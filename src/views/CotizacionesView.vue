@@ -135,10 +135,17 @@
           </template>
           <template #actions="{ row }">
             <button
-              class="text-orange-700 hover:text-orange-900 text-sm font-medium"
+              class="text-orange-700 hover:text-orange-900 text-sm font-medium mr-3"
               @click="editCotizacion(row)"
             >
               Editar
+            </button>
+            <button
+              v-if="row.estado === 'aprobada'"
+              class="text-green-700 hover:text-green-900 text-sm font-medium"
+              @click="convertirAViaje(row)"
+            >
+              Crear Viaje
             </button>
           </template>
           <template #cell:cliente="{ row }">
@@ -191,7 +198,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import Modal from '@/components/ui/Modal.vue'
 import DataTable, { type DataTableColumn } from '@/components/ui/DataTable.vue'
 import {
@@ -201,30 +208,22 @@ import {
   SegmentoCard,
 } from '@/components/cotizaciones'
 import { Plane, Home, Compass } from 'lucide-vue-next'
+import {
+  cotizacionesService,
+  segmentosService,
+  viajesService,
+  type Cotizacion,
+  type Segmento,
+} from '@/services/supabase'
 
-// Interfaz para segmentos
-interface Segmento {
-  id: number
-  tipo: 'Transporte' | 'Hospedaje' | 'Actividades'
-  proveedor?: string
-  nombre?: string
-  fechaInicial?: string
-  fechaFinal?: string
-  fechaEntrada?: string
-  fechaSalida?: string
-  horaSalida?: string
-  horaEntrada?: string
-  horaInicio?: string
-  duracion?: string
-  observaciones?: string
-  tieneRetorno?: boolean
-  [key: string]: unknown
-}
+// Tipos para formularios
+// Interfaces de formularios definidas en componentes individuales
 
 const showForm = ref(false)
 const selectedSegment = ref<string>('')
 const search = ref('')
 const tableLoading = ref(false)
+const cotizacionActual = ref<Cotizacion | null>(null)
 const segmentosAgregados = ref<Segmento[]>([])
 const editandoSegmento = ref<Segmento | null>(null)
 
@@ -238,7 +237,9 @@ const tableColumns: DataTableColumn[] = [
 
 // Definir tipo para las filas de cotización
 interface CotizacionRow {
-  id: number
+  id: string
+  nombre: string
+  viajero_id: string
   cliente: string
   email: string
   destino: string
@@ -246,22 +247,11 @@ interface CotizacionRow {
   segmento: string
   fecha: string
   presupuesto: number
+  estado: 'borrador' | 'enviada' | 'aprobada' | 'rechazada'
 }
 
-// Datos mock de cotizaciones (vacíos inicialmente)
-const allTableRows = ref<CotizacionRow[]>([
-  // Datos de ejemplo comentados para que esté vacío inicialmente
-  // {
-  //   id: 1,
-  //   cliente: 'Ana López',
-  //   email: 'ana@email.com',
-  //   destino: 'Cancún, México',
-  //   duracion: '7 días',
-  //   segmento: 'Estándar',
-  //   fecha: '2024-12-15',
-  //   presupuesto: 2500
-  // }
-])
+// Datos de cotizaciones cargados desde Supabase
+const allTableRows = ref<CotizacionRow[]>([])
 
 // Filtrar filas basado en búsqueda
 const tableRows = computed(() => {
@@ -278,8 +268,8 @@ const tableRows = computed(() => {
 // Computed: segmentos ordenados por fecha
 const segmentosOrdenados = computed(() => {
   return [...segmentosAgregados.value].sort((a, b) => {
-    const fechaA = a.fechaInicial || a.fechaEntrada || ''
-    const fechaB = b.fechaInicial || b.fechaEntrada || ''
+    const fechaA = a.fecha_inicio || ''
+    const fechaB = b.fecha_inicio || ''
     return fechaA.localeCompare(fechaB)
   })
 })
@@ -296,75 +286,202 @@ const closeForm = () => {
   editandoSegmento.value = null
 }
 
-const handleFormSubmit = (data: Record<string, unknown>) => {
-  if (editandoSegmento.value) {
-    // Editar segmento existente
-    const index = segmentosAgregados.value.findIndex((s) => s.id === editandoSegmento.value!.id)
-    if (index !== -1) {
-      segmentosAgregados.value[index] = {
-        ...editandoSegmento.value,
-        ...data,
-        id: editandoSegmento.value.id,
-      }
+const handleFormSubmit = async (data: Record<string, unknown>) => {
+  try {
+    // Crear cotización si no existe
+    if (!cotizacionActual.value) {
+      cotizacionActual.value = await cotizacionesService.create({
+        nombre: `Cotización ${new Date().toLocaleDateString('es-ES')}`,
+        estado: 'borrador',
+      })
     }
-    alert(`Segmento actualizado correctamente`)
-  } else {
-    // Agregar nuevo segmento
-    const nuevoSegmento: Segmento = {
-      id: Date.now(),
-      tipo: data.segmento as 'Transporte' | 'Hospedaje' | 'Actividades',
-      ...data,
-    }
-    segmentosAgregados.value.push(nuevoSegmento)
-    alert(`Segmento agregado. Puedes agregar más o guardar la cotización completa.`)
-  }
 
-  closeForm()
+    // Preparar datos del segmento
+    const segmentoBase = {
+      tipo: (data.segmento as string).toLowerCase() as 'transporte' | 'hospedaje' | 'actividad',
+      nombre: (data.nombre as string) || (data.proveedor as string) || '',
+      proveedor: (data.proveedor as string) || '',
+      fecha_inicio:
+        (data.fechaInicial as string) ||
+        (data.fechaEntrada as string) ||
+        (data.fecha_inicio as string) ||
+        '',
+      fecha_fin: (data.fechaFinal as string) || (data.fechaSalida as string) || undefined,
+      hora_inicio: (data.horaSalida as string) || (data.horaInicio as string) || undefined,
+      hora_fin: (data.horaEntrada as string) || undefined,
+      duracion: (data.duracion as string) || '',
+      observaciones: (data.observaciones as string) || '',
+      orden: segmentosAgregados.value.length + 1,
+      cotizacion_id: cotizacionActual.value.id,
+    }
+
+    if (editandoSegmento.value) {
+      // Actualizar segmento existente
+      if ((data.segmento as string) === 'Transporte') {
+        await segmentosService.createTransporte(segmentoBase, {
+          tipo_transporte: ((data.tipo as string) || 'otro') as
+            | 'aereo'
+            | 'tren'
+            | 'bus'
+            | 'carro_privado'
+            | 'uber'
+            | 'otro',
+          tiene_retorno: data.tieneRetorno !== false,
+          origen: (data.origen as string) || '',
+          destino: (data.destino as string) || '',
+        })
+      } else if ((data.segmento as string) === 'Hospedaje') {
+        await segmentosService.createHospedaje(segmentoBase, {
+          tipo_hospedaje: ((data.tipo as string) || 'otro') as
+            | 'hotel'
+            | 'renta_privada'
+            | 'airbnb'
+            | 'otro',
+          numero_habitaciones: (data.numero_habitaciones as number) || undefined,
+        })
+      } else if ((data.segmento as string) === 'Actividades') {
+        await segmentosService.createActividad(segmentoBase, {
+          duracion_horas: (data.duracion_horas as number) || undefined,
+        })
+      }
+
+      // Actualizar en la lista local
+      const index = segmentosAgregados.value.findIndex((s) => s.id === editandoSegmento.value!.id)
+      if (index !== -1) {
+        // Recargar segmentos
+        await loadSegmentos()
+      }
+      alert(`Segmento actualizado correctamente`)
+    } else {
+      // Crear nuevo segmento
+      let nuevoSegmento: Segmento
+
+      if ((data.segmento as string) === 'Transporte') {
+        nuevoSegmento = await segmentosService.createTransporte(segmentoBase, {
+          tipo_transporte: ((data.tipo as string) || 'otro') as
+            | 'aereo'
+            | 'tren'
+            | 'bus'
+            | 'carro_privado'
+            | 'uber'
+            | 'otro',
+          tiene_retorno: data.tieneRetorno !== false,
+          origen: (data.origen as string) || '',
+          destino: (data.destino as string) || '',
+        })
+      } else if ((data.segmento as string) === 'Hospedaje') {
+        nuevoSegmento = await segmentosService.createHospedaje(segmentoBase, {
+          tipo_hospedaje: ((data.tipo as string) || 'otro') as
+            | 'hotel'
+            | 'renta_privada'
+            | 'airbnb'
+            | 'otro',
+          numero_habitaciones: (data.numero_habitaciones as number) || undefined,
+        })
+      } else {
+        nuevoSegmento = await segmentosService.createActividad(segmentoBase, {
+          duracion_horas: (data.duracion_horas as number) || undefined,
+        })
+      }
+
+      segmentosAgregados.value.push(nuevoSegmento)
+      alert(`Segmento agregado. Puedes agregar más o guardar la cotización completa.`)
+    }
+
+    closeForm()
+  } catch (error) {
+    console.error('Error al guardar segmento:', error)
+    alert('Error al guardar el segmento. Inténtalo de nuevo.')
+  }
+}
+
+// Función para cargar segmentos de la cotización actual
+const loadSegmentos = async () => {
+  if (cotizacionActual.value) {
+    try {
+      const cotizacion = await cotizacionesService.getById(cotizacionActual.value.id)
+      segmentosAgregados.value = cotizacion.segmentos || []
+    } catch (error) {
+      console.error('Error al cargar segmentos:', error)
+      alert('Error al cargar los segmentos')
+    }
+  }
 }
 
 const editarSegmento = (segmento: Segmento) => {
   editandoSegmento.value = segmento
   // Determinar qué tipo de segmento es para abrir el formulario correcto
-  if (segmento.tipo === 'Transporte') {
+  if (segmento.tipo === 'transporte') {
     selectedSegment.value = 'transporte'
-  } else if (segmento.tipo === 'Hospedaje') {
+  } else if (segmento.tipo === 'hospedaje') {
     selectedSegment.value = 'hospedaje'
-  } else if (segmento.tipo === 'Actividades') {
+  } else if (segmento.tipo === 'actividad') {
     selectedSegment.value = 'actividades'
   }
   showForm.value = true
 }
 
-const eliminarSegmento = (id: number) => {
+const eliminarSegmento = async (id: string) => {
   if (confirm('¿Estás seguro de eliminar este segmento?')) {
-    segmentosAgregados.value = segmentosAgregados.value.filter((s) => s.id !== id)
+    try {
+      await segmentosService.delete(id)
+      segmentosAgregados.value = segmentosAgregados.value.filter((s) => s.id !== id)
+      alert('Segmento eliminado correctamente')
+    } catch (error) {
+      console.error('Error al eliminar segmento:', error)
+      alert('Error al eliminar el segmento')
+    }
   }
 }
 
-const limpiarSegmentos = () => {
+const limpiarSegmentos = async () => {
   if (confirm('¿Estás seguro de eliminar todos los segmentos? Esta acción no se puede deshacer.')) {
-    segmentosAgregados.value = []
+    try {
+      if (cotizacionActual.value) {
+        // Eliminar todos los segmentos de la cotización
+        for (const segmento of segmentosAgregados.value) {
+          await segmentosService.delete(segmento.id)
+        }
+        segmentosAgregados.value = []
+        // Opcionalmente, eliminar la cotización si no tiene segmentos
+        await cotizacionesService.delete(cotizacionActual.value.id)
+        cotizacionActual.value = null
+      }
+    } catch (error) {
+      console.error('Error al limpiar segmentos:', error)
+      alert('Error al limpiar los segmentos')
+    }
   }
 }
 
-const guardarCotizacionCompleta = () => {
+const guardarCotizacionCompleta = async () => {
   if (segmentosAgregados.value.length === 0) {
     alert('No hay segmentos para guardar')
     return
   }
 
-  console.log('Cotización completa:', {
-    segmentos: segmentosAgregados.value,
-    total: segmentosAgregados.value.length,
-  })
+  try {
+    // La cotización ya está guardada, solo actualizar estado si es necesario
+    if (cotizacionActual.value) {
+      await cotizacionesService.update(cotizacionActual.value.id, {
+        estado: 'enviada', // Cambiar estado cuando se "envía" la cotización
+      })
+    }
 
-  // Aquí se guardaría en Supabase
-  alert(
-    `Cotización guardada con ${segmentosAgregados.value.length} segmentos.\n\nPróximamente: Generación de PDF y guardado en base de datos.`,
-  )
+    alert(
+      `Cotización guardada con ${segmentosAgregados.value.length} segmentos.\n\nEstado: Enviada\n\nPróximamente: Generación de PDF`,
+    )
 
-  // Limpiar después de guardar
-  segmentosAgregados.value = []
+    // Limpiar después de guardar
+    segmentosAgregados.value = []
+    cotizacionActual.value = null
+
+    // Recargar la tabla de cotizaciones
+    await recargarCotizaciones()
+  } catch (error) {
+    console.error('Error al guardar cotización:', error)
+    alert('Error al guardar la cotización')
+  }
 }
 
 // Funciones auxiliares para la tabla
@@ -389,8 +506,76 @@ const formatDate = (dateString: string) => {
   })
 }
 
-const editCotizacion = (row: CotizacionRow) => {
-  console.log('Editar cotización:', row)
-  alert('Funcionalidad de edición próximamente disponible')
+const editCotizacion = async (row: CotizacionRow) => {
+  try {
+    // Cargar la cotización completa con segmentos
+    const cotizacion = await cotizacionesService.getById(row.id)
+    cotizacionActual.value = cotizacion
+    segmentosAgregados.value = cotizacion.segmentos || []
+
+    console.log('Cotización cargada para edición:', cotizacion)
+    alert(`Cotización "${cotizacion.nombre}" cargada para edición`)
+  } catch (error) {
+    console.error('Error al cargar cotización:', error)
+    alert('Error al cargar la cotización para edición')
+  }
 }
+
+const convertirAViaje = async (row: CotizacionRow) => {
+  if (
+    !confirm(
+      `¿Crear un viaje desde la cotización "${row.nombre}"?\n\nEsto copiará todos los segmentos a un nuevo viaje.`,
+    )
+  ) {
+    return
+  }
+
+  try {
+    // Crear viaje desde cotización
+    const viaje = await viajesService.createFromCotizacion(row.id, row.viajero_id)
+
+    alert(
+      `¡Viaje creado exitosamente!\n\nNombre: ${viaje.nombre}\nID: ${viaje.id}\n\nAhora puedes gestionar el viaje desde el módulo de Viajes.`,
+    )
+
+    // Opcional: redirigir al módulo de viajes
+    // router.push('/viajes')
+  } catch (error) {
+    console.error('Error al crear viaje desde cotización:', error)
+    alert('Error al crear el viaje desde la cotización')
+  }
+}
+
+// Función para recargar cotizaciones desde Supabase
+const recargarCotizaciones = async () => {
+  try {
+    tableLoading.value = true
+    const cotizaciones = await cotizacionesService.list()
+
+    // Transformar cotizaciones a formato de tabla
+    allTableRows.value = cotizaciones.map((cot) => ({
+      id: cot.id,
+      nombre: cot.nombre,
+      viajero_id: cot.viajero_id || '',
+      cliente: 'Cliente', // TODO: Obtener del viajero
+      email: 'email@example.com', // TODO: Obtener del viajero
+      destino: 'Destino', // TODO: Calcular desde segmentos
+      duracion: '0 días', // TODO: Calcular desde segmentos
+      segmento: cot.estado || 'borrador',
+      fecha: cot.created_at,
+      presupuesto: 0, // TODO: Calcular desde segmentos
+      estado: cot.estado,
+    }))
+  } catch (error) {
+    console.error('Error al cargar cotizaciones:', error)
+    alert('Error al cargar las cotizaciones desde la base de datos')
+  } finally {
+    tableLoading.value = false
+  }
+}
+
+// Cargar cotizaciones al montar el componente
+onMounted(() => {
+  recargarCotizaciones()
+})
 </script>

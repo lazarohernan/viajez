@@ -1,0 +1,279 @@
+import { supabase } from './supabase'
+import { BaseService, type ServiceResponse } from './base.service'
+import type { User, Session } from '@supabase/supabase-js'
+import type { Viajeroz } from './supabase'
+
+export interface AdminProfile {
+  id: string
+  nombre: string
+  apellido: string
+  email: string
+  telefono?: string
+  cargo?: string
+  departamento?: string
+  permisos_especiales?: string[]
+  activo: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface AuthUser extends User {
+  profile?: Viajeroz
+  adminProfile?: AdminProfile
+  isAdmin?: boolean
+}
+
+export interface LoginCredentials {
+  email?: string
+  password?: string
+  identidad?: string
+  telefono?: string
+}
+
+export interface SignUpData {
+  nombre: string
+  apellido: string
+  email: string
+  telefono: string
+  identidad: string
+  fecha_nacimiento: string
+}
+
+/**
+ * Servicio de autenticación personalizado
+ * Maneja login/logout y gestión de sesiones
+ */
+export class AuthService extends BaseService {
+  /**
+   * Login con diferentes métodos según el rol
+   * - Admin: email + password
+   * - Cliente: identidad + telefono
+   */
+  async login(credentials: LoginCredentials): Promise<ServiceResponse<AuthUser>> {
+    try {
+      // Solo login de admin con email/password
+      if (!credentials.email || !credentials.password) {
+        return {
+          data: null,
+          error: 'Por favor proporcione email y contraseña.',
+        }
+      }
+
+      // Login de administrador con email/password
+      console.log('Intentando login con Supabase Auth...')
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: credentials.email,
+        password: credentials.password,
+      })
+
+      if (error) {
+        console.error('Error en signInWithPassword:', error)
+        return { data: null, error: error.message }
+      }
+
+      console.log('Login exitoso en Supabase Auth, usuario:', data.user.email)
+
+      // Verificar el rol desde user_roles
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', data.user.id)
+        .maybeSingle()
+
+      console.log('Role data:', roleData, 'Role error:', roleError)
+
+      if (!roleData || roleData.role !== 'admin') {
+        // Cerrar sesión si no es admin
+        await supabase.auth.signOut()
+        return { data: null, error: 'Usuario no autorizado como administrador' }
+      }
+
+      // Obtener perfil del administrador desde la tabla admins
+      const { data: adminData, error: adminError } = await supabase
+        .from('admins')
+        .select('*')
+        .eq('id', data.user.id)
+        .maybeSingle()
+
+      console.log('Admin data:', adminData, 'Admin error:', adminError)
+
+      // Retornar usuario con perfil de admin
+      const authUser: AuthUser = Object.assign({}, data.user, {
+        adminProfile: adminData || undefined,
+        isAdmin: true,
+      })
+
+      console.log('AuthUser creado:', authUser.email, 'isAdmin:', authUser.isAdmin)
+
+      return { data: authUser, error: null }
+    } catch (error) {
+      return {
+        data: null,
+        error: error instanceof Error ? error.message : 'Error en login',
+      }
+    }
+  }
+
+  /**
+   * Registro de nuevo viajero
+   */
+  async signUp(userData: SignUpData): Promise<ServiceResponse<AuthUser>> {
+    try {
+      // Crear el viajero primero
+      const { data: viajero, error: viajeroError } = await supabase
+        .from('viajeroz')
+        .insert({
+          nombre: userData.nombre,
+          apellido: userData.apellido,
+          email: userData.email,
+          telefono: userData.telefono,
+          identidad: userData.identidad,
+          fecha_nacimiento: userData.fecha_nacimiento,
+        })
+        .select()
+        .single()
+
+      if (viajeroError) {
+        return { data: null, error: viajeroError.message }
+      }
+
+      // Enviar email de confirmación
+      const { data, error } = await supabase.auth.signInWithOtp({
+        email: userData.email,
+        options: {
+          data: {
+            viajero_id: viajero.id,
+            nombre: userData.nombre,
+            apellido: userData.apellido,
+          },
+        },
+      })
+
+      if (error) {
+        return { data: null, error: error.message }
+      }
+
+      if (!data.user) {
+        return { data: null, error: 'No se pudo obtener la información del usuario' }
+      }
+
+      const user = data.user
+      const authUser: AuthUser = Object.assign({}, user, { profile: viajero })
+
+      return { data: authUser, error: null }
+    } catch (error) {
+      return {
+        data: null,
+        error: error instanceof Error ? error.message : 'Error en registro',
+      }
+    }
+  }
+
+  /**
+   * Logout
+   */
+  async logout(): Promise<ServiceResponse<boolean>> {
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        return { data: false, error: error.message }
+      }
+      return { data: true, error: null }
+    } catch (error) {
+      return {
+        data: false,
+        error: error instanceof Error ? error.message : 'Error en logout',
+      }
+    }
+  }
+
+  /**
+   * Obtener sesión actual
+   */
+  async getCurrentSession(): Promise<
+    ServiceResponse<{ session: Session | null; user: AuthUser | null }>
+  > {
+    try {
+      const {
+        data: { session },
+        error,
+      } = await supabase.auth.getSession()
+      if (error) {
+        return { data: { session: null, user: null }, error: error.message }
+      }
+
+      if (!session?.user) {
+        return { data: { session: null, user: null }, error: null }
+      }
+
+      // Verificar si es admin o cliente
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', session.user.id)
+        .maybeSingle()
+
+      let authUser: AuthUser = Object.assign({}, session.user)
+
+      if (roleData?.role === 'admin') {
+        // Es admin - obtener perfil de admins
+        const { data: adminData } = await supabase
+          .from('admins')
+          .select('*')
+          .eq('id', session.user.id)
+          .maybeSingle()
+
+        authUser = Object.assign({}, session.user, {
+          adminProfile: adminData || undefined,
+          isAdmin: true,
+        })
+      } else {
+        // Es cliente - obtener perfil de viajeroz
+        const { data: profile } = await supabase
+          .from('viajeroz')
+          .select('*')
+          .eq('id', session.user.user_metadata?.viajero_id || session.user.id)
+          .maybeSingle()
+
+        authUser = Object.assign({}, session.user, {
+          profile: profile || undefined,
+          isAdmin: false,
+        })
+      }
+
+      return {
+        data: { session, user: authUser },
+        error: null,
+      }
+    } catch (error) {
+      return {
+        data: { session: null, user: null },
+        error: error instanceof Error ? error.message : 'Error obteniendo sesión',
+      }
+    }
+  }
+
+  /**
+   * Verificar si el usuario está autenticado
+   */
+  async isAuthenticated(): Promise<boolean> {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      return !!session?.user
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * Listener para cambios de autenticación
+   */
+  onAuthStateChange(callback: (event: string, session: Session | null) => void) {
+    return supabase.auth.onAuthStateChange(callback)
+  }
+}
+
+// Instancia global del servicio de autenticación
+export const authService = new AuthService()

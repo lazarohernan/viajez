@@ -162,7 +162,7 @@ const getStatusClass = (status: string) => {
       </div>
 
       <!-- Search Form -->
-      <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 mb-12">
+      <div class="bg-white rounded-2xl border border-gray-200 p-8 mb-12">
         <form @submit.prevent="searchTrip" class="max-w-md mx-auto">
           <div class="mb-6">
             <label for="dni" class="block text-sm font-medium text-gray-700 mb-2">

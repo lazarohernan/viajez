@@ -134,8 +134,21 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 
+interface ActividadFormData extends Record<string, unknown> {
+  nombre: string
+  fechaInicial: string
+  fechaEntrada: string
+  fecha_inicio: string
+  horaInicio: string
+  horaEntrada: string
+  duracion_horas: number
+  duracion: string
+  segmento: string
+  observaciones: string
+}
+
 const emit = defineEmits<{
-  submit: [data: any]
+  submit: [data: ActividadFormData]
   cancel: []
 }>()
 
@@ -167,8 +180,12 @@ const duracionCalculada = computed(() => {
 const handleSubmit = () => {
   emit('submit', {
     ...formData.value,
+    fechaEntrada: formData.value.fechaInicial,
+    fecha_inicio: formData.value.fechaInicial,
+    horaEntrada: formData.value.horaInicio,
+    duracion_horas: formData.value.duracionHoras,
     duracion: duracionCalculada.value,
     segmento: 'Actividades',
-  })
+  } as ActividadFormData)
 }
 </script>

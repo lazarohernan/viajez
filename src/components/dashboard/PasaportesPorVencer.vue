@@ -41,13 +41,24 @@
       <div
         v-for="pasaporte in pasaportes"
         :key="pasaporte.id"
-        class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
-        @click="$emit('verDetalle', pasaporte)"
+        class="relative flex items-center justify-between p-3 rounded-lg transition-colors cursor-pointer"
+        :class="getCardClasses(pasaporte.diasRestantes)"
+        @click="abrirDetalle(pasaporte)"
       >
+        <span
+          class="absolute top-3 right-3 inline-flex px-2.5 py-1 text-xs font-semibold rounded-full"
+          :class="getUrgenciaBadgeClass(pasaporte.diasRestantes)"
+        >
+          {{ getUrgenciaText(pasaporte.diasRestantes) }}
+        </span>
+
         <div class="flex-1">
           <div class="flex items-center gap-3">
-            <div class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
-              <FileText class="w-4 h-4 text-orange-600" />
+            <div
+              class="w-8 h-8 rounded-lg flex items-center justify-center"
+              :class="getIconWrapperClass(pasaporte.diasRestantes)"
+            >
+              <FileText class="w-4 h-4" :class="getIconClass(pasaporte.diasRestantes)" />
             </div>
             <div class="flex-1 min-w-0">
               <h4 class="font-medium text-gray-900 text-sm truncate">
@@ -62,47 +73,149 @@
           <!-- Información de vencimiento -->
           <div class="mt-3 flex items-center gap-4">
             <div class="flex items-center gap-2">
-              <Calendar class="w-4 h-4 text-gray-400" />
+              <Calendar class="w-4 h-4" :class="getMetaIconClass(pasaporte.diasRestantes)" />
               <span class="text-sm text-gray-600">
                 Vence: {{ formatDate(pasaporte.fechaVencimiento) }}
               </span>
             </div>
             <div class="flex items-center gap-2">
-              <Clock class="w-4 h-4 text-gray-400" />
+              <Clock class="w-4 h-4" :class="getMetaIconClass(pasaporte.diasRestantes)" />
               <span class="text-sm" :class="getUrgenciaClass(pasaporte.diasRestantes)">
                 {{ pasaporte.diasRestantes }} días restantes
               </span>
             </div>
           </div>
-
-          <!-- Información adicional -->
-          <div class="mt-2 text-xs text-gray-500">
-            <span>Emisión: {{ formatDate(pasaporte.fechaEmision) }}</span>
-            <span class="mx-2">•</span>
-            <span>Expediente: {{ pasaporte.expediente || 'N/A' }}</span>
-          </div>
-        </div>
-
-        <div class="ml-4">
-          <span
-            class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
-            :class="getUrgenciaBadgeClass(pasaporte.diasRestantes)"
-          >
-            {{ getUrgenciaText(pasaporte.diasRestantes) }}
-          </span>
         </div>
       </div>
     </div>
   </div>
+
+  <transition name="fade">
+    <div
+      v-if="mostrarModal && pasaporteSeleccionado"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div class="w-full max-w-xl rounded-lg bg-white border border-gray-200">
+        <div class="flex items-start justify-between border-b border-gray-200 px-6 py-4">
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900">Detalle del pasaporte</h3>
+            <p class="text-sm text-gray-500">
+              Titular: {{ pasaporteSeleccionado.cliente.nombre }}
+              {{ pasaporteSeleccionado.cliente.apellido }}
+            </p>
+          </div>
+          <button
+            type="button"
+            class="rounded-md p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+            @click="cerrarDetalle"
+          >
+            <span class="sr-only">Cerrar</span>
+            ✕
+          </button>
+        </div>
+
+        <div class="space-y-4 px-6 py-5">
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <p class="text-xs uppercase text-gray-500">Número de pasaporte</p>
+              <p class="text-sm font-medium text-gray-900">{{ pasaporteSeleccionado.numero }}</p>
+            </div>
+            <div>
+              <p class="text-xs uppercase text-gray-500">Nacionalidad</p>
+              <p class="text-sm font-medium text-gray-900">
+                {{ pasaporteSeleccionado.nacionalidad }}
+              </p>
+            </div>
+            <div>
+              <p class="text-xs uppercase text-gray-500">Fecha de emisión</p>
+              <p class="text-sm font-medium text-gray-900">
+                {{ formatDate(pasaporteSeleccionado.fechaEmision) }}
+              </p>
+            </div>
+            <div>
+              <p class="text-xs uppercase text-gray-500">Fecha de vencimiento</p>
+              <p class="text-sm font-medium text-gray-900">
+                {{ formatDate(pasaporteSeleccionado.fechaVencimiento) }}
+              </p>
+            </div>
+            <div>
+              <p class="text-xs uppercase text-gray-500">Días restantes</p>
+              <p
+                class="text-sm font-semibold"
+                :class="getUrgenciaClass(pasaporteSeleccionado.diasRestantes)"
+              >
+                {{ pasaporteSeleccionado.diasRestantes }} días
+              </p>
+            </div>
+            <div>
+              <p class="text-xs uppercase text-gray-500">Estado</p>
+              <span
+                class="inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold"
+                :class="getUrgenciaBadgeClass(pasaporteSeleccionado.diasRestantes)"
+              >
+                {{ pasaporteSeleccionado.estado }}
+              </span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <p class="text-xs uppercase text-gray-500">Correo</p>
+              <p class="text-sm text-gray-700">{{ pasaporteSeleccionado.cliente.email }}</p>
+            </div>
+            <div v-if="pasaporteSeleccionado.cliente.telefono">
+              <p class="text-xs uppercase text-gray-500">Teléfono</p>
+              <p class="text-sm text-gray-700">
+                {{ formatPhoneHN(pasaporteSeleccionado.cliente.telefono) }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 border-t border-gray-200 px-6 py-4">
+          <button
+            type="button"
+            class="rounded-md border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            @click="cerrarDetalle"
+          >
+            Cerrar
+          </button>
+          <button
+            type="button"
+            class="rounded-md px-4 py-2 text-sm font-semibold text-white"
+            :class="getWhatsappButtonClasses(pasaporteSeleccionado?.diasRestantes ?? 0)"
+            :disabled="!pasaporteSeleccionado?.cliente.telefono"
+            @click="contactarClientePorWhatsapp"
+          >
+            Contactar cliente
+          </button>
+        </div>
+      </div>
+    </div>
+  </transition>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { Calendar, Clock, FileText } from 'lucide-vue-next'
+import { supabase } from '@/services/supabase'
 
-// Interfaces
+type ViajeroPasaporte = {
+  id: string
+  nombre: string
+  apellido: string
+  email: string
+  telefono?: string | null
+  pais_residencia?: string | null
+  numero_pasaporte: string | null
+  fecha_vencimiento_pasaporte: string | null
+  fecha_emision_pasaporte?: string | null
+}
+
 interface Cliente {
-  id: number
+  id: string
   nombre: string
   apellido: string
   email: string
@@ -110,14 +223,13 @@ interface Cliente {
 }
 
 interface PasaportePorVencer {
-  id: number
+  id: string
   cliente: Cliente
   numero: string
   nacionalidad: string
   fechaEmision: string
   fechaVencimiento: string
   diasRestantes: number
-  expediente?: string
   estado: 'Activo' | 'Por Vencer' | 'Vencido'
 }
 
@@ -125,96 +237,91 @@ interface PasaportePorVencer {
 const pasaportes = ref<PasaportePorVencer[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
+const mostrarModal = ref(false)
+const pasaporteSeleccionado = ref<PasaportePorVencer | null>(null)
 
 // Props y emits
-defineProps<{
+const props = defineProps<{
   maxItems?: number
 }>()
 
-// const emit = defineEmits<{
-//   verTodos: []
-//   verDetalle: [pasaporte: PasaportePorVencer]
-// }>()
+defineEmits<{
+  verTodos: []
+  verDetalle: [pasaporte: PasaportePorVencer]
+}>()
 
-// Datos mock - luego se conectará a Supabase
+// Conectado a Supabase
 const fetchPasaportesPorVencer = async () => {
   loading.value = true
   error.value = null
 
   try {
-    // Simular llamada a API
-    await new Promise((resolve) => setTimeout(resolve, 700))
+    const hoy = new Date()
+    const en90Dias = new Date()
+    en90Dias.setDate(hoy.getDate() + 90)
 
-    pasaportes.value = [
-      {
-        id: 1,
-        cliente: {
-          id: 1,
-          nombre: 'María',
-          apellido: 'González',
-          email: 'maria@email.com',
-          telefono: '+57 300 123 4567',
-        },
-        numero: 'P123456789',
-        nacionalidad: 'Colombiana',
-        fechaEmision: '2023-03-15',
-        fechaVencimiento: '2025-01-22',
-        diasRestantes: 18,
-        expediente: 'EXP-2023-001',
-        estado: 'Por Vencer',
+    const { data, error: supabaseError } = await supabase
+      .from('viajeroz')
+      .select(
+        `
+        id,
+        nombre,
+        apellido,
+        email,
+        telefono,
+        pais_residencia,
+        numero_pasaporte,
+        fecha_vencimiento_pasaporte
+      `,
+      )
+      .not('numero_pasaporte', 'is', null)
+      .not('fecha_vencimiento_pasaporte', 'is', null)
+      .gte('fecha_vencimiento_pasaporte', hoy.toISOString().split('T')[0])
+      .lte('fecha_vencimiento_pasaporte', en90Dias.toISOString().split('T')[0])
+      .order('fecha_vencimiento_pasaporte', { ascending: true })
+
+    if (supabaseError) throw supabaseError
+
+    const pasaportesData = (data || []).reduce<PasaportePorVencer[]>(
+      (acc: PasaportePorVencer[], viajero: ViajeroPasaporte) => {
+        if (!viajero.numero_pasaporte || !viajero.fecha_vencimiento_pasaporte) {
+          return acc
+        }
+
+        const fechaVencimiento = new Date(viajero.fecha_vencimiento_pasaporte)
+        const diffTime = fechaVencimiento.getTime() - hoy.getTime()
+        const diasRestantes = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+        let estado: 'Activo' | 'Por Vencer' | 'Vencido' = 'Activo'
+        if (diasRestantes <= 0) estado = 'Vencido'
+        else if (diasRestantes <= 30) estado = 'Por Vencer'
+
+        acc.push({
+          id: viajero.id,
+          cliente: {
+            id: viajero.id,
+            nombre: viajero.nombre,
+            apellido: viajero.apellido,
+            email: viajero.email,
+            telefono: viajero.telefono || undefined,
+          },
+          numero: viajero.numero_pasaporte,
+          nacionalidad: viajero.pais_residencia || 'No especificada',
+          fechaEmision: '',
+          fechaVencimiento: viajero.fecha_vencimiento_pasaporte,
+          diasRestantes,
+          estado,
+        })
+
+        return acc
       },
-      {
-        id: 2,
-        cliente: {
-          id: 2,
-          nombre: 'Carlos',
-          apellido: 'Rodríguez',
-          email: 'carlos@email.com',
-          telefono: '+57 301 987 6543',
-        },
-        numero: 'P987654321',
-        nacionalidad: 'Colombiana',
-        fechaEmision: '2022-08-10',
-        fechaVencimiento: '2025-01-25',
-        diasRestantes: 21,
-        expediente: 'EXP-2022-045',
-        estado: 'Por Vencer',
-      },
-      {
-        id: 3,
-        cliente: {
-          id: 3,
-          nombre: 'Ana',
-          apellido: 'López',
-          email: 'ana@email.com',
-          telefono: '+57 302 456 7890',
-        },
-        numero: 'P456789123',
-        nacionalidad: 'Colombiana',
-        fechaEmision: '2023-05-20',
-        fechaVencimiento: '2025-01-18',
-        diasRestantes: 14,
-        expediente: 'EXP-2023-078',
-        estado: 'Por Vencer',
-      },
-      {
-        id: 4,
-        cliente: {
-          id: 4,
-          nombre: 'Luis',
-          apellido: 'Martínez',
-          email: 'luis@email.com',
-          telefono: '+57 303 321 6547',
-        },
-        numero: 'P789123456',
-        nacionalidad: 'Colombiana',
-        fechaEmision: '2023-07-01',
-        fechaVencimiento: '2025-01-30',
-        diasRestantes: 26,
-        expediente: 'EXP-2023-112',
-        estado: 'Por Vencer',
-      },
-    ]
+      [],
+    )
+
+    const ordenados = pasaportesData.sort(
+      (a: PasaportePorVencer, b: PasaportePorVencer) => a.diasRestantes - b.diasRestantes,
+    )
+    pasaportes.value = props.maxItems ? ordenados.slice(0, props.maxItems) : ordenados
   } catch (err) {
     error.value = 'Error al cargar los pasaportes por vencer'
     console.error('Error fetching pasaportes por vencer:', err)
@@ -232,22 +339,105 @@ const formatDate = (dateString: string) => {
   })
 }
 
+const getCardClasses = (diasRestantes: number) => {
+  if (diasRestantes <= 7) return 'bg-red-50 hover:bg-red-100'
+  if (diasRestantes <= 15) return 'bg-orange-50 hover:bg-orange-100'
+  return 'bg-green-50 hover:bg-green-100'
+}
+
+const getIconWrapperClass = (diasRestantes: number) => {
+  if (diasRestantes <= 7) return 'bg-red-100/90'
+  if (diasRestantes <= 15) return 'bg-orange-100/90'
+  return 'bg-green-100/90'
+}
+
+const getIconClass = (diasRestantes: number) => {
+  if (diasRestantes <= 7) return 'text-red-700'
+  if (diasRestantes <= 15) return 'text-orange-700'
+  return 'text-green-700'
+}
+
+const getMetaIconClass = (diasRestantes: number) => {
+  if (diasRestantes <= 7) return 'text-red-500'
+  if (diasRestantes <= 15) return 'text-orange-500'
+  return 'text-green-500'
+}
+
 const getUrgenciaClass = (diasRestantes: number) => {
   if (diasRestantes <= 7) return 'text-red-600 font-medium'
   if (diasRestantes <= 15) return 'text-orange-600 font-medium'
-  return 'text-gray-600'
+  return 'text-green-600 font-medium'
 }
 
 const getUrgenciaBadgeClass = (diasRestantes: number) => {
   if (diasRestantes <= 7) return 'bg-red-100 text-red-800'
   if (diasRestantes <= 15) return 'bg-orange-100 text-orange-800'
-  return 'bg-gray-100 text-gray-700'
+  return 'bg-green-100 text-green-800'
 }
 
 const getUrgenciaText = (diasRestantes: number) => {
-  if (diasRestantes <= 7) return 'Urgente'
-  if (diasRestantes <= 15) return 'Próximo'
-  return 'Monitoreo'
+  if (diasRestantes <= 7) return 'Renovar ahora'
+  if (diasRestantes <= 15) return 'Revisión próxima'
+  return 'Todo en orden'
+}
+
+const abrirDetalle = (pasaporte: PasaportePorVencer) => {
+  pasaporteSeleccionado.value = pasaporte
+  mostrarModal.value = true
+}
+
+const cerrarDetalle = () => {
+  mostrarModal.value = false
+  pasaporteSeleccionado.value = null
+}
+
+const formatPhoneHN = (telefono?: string) => {
+  if (!telefono) return ''
+
+  const digits = telefono.replace(/\D/g, '')
+  if (digits.length === 8) {
+    return `${digits.slice(0, 4)}-${digits.slice(4)}`
+  }
+  if (digits.length === 11 && digits.startsWith('504')) {
+    return `+504 ${digits.slice(3, 7)}-${digits.slice(7)}`
+  }
+  if (digits.length === 12 && digits.startsWith('00504')) {
+    return `+504 ${digits.slice(5, 9)}-${digits.slice(9)}`
+  }
+
+  return telefono
+}
+
+const normalizePhoneHN = (telefono?: string) => {
+  if (!telefono) return null
+  const digits = telefono.replace(/\D/g, '')
+  if (digits.startsWith('504')) return digits
+  if (digits.startsWith('00')) return digits.slice(2)
+  if (digits.length === 8) return `504${digits}`
+  return digits.length > 0 ? digits : null
+}
+
+const buildWhatsappMessage = (pasaporte: PasaportePorVencer) => {
+  return `Hola ${pasaporte.cliente.nombre}, te contactamos de ViajeMoz. Tu pasaporte (${pasaporte.numero}) vence el ${formatDate(pasaporte.fechaVencimiento)}. Escríbenos para ayudarte con la renovación.`
+}
+
+const abrirWhatsapp = (telefonoNormalizado: string, mensaje: string) => {
+  const url = `https://wa.me/${telefonoNormalizado}?text=${encodeURIComponent(mensaje)}`
+  window.open(url, '_blank', 'noopener,noreferrer')
+}
+
+const contactarClientePorWhatsapp = () => {
+  if (!pasaporteSeleccionado.value) return
+  const telefono = normalizePhoneHN(pasaporteSeleccionado.value.cliente.telefono)
+  if (!telefono) return
+  const mensaje = buildWhatsappMessage(pasaporteSeleccionado.value)
+  abrirWhatsapp(telefono, mensaje)
+}
+
+const getWhatsappButtonClasses = (diasRestantes: number) => {
+  if (diasRestantes <= 7) return 'bg-red-600 hover:bg-red-700'
+  if (diasRestantes <= 15) return 'bg-orange-600 hover:bg-orange-700'
+  return 'bg-green-600 hover:bg-green-700'
 }
 
 // Inicializar

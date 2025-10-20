@@ -118,8 +118,23 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 
+interface HospedajeFormData extends Record<string, unknown> {
+  tipo: string
+  proveedor: string
+  fechaEntrada: string
+  fechaSalida: string
+  fecha_inicio: string
+  fecha_fin: string
+  horaEntrada: string
+  horaSalida: string
+  numero_habitaciones: number
+  duracion: string
+  segmento: string
+  observaciones: string
+}
+
 const emit = defineEmits<{
-  submit: [data: any]
+  submit: [data: HospedajeFormData]
   cancel: []
 }>()
 
@@ -148,8 +163,12 @@ const duracionCalculada = computed(() => {
 const handleSubmit = () => {
   emit('submit', {
     ...formData.value,
+    fecha_inicio: formData.value.fechaEntrada,
+    fecha_fin: formData.value.fechaSalida,
+    horaEntrada: '',
+    horaSalida: '',
     duracion: duracionCalculada.value,
     segmento: 'Hospedaje',
-  })
+  } as HospedajeFormData)
 }
 </script>

@@ -102,6 +102,7 @@ const wrapperClass = computed(() => (props.unstyled ? '' : 'bg-white rounded-2xl
 
 const onSubmit = () => {
   emit('submit', { ...form })
+  return { ...form }
 }
 
 defineExpose({ submit: onSubmit })

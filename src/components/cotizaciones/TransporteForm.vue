@@ -49,6 +49,30 @@
         />
       </div>
 
+      <!-- Origen y Destino -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Origen</label>
+          <input
+            v-model="formData.origen"
+            type="text"
+            placeholder="Ciudad de salida"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+            required
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Destino</label>
+          <input
+            v-model="formData.destino"
+            type="text"
+            placeholder="Ciudad de llegada"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+            required
+          />
+        </div>
+      </div>
+
       <!-- Checkbox de Retorno -->
       <div class="flex items-center gap-2 p-3 bg-orange-50 rounded-lg border border-orange-200">
         <input
@@ -168,14 +192,33 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 
+interface TransporteFormData extends Record<string, unknown> {
+  tipo: string
+  proveedor: string
+  tieneRetorno: boolean
+  origen: string
+  destino: string
+  fechaSalida: string
+  fechaEntrada: string
+  fecha_inicio: string
+  fecha_fin: string
+  horaSalida: string
+  horaEntrada: string
+  duracion: string
+  segmento: string
+  observaciones: string
+}
+
 const emit = defineEmits<{
-  submit: [data: any]
+  submit: [data: TransporteFormData]
   cancel: []
 }>()
 
 const formData = ref({
   tipo: '',
   proveedor: '',
+  origen: '',
+  destino: '',
   tieneRetorno: true,
   fechaInicial: '',
   fechaFinal: '',
@@ -222,8 +265,15 @@ watch(
 const handleSubmit = () => {
   emit('submit', {
     ...formData.value,
-    duracion: duracionCalculada.value,
+    fechaSalida: formData.value.fechaInicial || '',
+    fechaEntrada: formData.value.fechaFinal || '',
+    fecha_inicio: formData.value.fechaInicial || '',
+    fecha_fin: formData.value.fechaFinal || '',
+    horaEntrada: formData.value.horaEntrada || '',
+    duracion: duracionCalculada.value || '',
     segmento: 'Transporte',
-  })
+    origen: formData.value.origen || '',
+    destino: formData.value.destino || '',
+  } as TransporteFormData)
 }
 </script>

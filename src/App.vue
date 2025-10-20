@@ -51,7 +51,8 @@ const showSidebar = computed(
     route.path.startsWith('/dashboard') ||
     (route.path.startsWith('/cliente') && !route.path.startsWith('/cliente/viajes')) ||
     route.path.startsWith('/viajes') ||
-    route.path.startsWith('/cotizaciones'),
+    route.path.startsWith('/cotizaciones') ||
+    route.path.startsWith('/perfil'),
 )
 const mobileSidebarOpen = ref(false)
 

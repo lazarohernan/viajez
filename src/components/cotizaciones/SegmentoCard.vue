@@ -10,8 +10,8 @@
           class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
           :class="getIconBgClass()"
         >
-          <Plane v-if="segmento.tipo === 'Transporte'" class="w-5 h-5 text-orange-600" />
-          <Home v-else-if="segmento.tipo === 'Hospedaje'" class="w-5 h-5 text-orange-600" />
+          <Plane v-if="segmento.tipo === 'transporte'" class="w-5 h-5 text-orange-600" />
+          <Home v-else-if="segmento.tipo === 'hospedaje'" class="w-5 h-5 text-orange-600" />
           <Compass v-else class="w-5 h-5 text-orange-600" />
         </div>
 
@@ -26,7 +26,11 @@
               {{ segmento.tipo }}
             </span>
             <span
-              v-if="segmento.tipo === 'Transporte' && segmento.tieneRetorno === false"
+              v-if="
+                segmento.tipo === 'transporte' &&
+                segmento.segmento_transporte &&
+                !segmento.segmento_transporte.tiene_retorno
+              "
               class="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800"
             >
               Solo ida
@@ -90,23 +94,7 @@
 
 <script setup lang="ts">
 import { Plane, Home, Compass, Calendar, Clock, Pencil, Trash2 } from 'lucide-vue-next'
-
-interface Segmento {
-  id: number
-  tipo: 'Transporte' | 'Hospedaje' | 'Actividades'
-  proveedor?: string
-  nombre?: string
-  fechaInicial?: string
-  fechaFinal?: string
-  fechaEntrada?: string
-  fechaSalida?: string
-  horaSalida?: string
-  horaEntrada?: string
-  horaInicio?: string
-  duracion?: string
-  observaciones?: string
-  tieneRetorno?: boolean
-}
+import type { Segmento } from '@/services/supabase'
 
 const props = defineProps<{
   segmento: Segmento
@@ -119,11 +107,11 @@ const emit = defineEmits<{
 
 const getIconBgClass = () => {
   switch (props.segmento.tipo) {
-    case 'Transporte':
+    case 'transporte':
       return 'bg-blue-50'
-    case 'Hospedaje':
+    case 'hospedaje':
       return 'bg-green-50'
-    case 'Actividades':
+    case 'actividad':
       return 'bg-purple-50'
     default:
       return 'bg-gray-50'
@@ -132,11 +120,11 @@ const getIconBgClass = () => {
 
 const getTipoBadgeClass = () => {
   switch (props.segmento.tipo) {
-    case 'Transporte':
+    case 'transporte':
       return 'bg-blue-100 text-blue-800'
-    case 'Hospedaje':
+    case 'hospedaje':
       return 'bg-green-100 text-green-800'
-    case 'Actividades':
+    case 'actividad':
       return 'bg-purple-100 text-purple-800'
     default:
       return 'bg-gray-100 text-gray-800'
@@ -144,7 +132,7 @@ const getTipoBadgeClass = () => {
 }
 
 const getSegmentoNombre = () => {
-  if (props.segmento.tipo === 'Actividades') {
+  if (props.segmento.tipo === 'actividad') {
     return props.segmento.nombre || props.segmento.proveedor || 'Actividad'
   }
   return props.segmento.proveedor || props.segmento.nombre || 'Sin proveedor'
@@ -152,41 +140,37 @@ const getSegmentoNombre = () => {
 
 const formatFechas = () => {
   const s = props.segmento
-  if (s.tipo === 'Transporte') {
-    if (
-      s.fechaInicial &&
-      s.fechaFinal &&
-      (s.tieneRetorno === true || s.tieneRetorno === undefined)
-    ) {
-      return `${formatDate(s.fechaInicial)} → ${formatDate(s.fechaFinal)}`
+  if (s.tipo === 'transporte') {
+    if (s.fecha_inicio && s.fecha_fin) {
+      return `${formatDate(s.fecha_inicio)} → ${formatDate(s.fecha_fin)}`
     }
-    return s.fechaInicial ? formatDate(s.fechaInicial) : 'Sin fecha'
+    return s.fecha_inicio ? formatDate(s.fecha_inicio) : 'Sin fecha'
   }
-  if (s.tipo === 'Hospedaje') {
-    if (s.fechaEntrada && s.fechaSalida) {
-      return `${formatDate(s.fechaEntrada)} - ${formatDate(s.fechaSalida)}`
+  if (s.tipo === 'hospedaje') {
+    if (s.fecha_inicio && s.fecha_fin) {
+      return `${formatDate(s.fecha_inicio)} - ${formatDate(s.fecha_fin)}`
     }
     return 'Sin fecha'
   }
-  if (s.tipo === 'Actividades') {
-    if (s.fechaInicial && s.fechaFinal && s.fechaInicial !== s.fechaFinal) {
-      return `${formatDate(s.fechaInicial)} - ${formatDate(s.fechaFinal)}`
+  if (s.tipo === 'actividad') {
+    if (s.fecha_inicio && s.fecha_fin && s.fecha_inicio !== s.fecha_fin) {
+      return `${formatDate(s.fecha_inicio)} - ${formatDate(s.fecha_fin)}`
     }
-    return s.fechaInicial ? formatDate(s.fechaInicial) : 'Sin fecha'
+    return s.fecha_inicio ? formatDate(s.fecha_inicio) : 'Sin fecha'
   }
   return 'Sin fecha'
 }
 
 const formatHorarios = () => {
   const s = props.segmento
-  if (s.tipo === 'Transporte') {
-    if (s.horaSalida && s.horaEntrada) {
-      return `${s.horaSalida} - ${s.horaEntrada}`
+  if (s.tipo === 'transporte') {
+    if (s.hora_inicio && s.hora_fin) {
+      return `${s.hora_inicio} - ${s.hora_fin}`
     }
-    return s.horaSalida || 'Sin horario'
+    return s.hora_inicio || 'Sin horario'
   }
-  if (s.tipo === 'Actividades' && s.horaInicio) {
-    return `Inicio: ${s.horaInicio}`
+  if (s.tipo === 'actividad' && s.hora_inicio) {
+    return `Inicio: ${s.hora_inicio}`
   }
   return 'Sin horario'
 }

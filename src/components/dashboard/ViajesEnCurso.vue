@@ -6,9 +6,9 @@
           <div class="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
             <MapPin class="w-4 h-4 text-white" />
           </div>
-          <h3 class="text-lg font-semibold text-gray-900">Viajes en Curso</h3>
+          <h3 class="text-lg font-semibold text-gray-900">Viajes Activos</h3>
         </div>
-        <p class="text-sm text-gray-600 ml-10">Itinerarios activos actualmente</p>
+        <p class="text-sm text-gray-600 ml-10">Viajes en curso y próximos a iniciar</p>
       </div>
       <button
         type="button"
@@ -58,13 +58,13 @@
           <!-- Información del progreso -->
           <div class="mt-3 flex items-center gap-4">
             <div class="flex items-center gap-2">
-              <Calendar class="w-4 h-4 text-gray-400" />
-              <span class="text-sm text-gray-600">{{ formatDate(viaje.fechaInicio) }}</span>
+              <Calendar class="w-4 h-4 text-orange-600" />
+              <span class="text-sm text-gray-600">{{ formatDate(viaje.fecha_inicio) }}</span>
             </div>
             <div class="flex items-center gap-2">
-              <Clock class="w-4 h-4 text-gray-400" />
+              <Clock class="w-4 h-4 text-orange-600" />
               <span class="text-sm text-gray-600">
-                {{ calcularDiasRestantes(viaje.fechaFin) }} días restantes
+                {{ calcularDiasRestantes(viaje.fecha_fin) }} días restantes
               </span>
             </div>
           </div>
@@ -73,12 +73,12 @@
           <div class="mt-2">
             <div class="flex justify-between text-xs text-gray-500 mb-1">
               <span>Progreso</span>
-              <span>{{ viaje.progreso }}%</span>
+              <span>{{ viaje.progreso_porcentaje }}%</span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-2">
               <div
                 class="bg-orange-500 h-2 rounded-full transition-all duration-300"
-                :style="{ width: viaje.progreso + '%' }"
+                :style="{ width: viaje.progreso_porcentaje + '%' }"
               ></div>
             </div>
           </div>
@@ -89,7 +89,7 @@
             class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
             :class="getEstadoClass(viaje.estado)"
           >
-            {{ viaje.estado }}
+            {{ formatEstado(viaje.estado) }}
           </span>
         </div>
       </div>
@@ -101,95 +101,91 @@
 import { ref, onMounted } from 'vue'
 import { Calendar, Clock, MapPin } from 'lucide-vue-next'
 
-// Interfaces
-interface ViajeEnCurso {
-  id: number
-  nombre: string
-  destino: string
-  fechaInicio: string
-  fechaFin: string
-  progreso: number
-  estado: 'En Curso' | 'Por Iniciar' | 'Finalizando'
-  cliente: string
-  presupuesto: number
+import { viajesService } from '@/services/viajes.service'
+
+interface Props {
+  maxItems?: number
 }
 
-// Estado reactivo
-const viajes = ref<ViajeEnCurso[]>([])
+interface ViajeCard {
+  id: string
+  nombre: string
+  destino: string
+  fecha_inicio: string | null
+  fecha_fin: string | null
+  progreso_porcentaje: number
+  estado: string | null
+}
+
+const props = defineProps<Props>()
+
+const viajes = ref<ViajeCard[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 
-// Props y emits
-defineProps<{
-  maxItems?: number
-}>()
-
-// const emit = defineEmits<{
-//   verTodos: []
-//   verDetalle: [viaje: ViajeEnCurso]
-// }>()
-
-// Datos mock - luego se conectará a Supabase
+// Conectado a Supabase
 const fetchViajesEnCurso = async () => {
   loading.value = true
   error.value = null
 
   try {
-    // Simular llamada a API
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    console.log('🔍 Cargando viajes en curso...')
 
-    viajes.value = [
-      {
-        id: 1,
-        nombre: 'Europa Express',
-        destino: 'París, Francia',
-        fechaInicio: '2025-01-15',
-        fechaFin: '2025-01-25',
-        progreso: 65,
-        estado: 'En Curso',
-        cliente: 'María González',
-        presupuesto: 3500,
-      },
-      {
-        id: 2,
-        nombre: 'Aventura Andina',
-        destino: 'Cusco, Perú',
-        fechaInicio: '2025-01-18',
-        fechaFin: '2025-01-28',
-        progreso: 30,
-        estado: 'En Curso',
-        cliente: 'Carlos Rodríguez',
-        presupuesto: 2200,
-      },
-      {
-        id: 3,
-        nombre: 'Caribe Premium',
-        destino: 'Cancún, México',
-        fechaInicio: '2025-01-20',
-        fechaFin: '2025-01-27',
-        progreso: 80,
-        estado: 'Finalizando',
-        cliente: 'Ana López',
-        presupuesto: 4200,
-      },
-    ]
+    // Primero intentar con getInProgress
+    const { data, error: serviceError } = await viajesService.getInProgress()
+
+    console.log('📊 Respuesta del servicio:', { data, serviceError })
+
+    if (serviceError) {
+      console.error('❌ Error del servicio:', serviceError)
+      error.value = serviceError
+      viajes.value = []
+      return
+    }
+
+    if (!data || data.length === 0) {
+      console.warn('⚠️ No se encontraron viajes en curso')
+      viajes.value = []
+      return
+    }
+
+    const ordered = (data || [])
+      .sort((a, b) => (a.fecha_inicio || '').localeCompare(b.fecha_inicio || ''))
+      .map((viaje) => {
+        console.log('🗺️ Procesando viaje:', viaje.nombre, 'Estado:', viaje.estado)
+        return {
+          id: viaje.id,
+          nombre: viaje.nombre,
+          destino: viaje.cotizacion?.nombre || viaje.descripcion || 'Sin destino definido',
+          fecha_inicio: viaje.fecha_inicio ?? null,
+          fecha_fin: viaje.fecha_fin ?? null,
+          progreso_porcentaje: viaje.progreso_porcentaje ?? 0,
+          estado: viaje.estado ?? null,
+        }
+      })
+
+    viajes.value = props.maxItems ? ordered.slice(0, props.maxItems) : ordered
+    console.log('✅ Viajes cargados:', viajes.value.length)
   } catch (err) {
     error.value = 'Error al cargar los viajes en curso'
-    console.error('Error fetching viajes en curso:', err)
+    console.error('❌ Error fetching viajes en curso:', err)
   } finally {
     loading.value = false
   }
 }
 
 // Funciones auxiliares
-const formatDate = (dateString: string) => {
+const formatDate = (dateString: string | null | undefined) => {
+  if (!dateString) return 'Sin fecha'
+
   return new Date(dateString).toLocaleDateString('es-ES', {
     day: 'numeric',
     month: 'short',
   })
 }
 
-const calcularDiasRestantes = (fechaFin: string) => {
+const calcularDiasRestantes = (fechaFin: string | null | undefined) => {
+  if (!fechaFin) return 0
   const hoy = new Date()
   const fin = new Date(fechaFin)
   const diffTime = fin.getTime() - hoy.getTime()
@@ -197,16 +193,29 @@ const calcularDiasRestantes = (fechaFin: string) => {
   return Math.max(0, diffDays)
 }
 
-const getEstadoClass = (estado: string) => {
+const getEstadoClass = (estado?: string | null) => {
   switch (estado) {
-    case 'En Curso':
+    case 'en_curso':
       return 'bg-orange-100 text-orange-800'
-    case 'Por Iniciar':
-      return 'bg-gray-100 text-gray-700'
-    case 'Finalizando':
-      return 'bg-gray-200 text-gray-800'
+    case 'por_iniciar':
+      return 'bg-amber-100 text-amber-700'
+    case 'finalizado':
+      return 'bg-emerald-100 text-emerald-800'
     default:
       return 'bg-gray-100 text-gray-700'
+  }
+}
+
+const formatEstado = (estado?: string | null) => {
+  switch (estado) {
+    case 'en_curso':
+      return 'En curso'
+    case 'por_iniciar':
+      return 'Por iniciar'
+    case 'finalizado':
+      return 'Finalizado'
+    default:
+      return 'Sin estado'
   }
 }
 

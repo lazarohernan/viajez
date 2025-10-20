@@ -64,13 +64,26 @@
               >
             </RouterLink>
           </li>
+          <li>
+            <RouterLink
+              to="/perfil"
+              class="flex items-center justify-center group-hover:justify-start px-0 group-hover:px-2 py-2 rounded-xl text-gray-700 hover:bg-orange-50 hover:text-orange-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-orange-200 gap-0 group-hover:gap-3"
+              :class="activeClass('/perfil')"
+            >
+              <User class="w-5 h-5 flex-shrink-0" />
+              <span
+                class="ml-0 group-hover:ml-3 text-sm font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 overflow-hidden w-0 max-w-0 group-hover:w-auto group-hover:max-w-[180px] transition-all duration-200"
+                >Perfil</span
+              >
+            </RouterLink>
+          </li>
         </ul>
       </nav>
 
       <div class="p-3 border-t border-gray-200">
         <button
           type="button"
-          @click="$router.push('/')"
+          @click="handleLogout"
           class="w-full flex items-center justify-center group-hover:justify-start px-0 group-hover:px-2 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl transition-all duration-200"
         >
           <LogOut class="w-5 h-5 flex-shrink-0" />
@@ -85,11 +98,20 @@
 </template>
 
 <script setup lang="ts">
-import { useRoute } from 'vue-router'
-import { Plane, LayoutDashboard, Users, MapPin, File, LogOut } from 'lucide-vue-next'
+import { useRoute, useRouter } from 'vue-router'
+import { Plane, LayoutDashboard, Users, MapPin, File, User, LogOut } from 'lucide-vue-next'
+import { useAuthStore } from '@/stores/auth'
+
 const route = useRoute()
+const router = useRouter()
+const authStore = useAuthStore()
 
 const isActive = (path: string) => route.path.startsWith(path)
 const activeClass = (path: string) =>
   isActive(path) ? 'bg-orange-50 text-orange-700 ring-1 ring-orange-100' : ''
+
+const handleLogout = async () => {
+  await authStore.logout()
+  router.push('/login')
+}
 </script>

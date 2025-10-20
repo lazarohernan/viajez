@@ -10,9 +10,9 @@
             </div>
             <div>
               <h1 class="text-2xl font-semibold text-gray-900">
-                {{ authStore.user?.nombre }} {{ authStore.user?.apellido }}
+                {{ authStore.user?.profile?.nombre }} {{ authStore.user?.profile?.apellido }}
               </h1>
-              <p class="text-gray-600">{{ authStore.user?.email }}</p>
+              <p class="text-gray-600">{{ authStore.user?.profile?.email }}</p>
             </div>
           </div>
           <button
