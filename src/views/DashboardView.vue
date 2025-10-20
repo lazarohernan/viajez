@@ -72,9 +72,9 @@ interface ViajeEnCurso {
 }
 
 interface VisaPorVencer {
-  id: number
+  id: string
   cliente: {
-    id: number
+    id: string
     nombre: string
     apellido: string
     email: string
@@ -89,9 +89,9 @@ interface VisaPorVencer {
 }
 
 interface Cumpleanos {
-  id: number
+  id: string
   cliente: {
-    id: number
+    id: string
     nombre: string
     apellido: string
     email: string
@@ -104,9 +104,9 @@ interface Cumpleanos {
 }
 
 interface PasaportePorVencer {
-  id: number
+  id: string
   cliente: {
-    id: number
+    id: string
     nombre: string
     apellido: string
     email: string
