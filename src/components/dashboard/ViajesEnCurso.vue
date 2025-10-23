@@ -328,12 +328,12 @@ const fetchViajesEnCurso = async () => {
   error.value = null
 
   try {
-    console.log('🔍 Cargando viajes en curso...')
+    // console.log('🔍 Cargando viajes en curso...')
 
     // Primero intentar con getInProgress
     const { data, error: serviceError } = await viajesService.getInProgress()
 
-    console.log('📊 Respuesta del servicio:', { data, serviceError })
+    // console.log('📊 Respuesta del servicio:', { data, serviceError })
 
     if (serviceError) {
       console.error('❌ Error del servicio:', serviceError)
@@ -351,7 +351,7 @@ const fetchViajesEnCurso = async () => {
     const ordered = (data || [])
       .sort((a, b) => (a.fecha_inicio || '').localeCompare(b.fecha_inicio || ''))
       .map((viaje) => {
-        console.log('🗺️ Procesando viaje:', viaje.nombre, 'Estado:', viaje.estado)
+        // console.log('🗺️ Procesando viaje:', viaje.nombre, 'Estado:', viaje.estado)
 
         // Procesar segmentos
         const segmentosInfo = procesarSegmentos(viaje)
@@ -370,7 +370,7 @@ const fetchViajesEnCurso = async () => {
       })
 
     viajes.value = props.maxItems ? ordered.slice(0, props.maxItems) : ordered
-    console.log('✅ Viajes cargados:', viajes.value.length)
+    // console.log('✅ Viajes cargados:', viajes.value.length)
   } catch (err) {
     error.value = 'Error al cargar los viajes en curso'
     console.error('❌ Error fetching viajes en curso:', err)

@@ -195,7 +195,7 @@ const formData = ref({
   observaciones: (props.initialData?.observaciones as string) || '',
 })
 
-console.log('🏨 HospedajeForm inicializado con datos:', {
+// console.log('🏨 HospedajeForm inicializado con datos:', {
   initialData: props.initialData,
   formData: formData.value,
 })
@@ -216,8 +216,8 @@ watch(
         | Record<string, unknown>[]
         | undefined
 
-      console.log('🔄 HospedajeForm recibiendo initialData:', JSON.stringify(newData, null, 2))
-      console.log('🏨 segmento_hospedaje RAW:', JSON.stringify(segmentoHospedajeRaw, null, 2))
+      // console.log('🔄 HospedajeForm recibiendo initialData:', JSON.stringify(newData, null, 2))
+      // console.log('🏨 segmento_hospedaje RAW:', JSON.stringify(segmentoHospedajeRaw, null, 2))
 
       // Si viene como array, tomar el primer elemento
       let segmentoHospedaje: Record<string, unknown> | undefined = undefined
@@ -249,10 +249,10 @@ watch(
           formData.value.proveedor = 'otro'
           proveedorPersonalizado.value = proveedor
         }
-        console.log('🏨 Hotel seleccionado en dropdown:', proveedor)
+        // console.log('🏨 Hotel seleccionado en dropdown:', proveedor)
       }
 
-      console.log(
+      // console.log(
         '✅ HospedajeForm actualizado con nuevos datos:',
         JSON.stringify(formData.value, null, 2),
       )

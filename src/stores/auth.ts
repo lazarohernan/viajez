@@ -108,7 +108,7 @@ export const useAuthStore = defineStore('auth', () => {
       const {
         data: { subscription },
       } = authService.onAuthStateChange(async (event, newSession) => {
-        console.log('Auth state changed:', event, newSession)
+        // console.log('Auth state changed:', event, newSession)
 
         session.value = newSession
 

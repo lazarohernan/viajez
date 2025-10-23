@@ -462,8 +462,8 @@ const viajesFinalizados = computed(() => {
 // Cargar viajes del usuario desde Supabase
 const cargarViajes = async () => {
   if (!authStore.user?.profile?.id) {
-    console.log('❌ No hay usuario logueado')
-    console.log('📊 Estado del authStore:', {
+    // console.log('❌ No hay usuario logueado')
+    // console.log('📊 Estado del authStore:', {
       isAuthenticated: authStore.isAuthenticated,
       user: authStore.user,
       profile: authStore.user?.profile,
@@ -473,8 +473,8 @@ const cargarViajes = async () => {
 
   loading.value = true
   const userId = authStore.user.profile.id
-  console.log('🔄 Cargando viajes del usuario:', userId)
-  console.log('📊 Información del usuario:', {
+  // console.log('🔄 Cargando viajes del usuario:', userId)
+  // console.log('📊 Información del usuario:', {
     id: userId,
     email: authStore.user.email,
     identidad: authStore.user.profile.identidad,
@@ -487,9 +487,9 @@ const cargarViajes = async () => {
     if (result.error) {
       console.error('❌ Error cargando viajes:', result.error)
     } else {
-      console.log('📦 Viajes recibidos de Supabase:', result.data?.length || 0)
+      // console.log('📦 Viajes recibidos de Supabase:', result.data?.length || 0)
       if (result.data && result.data.length > 0) {
-        console.log(
+        // console.log(
           '📋 Detalle de viajes:',
           result.data.map((v) => ({ id: v.id, nombre: v.nombre })),
         )
@@ -497,7 +497,7 @@ const cargarViajes = async () => {
 
       // Transformar los viajes de Supabase al formato de la UI
       viajes.value = (result.data || []).map(transformarViaje)
-      console.log('✅ Viajes cargados y transformados:', viajes.value.length)
+      // console.log('✅ Viajes cargados y transformados:', viajes.value.length)
     }
   } catch (error) {
     console.error('❌ Error al cargar viajes:', error)
@@ -573,27 +573,27 @@ const verDetalleViaje = (viaje: ViajeUI) => {
 
 // Verificar si el usuario está activo
 const verificarUsuarioActivo = async () => {
-  console.log('🔍 Verificando usuario activo:', authStore.user)
+  // console.log('🔍 Verificando usuario activo:', authStore.user)
 
   // Refrescar la sesión para obtener la información más actualizada
   await authStore.refreshSession()
 
   if (!authStore.user) {
-    console.log('❌ No hay usuario logueado')
+    // console.log('❌ No hay usuario logueado')
     router.push('/login-viajero')
     return false
   }
 
   // Verificar si el usuario tiene un perfil y está activo
   if (authStore.user.profile && authStore.user.profile.activo === false) {
-    console.log('❌ Usuario desactivado, redirigiendo al login')
+    // console.log('❌ Usuario desactivado, redirigiendo al login')
     alert('Tu cuenta ha sido desactivada. Contacta al administrador.')
     authStore.logout()
     router.push('/login-viajero')
     return false
   }
 
-  console.log('✅ Usuario activo')
+  // console.log('✅ Usuario activo')
   return true
 }
 
@@ -604,7 +604,7 @@ const logout = () => {
 
 // Verificar estado del usuario al montar el componente
 onMounted(async () => {
-  console.log('🚀 ClientViajesView montado')
+  // console.log('🚀 ClientViajesView montado')
   await verificarUsuarioActivo()
 
   // Cargar viajes del usuario
@@ -613,7 +613,7 @@ onMounted(async () => {
   // Verificar estado del usuario cada 30 segundos
   statusCheckInterval = window.setInterval(async () => {
     if (authStore.isAuthenticated) {
-      console.log('🔄 Verificación periódica del estado del usuario')
+      // console.log('🔄 Verificación periódica del estado del usuario')
       await verificarUsuarioActivo()
     }
   }, 30000) // 30 segundos
@@ -631,24 +631,24 @@ onUnmounted(() => {
 watch(
   () => authStore.user,
   async (nuevoUsuario, usuarioAnterior) => {
-    console.log('👀 Usuario cambió:', nuevoUsuario)
+    // console.log('👀 Usuario cambió:', nuevoUsuario)
 
     // Si no hay usuario, redirigir
     if (!nuevoUsuario) {
-      console.log('❌ Usuario se deslogueó')
+      // console.log('❌ Usuario se deslogueó')
       router.push('/login-viajero')
       return
     }
 
     // Si el usuario cambió o si es la primera vez, refrescar la sesión
     if (!usuarioAnterior || nuevoUsuario.id !== usuarioAnterior.id) {
-      console.log('🔄 Refrescando sesión por cambio de usuario')
+      // console.log('🔄 Refrescando sesión por cambio de usuario')
       await authStore.refreshSession()
     }
 
     // Verificar si el usuario fue desactivado
     if (nuevoUsuario.profile && nuevoUsuario.profile.activo === false) {
-      console.log('❌ Usuario fue desactivado')
+      // console.log('❌ Usuario fue desactivado')
       alert('Tu cuenta ha sido desactivada. Contacta al administrador.')
       authStore.logout()
       router.push('/login-viajero')

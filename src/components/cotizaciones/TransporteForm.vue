@@ -364,7 +364,7 @@ const formData = ref({
   observaciones: (props.initialData?.observaciones as string) || '',
 })
 
-console.log('🎯 TransporteForm inicializado con datos:', {
+// console.log('🎯 TransporteForm inicializado con datos:', {
   initialData: props.initialData,
   formData: formData.value,
 })
@@ -385,16 +385,16 @@ watch(
         | Record<string, unknown>[]
         | undefined
 
-      console.log('🔄 TransporteForm recibiendo initialData:', JSON.stringify(newData, null, 2))
-      console.log('🚗 segmento_transporte RAW:', JSON.stringify(segmentoTransporteRaw, null, 2))
-      console.log('🚗 segmento_transporte TYPE:', typeof segmentoTransporteRaw)
-      console.log('🚗 segmento_transporte IS ARRAY:', Array.isArray(segmentoTransporteRaw))
+      // console.log('🔄 TransporteForm recibiendo initialData:', JSON.stringify(newData, null, 2))
+      // console.log('🚗 segmento_transporte RAW:', JSON.stringify(segmentoTransporteRaw, null, 2))
+      // console.log('🚗 segmento_transporte TYPE:', typeof segmentoTransporteRaw)
+      // console.log('🚗 segmento_transporte IS ARRAY:', Array.isArray(segmentoTransporteRaw))
 
       // Si viene como array, tomar el primer elemento
       let segmentoTransporte: Record<string, unknown> | undefined = undefined
       if (Array.isArray(segmentoTransporteRaw) && segmentoTransporteRaw.length > 0) {
         segmentoTransporte = segmentoTransporteRaw[0]
-        console.log(
+        // console.log(
           '🚗 segmento_transporte después de tomar [0]:',
           JSON.stringify(segmentoTransporte, null, 2),
         )
@@ -408,7 +408,7 @@ watch(
       const destino = (segmentoTransporte?.destino as string) || ''
       const tieneRetorno = (segmentoTransporte?.tiene_retorno as boolean) !== false
 
-      console.log('📦 Datos extraídos:', {
+      // console.log('📦 Datos extraídos:', {
         tipo,
         proveedor,
         origen,
@@ -432,15 +432,15 @@ watch(
       // Actualizar también proveedorSeleccionado para que el dropdown muestre la aerolínea
       if (proveedor && tipo === 'aereo') {
         proveedorSeleccionado.value = proveedor
-        console.log('✈️ Aerolínea seleccionada en dropdown:', proveedor)
+        // console.log('✈️ Aerolínea seleccionada en dropdown:', proveedor)
       }
 
-      console.log(
+      // console.log(
         '✅ TransporteForm actualizado con nuevos datos:',
         JSON.stringify(formData.value, null, 2),
       )
     } else {
-      console.log('❌ TransporteForm recibió initialData null/undefined')
+      // console.log('❌ TransporteForm recibió initialData null/undefined')
     }
   },
   { immediate: true },

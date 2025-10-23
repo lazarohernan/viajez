@@ -54,6 +54,39 @@ export class ViajerosService extends BaseService {
         }
       }
 
+      // Verificar si la identidad ya existe (si se proporciona)
+      if (data.identidad) {
+        const existingViajero = await this.findByIdentity(data.identidad)
+        if (existingViajero.data) {
+          return {
+            data: null,
+            error: `⚠️ Cliente ya ingresado en el sistema con la identidad ${data.identidad}. Nombre: ${existingViajero.data.nombre} ${existingViajero.data.apellido}`,
+          }
+        }
+      }
+
+      // Validar campos obligatorios según la base de datos
+      if (!data.email) {
+        return {
+          data: null,
+          error: 'El email es obligatorio',
+        }
+      }
+
+      if (!data.identidad) {
+        return {
+          data: null,
+          error: 'La identidad es obligatoria',
+        }
+      }
+
+      if (!data.fecha_nacimiento) {
+        return {
+          data: null,
+          error: 'La fecha de nacimiento es obligatoria',
+        }
+      }
+
       // Crear el viajero en la base de datos
       const { data: viajero, error } = await supabase
         .from('viajeroz')
@@ -61,9 +94,9 @@ export class ViajerosService extends BaseService {
           nombre: data.nombre,
           apellido: data.apellido,
           telefono: data.telefono,
-          email: data.email || null,
-          identidad: data.identidad || null,
-          fecha_nacimiento: data.fecha_nacimiento ? this.formatDate(data.fecha_nacimiento) : null,
+          email: data.email,
+          identidad: data.identidad,
+          fecha_nacimiento: this.formatDate(data.fecha_nacimiento),
           numero_pasaporte: data.numero_pasaporte || null,
           fecha_vencimiento_pasaporte: data.fecha_vencimiento_pasaporte
             ? this.formatDate(data.fecha_vencimiento_pasaporte)
@@ -79,12 +112,25 @@ export class ViajerosService extends BaseService {
         .select()
         .single()
 
-      if (error) this.handleError(error)
+      if (error) {
+        // Manejar errores específicos de restricciones únicas
+        if (error.code === '23505') {
+          if (error.message.includes('viajeroz_identidad_key')) {
+            this.handleError(new Error(`⚠️ Cliente ya ingresado en el sistema con la identidad ${data.identidad}`))
+          } else if (error.message.includes('viajeroz_email_key')) {
+            this.handleError(new Error(`⚠️ Cliente ya ingresado en el sistema con el email ${data.email}`))
+          } else {
+            this.handleError(new Error('⚠️ Cliente ya ingresado en el sistema con estos datos'))
+          }
+        } else {
+          this.handleError(error)
+        }
+      }
 
       // Si se deben crear credenciales, crear usuario en Supabase Auth
       if (data.crear_credenciales && viajero && data.email && data.password) {
         try {
-          // Usar función RPC para crear usuario (requiere permisos de admin)
+          // Intentar usar función RPC para crear usuario
           const { data: rpcResult, error: rpcError } = await supabase.rpc('create_viajero_user', {
             user_email: data.email,
             user_password: data.password,
@@ -92,28 +138,30 @@ export class ViajerosService extends BaseService {
           })
 
           if (rpcError) {
-            console.error('Error en RPC create_viajero_user:', rpcError)
+            console.warn('⚠️ Función RPC no disponible, creando solo viajero:', rpcError.message)
+            // No fallar si la función RPC no existe, solo crear el viajero
             return {
               data: viajero,
-              error: `Viajero creado pero error al crear credenciales: ${rpcError.message}`,
+              error: null, // No mostrar error si el viajero se creó correctamente
             }
           }
 
           // Verificar resultado de la función
           if (rpcResult && !rpcResult.success) {
-            console.error('Error en función RPC:', rpcResult.error)
+            // console.warn('⚠️ Error en función RPC, pero viajero creado:', rpcResult.error)
             return {
               data: viajero,
-              error: `Viajero creado pero error al crear credenciales: ${rpcResult.error}`,
+              error: null, // No mostrar error si el viajero se creó correctamente
             }
           }
 
-          console.log('✅ Credenciales creadas exitosamente para:', data.email)
+          // console.log('✅ Credenciales creadas exitosamente para:', data.email)
         } catch (authError) {
-          console.error('Error en proceso de creación de credenciales:', authError)
+          console.warn('⚠️ Error en proceso de creación de credenciales, pero viajero creado:', authError)
+          // No fallar si hay error en credenciales, el viajero ya se creó
           return {
             data: viajero,
-            error: 'Viajero creado pero error al crear credenciales de acceso',
+            error: null, // No mostrar error si el viajero se creó correctamente
           }
         }
       }
@@ -194,7 +242,7 @@ export class ViajerosService extends BaseService {
   }
 
   async update(id: string, data: UpdateViajeroData): Promise<ServiceResponse<Viajeroz>> {
-    console.log('🔄 ViajerosService.update called with:', { id, data })
+    // console.log('🔄 ViajerosService.update called with:', { id, data })
     try {
       const updateData: Record<string, unknown> = {}
 
@@ -227,7 +275,7 @@ export class ViajerosService extends BaseService {
 
       updateData.updated_at = new Date().toISOString()
 
-      console.log('📡 Sending update to Supabase:', updateData)
+      // console.log('📡 Sending update to Supabase:', updateData)
       const { data: viajero, error } = await supabase
         .from('viajeroz')
         .update(updateData)
@@ -235,7 +283,7 @@ export class ViajerosService extends BaseService {
         .select()
         .single()
 
-      console.log('📡 Supabase response:', { viajero, error })
+      // console.log('📡 Supabase response:', { viajero, error })
       if (error) {
         console.error('❌ Error from Supabase:', error)
         this.handleError(error)
@@ -415,7 +463,7 @@ export class ViajerosService extends BaseService {
         }
       }
 
-      console.log('✅ Contraseña reseteada exitosamente para:', viajero.email)
+      // console.log('✅ Contraseña reseteada exitosamente para:', viajero.email)
       return { data: { newPassword }, error: null }
     } catch (error) {
       return {

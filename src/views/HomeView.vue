@@ -67,17 +67,17 @@ const loginViajero = async () => {
     })
 
     if (result.success) {
-      console.log('Login exitoso, verificando estado del usuario')
+      // console.log('Login exitoso, verificando estado del usuario')
 
       // Verificar si el usuario está activo
       if (authStore.user?.profile && authStore.user.profile.activo === false) {
-        console.log('❌ Usuario desactivado, bloqueando acceso')
+        // console.log('❌ Usuario desactivado, bloqueando acceso')
         loginError.value = 'Tu cuenta ha sido desactivada. Contacta al administrador.'
         await authStore.logout()
         return
       }
 
-      console.log('✅ Usuario activo, redirigiendo a viajes del cliente')
+      // console.log('✅ Usuario activo, redirigiendo a viajes del cliente')
       closeLoginModal()
       router.push('/cliente/viajes')
     } else {

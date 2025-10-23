@@ -226,7 +226,7 @@ export class ViajesService extends BaseService {
    */
   async getById(id: string): Promise<ServiceResponse<ViajeWithDetails>> {
     try {
-      console.log(`🚀 Ejecutando consulta optimizada getById() para viaje: ${id}`)
+      // console.log(`🚀 Ejecutando consulta optimizada getById() para viaje: ${id}`)
 
       const { data: viaje, error: viajeError } = await supabase
         .from('viajes')
@@ -251,7 +251,7 @@ export class ViajesService extends BaseService {
 
       if (viajeError) this.handleError(viajeError)
 
-      console.log('📦 Consulta ejecutada exitosamente, procesando resultados...')
+      // console.log('📦 Consulta ejecutada exitosamente, procesando resultados...')
 
       const viajeWithDetails: ViajeWithDetails = {
         ...viaje,
@@ -261,7 +261,7 @@ export class ViajesService extends BaseService {
           [],
       }
 
-      console.log(`✅ Optimización completada: viaje ${viaje.nombre} obtenido en 1 consulta`)
+      // console.log(`✅ Optimización completada: viaje ${viaje.nombre} obtenido en 1 consulta`)
 
       return { data: viajeWithDetails, error: null }
     } catch (error) {
@@ -521,11 +521,11 @@ export class ViajesService extends BaseService {
       const cacheKey = 'viajes_in_progress'
       const cached = viajesCache.get<ViajeWithDetails[]>(cacheKey)
       if (cached) {
-        console.log('🚀 Datos obtenidos desde caché')
+        // console.log('🚀 Datos obtenidos desde caché')
         return { data: cached, error: null }
       }
 
-      console.log('🚀 Ejecutando consulta optimizada getInProgress()')
+      // console.log('🚀 Ejecutando consulta optimizada getInProgress()')
 
       const { data, error } = await supabase
         .from('viajes')
@@ -549,7 +549,7 @@ export class ViajesService extends BaseService {
 
       if (error) this.handleError(error)
 
-      console.log('📦 Consulta ejecutada exitosamente, procesando resultados...')
+      // console.log('📦 Consulta ejecutada exitosamente, procesando resultados...')
 
       // Transformar los datos para el formato esperado
       const viajesWithDetails: ViajeWithDetails[] = (data || []).map(
@@ -565,7 +565,7 @@ export class ViajesService extends BaseService {
       // Guardar en caché por 2 minutos
       viajesCache.set(cacheKey, viajesWithDetails, 2 * 60 * 1000)
 
-      console.log(
+      // console.log(
         `✅ Optimización completada: ${viajesWithDetails.length} viajes obtenidos en 1 consulta`,
       )
 
@@ -619,7 +619,7 @@ export class ViajesService extends BaseService {
    */
   async getViajesByViajero(viajeroId: string): Promise<ServiceResponse<ViajeWithDetails[]>> {
     try {
-      console.log('🔍 Obteniendo viajes para viajero (optimizado):', viajeroId)
+      // console.log('🔍 Obteniendo viajes para viajero (optimizado):', viajeroId)
 
       // Consulta optimizada que obtiene todos los viajes del viajero en una sola operación
       const { data, error } = await supabase
@@ -644,7 +644,7 @@ export class ViajesService extends BaseService {
 
       if (error) this.handleError(error)
 
-      console.log('📦 Consulta ejecutada exitosamente, procesando resultados...')
+      // console.log('📦 Consulta ejecutada exitosamente, procesando resultados...')
 
       // Transformar los datos para el formato esperado
       const viajesWithDetails: ViajeWithDetails[] = (data || []).map(
@@ -655,7 +655,7 @@ export class ViajesService extends BaseService {
         }),
       )
 
-      console.log('✅ Viajes obtenidos:', viajesWithDetails.length)
+      // console.log('✅ Viajes obtenidos:', viajesWithDetails.length)
       return { data: viajesWithDetails, error: null }
     } catch (error) {
       console.error('❌ Error obteniendo viajes del viajero:', error)

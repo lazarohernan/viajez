@@ -73,7 +73,7 @@ export class AuthService extends BaseService {
       let userId: string
 
       if (isViajeroLogin && credentials.identidad) {
-        console.log('Intentando login de viajero con DNI:', credentials.identidad)
+        // console.log('Intentando login de viajero con DNI:', credentials.identidad)
 
         // Buscar viajero por identidad
         const { data: viajero, error: viajeroError } = await supabase
@@ -82,11 +82,11 @@ export class AuthService extends BaseService {
           .eq('identidad', credentials.identidad)
           .maybeSingle()
 
-        console.log('Resultado búsqueda viajero:', {
-          viajero,
-          viajeroError,
-          identidadBuscada: credentials.identidad,
-        })
+        // console.log('Resultado búsqueda viajero:', {
+        //   viajero,
+        //   viajeroError,
+        //   identidadBuscada: credentials.identidad,
+        // })
 
         if (viajeroError || !viajero) {
           console.error('Error en búsqueda de viajero:', viajeroError)
@@ -96,7 +96,7 @@ export class AuthService extends BaseService {
           }
         }
 
-        console.log('Viajero encontrado:', viajero.email, 'con ID:', viajero.id)
+        // console.log('Viajero encontrado:', viajero.email, 'con ID:', viajero.id)
 
         // Intentar login con el email asociado al viajero
         const { data, error } = await supabase.auth.signInWithPassword({
@@ -113,7 +113,7 @@ export class AuthService extends BaseService {
         userId = data.user.id
       } else if (isAdminLogin && credentials.email) {
         // Login de administrador con email/password
-        console.log('Intentando login de administrador con email...')
+        // console.log('Intentando login de administrador con email...')
         const { data, error } = await supabase.auth.signInWithPassword({
           email: credentials.email,
           password: credentials.password,
@@ -133,7 +133,7 @@ export class AuthService extends BaseService {
         }
       }
 
-      console.log('Login exitoso en Supabase Auth, usuario:', authData.user.email)
+      // console.log('Login exitoso en Supabase Auth, usuario:', authData.user.email)
 
       // Verificar el rol desde user_roles
       const { data: roleData, error: roleError } = await supabase
@@ -142,11 +142,11 @@ export class AuthService extends BaseService {
         .eq('user_id', userId)
         .maybeSingle()
 
-      console.log('Role data:', roleData, 'Role error:', roleError)
+      // console.log('Role data:', roleData, 'Role error:', roleError)
 
       // 🔧 TEMPORAL: Si no hay rol asignado, verificar si es el primer usuario (admin)
       if (!roleData) {
-        console.log('Usuario sin rol asignado, contactar administrador')
+        // console.log('Usuario sin rol asignado, contactar administrador')
         await supabase.auth.signOut()
         return { data: null, error: 'Usuario sin rol asignado. Contacta al administrador.' }
       }
@@ -161,7 +161,7 @@ export class AuthService extends BaseService {
           .eq('id', userId)
           .maybeSingle()
 
-        console.log('Admin data:', adminData, 'Admin error:', adminError)
+        // console.log('Admin data:', adminData, 'Admin error:', adminError)
 
         authUser = Object.assign({}, authData.user, {
           adminProfile: adminData || undefined,
@@ -175,7 +175,7 @@ export class AuthService extends BaseService {
           .eq('id', roleData.viajero_id)
           .maybeSingle()
 
-        console.log('Viajero data:', viajeroData, 'Viajero error:', viajeroError)
+        // console.log('Viajero data:', viajeroData, 'Viajero error:', viajeroError)
 
         authUser = Object.assign({}, authData.user, {
           profile: viajeroData || undefined,
@@ -186,7 +186,7 @@ export class AuthService extends BaseService {
         return { data: null, error: 'Rol de usuario no reconocido.' }
       }
 
-      console.log('AuthUser creado:', authUser.email, 'isAdmin:', authUser.isAdmin)
+      // console.log('AuthUser creado:', authUser.email, 'isAdmin:', authUser.isAdmin)
 
       return { data: authUser, error: null }
     } catch (error) {

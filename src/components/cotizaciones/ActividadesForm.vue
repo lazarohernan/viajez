@@ -185,7 +185,7 @@ const formData = ref({
   observaciones: '',
 })
 
-console.log('🎭 ActividadesForm inicializado con datos:', {
+// console.log('🎭 ActividadesForm inicializado con datos:', {
   initialData: props.initialData,
   formData: formData.value,
 })
@@ -201,8 +201,8 @@ watch(
         | Record<string, unknown>[]
         | undefined
 
-      console.log('🔄 ActividadesForm recibiendo initialData:', JSON.stringify(newData, null, 2))
-      console.log('🎭 segmento_actividad RAW:', JSON.stringify(segmentoActividadRaw, null, 2))
+      // console.log('🔄 ActividadesForm recibiendo initialData:', JSON.stringify(newData, null, 2))
+      // console.log('🎭 segmento_actividad RAW:', JSON.stringify(segmentoActividadRaw, null, 2))
 
       // Si viene como array, tomar el primer elemento
       let segmentoActividad: Record<string, unknown> | undefined = undefined
@@ -212,14 +212,14 @@ watch(
         segmentoActividad = segmentoActividadRaw
       }
 
-      console.log('🎭 duracion_horas raw:', segmentoActividad?.duracion_horas)
-      console.log('🎭 duracion_horas type:', typeof segmentoActividad?.duracion_horas)
+      // console.log('🎭 duracion_horas raw:', segmentoActividad?.duracion_horas)
+      // console.log('🎭 duracion_horas type:', typeof segmentoActividad?.duracion_horas)
 
       const duracionHorasValue = segmentoActividad?.duracion_horas
         ? Number(segmentoActividad.duracion_horas)
         : 0
 
-      console.log('🎭 duracionHorasValue convertido:', duracionHorasValue)
+      // console.log('🎭 duracionHorasValue convertido:', duracionHorasValue)
 
       formData.value = {
         nombre: (newData.nombre as string) || '',
@@ -230,13 +230,13 @@ watch(
         duracionHoras: duracionHorasValue,
         observaciones: (newData.observaciones as string) || '',
       }
-      console.log(
+      // console.log(
         '✅ ActividadesForm actualizado con nuevos datos:',
         JSON.stringify(formData.value, null, 2),
       )
-      console.log('✅ duracionHoras final:', formData.value.duracionHoras)
+      // console.log('✅ duracionHoras final:', formData.value.duracionHoras)
     } else {
-      console.log('❌ ActividadesForm recibió initialData null/undefined')
+      // console.log('❌ ActividadesForm recibió initialData null/undefined')
     }
   },
   { immediate: true },

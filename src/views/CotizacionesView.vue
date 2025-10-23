@@ -304,7 +304,7 @@ const closeForm = () => {
 
 const handleFormSubmit = async (data: Record<string, unknown>) => {
   try {
-    console.log('📥 Datos recibidos del formulario:', data)
+    // console.log('📥 Datos recibidos del formulario:', data)
 
     // Crear cotización si no existe
     if (!cotizacionActual.value) {
@@ -312,7 +312,7 @@ const handleFormSubmit = async (data: Record<string, unknown>) => {
         nombre: `Cotización ${new Date().toLocaleDateString('es-ES')}`,
         estado: 'borrador',
       })
-      console.log('✅ Cotización creada:', cotizacionActual.value)
+      // console.log('✅ Cotización creada:', cotizacionActual.value)
     }
 
     // Determinar el tipo de segmento basado en selectedSegment
@@ -348,7 +348,7 @@ const handleFormSubmit = async (data: Record<string, unknown>) => {
       cotizacion_id: cotizacionActual.value.id,
     }
 
-    console.log('📦 Datos del segmento preparados:', segmentoData)
+    // console.log('📦 Datos del segmento preparados:', segmentoData)
 
     // Preparar datos específicos según el tipo
     const createData: CreateSegmentoData = {
@@ -384,7 +384,7 @@ const handleFormSubmit = async (data: Record<string, unknown>) => {
 
     if (editandoSegmento.value) {
       // Actualizar segmento existente
-      console.log('📝 Actualizando segmento:', editandoSegmento.value.id)
+      // console.log('📝 Actualizando segmento:', editandoSegmento.value.id)
       const result = (await segmentosService.update(
         editandoSegmento.value.id,
         createData,
@@ -399,7 +399,7 @@ const handleFormSubmit = async (data: Record<string, unknown>) => {
       alert('Segmento actualizado correctamente')
     } else {
       // Crear nuevo segmento
-      console.log('✨ Creando nuevo segmento')
+      // console.log('✨ Creando nuevo segmento')
       const result = (await segmentosService.create(
         createData,
       )) as ServiceResponse<SegmentoWithDetails>
@@ -409,7 +409,7 @@ const handleFormSubmit = async (data: Record<string, unknown>) => {
       }
 
       segmentosAgregados.value.push(result.data as Segmento)
-      console.log('✅ Segmento creado:', result.data)
+      // console.log('✅ Segmento creado:', result.data)
       alert('Segmento agregado. Puedes agregar más o guardar la cotización completa.')
     }
 
@@ -538,7 +538,7 @@ const editCotizacion = async (row: CotizacionRow) => {
     cotizacionActual.value = cotizacion
     segmentosAgregados.value = cotizacion.segmentos || []
 
-    console.log('Cotización cargada para edición:', cotizacion)
+    // console.log('Cotización cargada para edición:', cotizacion)
     alert(`Cotización "${cotizacion.nombre}" cargada para edición`)
   } catch (error) {
     console.error('Error al cargar cotización:', error)
@@ -580,12 +580,12 @@ const eliminarCotizacion = async (row: CotizacionRow) => {
   }
 
   try {
-    console.log('🗑️ Eliminando cotización:', row.id)
+    // console.log('🗑️ Eliminando cotización:', row.id)
 
     // Eliminar la cotización (los segmentos se eliminarán en cascada si está configurado)
     await cotizacionesService.delete(row.id)
 
-    console.log('✅ Cotización eliminada')
+    // console.log('✅ Cotización eliminada')
     alert('Cotización eliminada correctamente')
 
     // Recargar la tabla

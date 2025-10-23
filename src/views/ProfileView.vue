@@ -93,7 +93,7 @@ const profile = ref({
 // Save profile function
 const saveProfile = () => {
   // Aquí iría la lógica para guardar en Supabase
-  console.log('Guardando perfil:', profile.value)
+  // console.log('Guardando perfil:', profile.value)
   alert('Perfil guardado exitosamente')
 }
 </script>

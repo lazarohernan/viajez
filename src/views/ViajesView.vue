@@ -536,7 +536,7 @@ const edit = async (row: Viaje) => {
       if (viajerosError) throw viajerosError
 
       selectedClients.value = viajerosData || []
-      console.log('✅ Viajeros cargados:', selectedClients.value.length)
+      // console.log('✅ Viajeros cargados:', selectedClients.value.length)
     } else {
       selectedClients.value = []
     }
@@ -564,7 +564,7 @@ const edit = async (row: Viaje) => {
 const viajeFormRef = ref<InstanceType<typeof ViajeForm> | null>(null)
 const submitViaje = async () => {
   try {
-    console.log('🚀 Iniciando submitViaje...')
+    // console.log('🚀 Iniciando submitViaje...')
 
     // Invoca el submit del formulario interno
     const formData = viajeFormRef.value?.submit?.() as
@@ -576,7 +576,7 @@ const submitViaje = async () => {
         }
       | undefined
 
-    console.log('📝 Datos del formulario:', formData)
+    // console.log('📝 Datos del formulario:', formData)
 
     if (!formData) {
       console.error('❌ No se pudo obtener datos del formulario')
@@ -593,30 +593,30 @@ const submitViaje = async () => {
       progreso_porcentaje: 0,
     }
 
-    console.log('📦 Payload para Supabase:', payload)
-    console.log('👥 Clientes seleccionados:', selectedClients.value.length)
+    // console.log('📦 Payload para Supabase:', payload)
+    // console.log('👥 Clientes seleccionados:', selectedClients.value.length)
 
     if (isEditing.value && editingDataRaw.value) {
-      console.log('✏️ Actualizando viaje existente...')
+      // console.log('✏️ Actualizando viaje existente...')
       const result = await viajesService.update(editingDataRaw.value.id, payload)
       if (result.error) throw new Error(result.error)
       await syncSelectedClients(editingDataRaw.value.id)
       alert('Viaje actualizado correctamente')
     } else {
-      console.log('➕ Creando nuevo viaje...')
+      // console.log('➕ Creando nuevo viaje...')
       const result = await viajesService.create(payload)
-      console.log('✅ Resultado de creación:', result)
+      // console.log('✅ Resultado de creación:', result)
 
       if (result.error || !result.data) {
         throw new Error(result.error || 'No se pudo crear el viaje')
       }
 
-      console.log('🔗 Sincronizando clientes...')
+      // console.log('🔗 Sincronizando clientes...')
       await syncSelectedClients(result.data.id)
       alert('Viaje creado correctamente')
     }
 
-    console.log('🔄 Recargando lista de viajes...')
+    // console.log('🔄 Recargando lista de viajes...')
     await loadViajes()
     closeForm()
   } catch (error) {
@@ -695,11 +695,11 @@ const deleteTrip = async (row: Viaje) => {
 
 const syncSelectedClients = async (viajeId: string) => {
   if (!selectedClients.value.length) {
-    console.log('⚠️ No hay clientes seleccionados para sincronizar')
+    // console.log('⚠️ No hay clientes seleccionados para sincronizar')
     return
   }
 
-  console.log(`🔗 Sincronizando ${selectedClients.value.length} cliente(s) con viaje ${viajeId}`)
+  // console.log(`🔗 Sincronizando ${selectedClients.value.length} cliente(s) con viaje ${viajeId}`)
 
   // Eliminar relaciones existentes
   const { error: deleteError } = await supabase
@@ -718,7 +718,7 @@ const syncSelectedClients = async (viajeId: string) => {
     viajero_id: viajero.id,
   }))
 
-  console.log('📝 Insertando relaciones:', inserts)
+  // console.log('📝 Insertando relaciones:', inserts)
 
   const { data, error: insertError } = await supabase
     .from('viaje_viajeroz')
@@ -730,6 +730,6 @@ const syncSelectedClients = async (viajeId: string) => {
     throw insertError
   }
 
-  console.log('✅ Relaciones sincronizadas correctamente:', data)
+  // console.log('✅ Relaciones sincronizadas correctamente:', data)
 }
 </script>

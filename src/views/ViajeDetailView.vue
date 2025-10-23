@@ -573,7 +573,7 @@ const actividadesFormRef = ref()
 
 // Cargar datos al montar
 onMounted(async () => {
-  console.log('🚀 ViajeDetailView montado con ID:', viajeId.value)
+  // console.log('🚀 ViajeDetailView montado con ID:', viajeId.value)
   await loadViaje()
 })
 
@@ -588,16 +588,16 @@ watch(showImportCotizacion, (newValue) => {
 const loadViaje = async () => {
   try {
     if (!viajeId.value) {
-      console.log('❌ No hay viajeId definido')
+      // console.log('❌ No hay viajeId definido')
       return
     }
 
-    console.log('🔄 Cargando viaje con ID:', viajeId.value)
+    // console.log('🔄 Cargando viaje con ID:', viajeId.value)
 
     // Cargar viaje con segmentos
     const viajeData = await viajesService.getById(viajeId.value)
-    console.log('📦 Datos del viaje obtenidos:', viajeData)
-    console.log('📋 Segmentos encontrados:', viajeData.segmentos?.length || 0)
+    // console.log('📦 Datos del viaje obtenidos:', viajeData)
+    // console.log('📋 Segmentos encontrados:', viajeData.segmentos?.length || 0)
 
     viaje.value = viajeData
     segmentos.value = viajeData.segmentos
@@ -608,7 +608,7 @@ const loadViaje = async () => {
     // Cargar documentos por segmento
     await loadDocumentosSegmentos()
 
-    console.log('✅ Viaje cargado exitosamente:', {
+    // console.log('✅ Viaje cargado exitosamente:', {
       nombre: viaje.value?.nombre,
       segmentos: segmentos.value.length,
       viajeros: viajeros.value.length,
@@ -680,8 +680,8 @@ const segmentosOrdenados = computed(() => {
 
 // Funciones para segmentos
 const editarSegmento = (segmento: Segmento) => {
-  console.log('✏️ Editando segmento:', segmento)
-  console.log('📝 Datos del segmento:', {
+  // console.log('✏️ Editando segmento:', segmento)
+  // console.log('📝 Datos del segmento:', {
     id: segmento.id,
     tipo: segmento.tipo,
     nombre: segmento.nombre,
@@ -722,7 +722,7 @@ const gestionarDocumentos = (segmento: Segmento) => {
 
 const handleSegmentSubmit = async (data: Record<string, unknown>) => {
   try {
-    console.log('💾 Guardando segmento:', {
+    // console.log('💾 Guardando segmento:', {
       tipo: selectedSegmentType.value,
       editando: !!editingSegment.value,
       data,
@@ -753,7 +753,7 @@ const handleSegmentSubmit = async (data: Record<string, unknown>) => {
 
     if (editingSegment.value) {
       // Actualizar segmento existente con sus datos específicos
-      console.log('📝 Actualizando segmento:', editingSegment.value.id)
+      // console.log('📝 Actualizando segmento:', editingSegment.value.id)
 
       const updateData: Partial<CreateSegmentoData> = {
         ...segmentoData,
@@ -787,7 +787,7 @@ const handleSegmentSubmit = async (data: Record<string, unknown>) => {
         }
       }
 
-      console.log('📦 Datos a actualizar:', updateData)
+      // console.log('📦 Datos a actualizar:', updateData)
 
       const result = (await segmentosService.update(
         editingSegment.value.id,
@@ -798,11 +798,11 @@ const handleSegmentSubmit = async (data: Record<string, unknown>) => {
         throw new Error(result.error)
       }
 
-      console.log('✅ Segmento actualizado:', result.data)
+      // console.log('✅ Segmento actualizado:', result.data)
       alert('Segmento del viaje actualizado correctamente')
     } else {
       // Crear nuevo segmento con datos específicos
-      console.log('✨ Creando nuevo segmento')
+      // console.log('✨ Creando nuevo segmento')
 
       const createData: CreateSegmentoData = {
         ...segmentoData,
@@ -836,7 +836,7 @@ const handleSegmentSubmit = async (data: Record<string, unknown>) => {
         }
       }
 
-      console.log('📦 Datos a crear:', createData)
+      // console.log('📦 Datos a crear:', createData)
 
       const result = (await segmentosService.create(
         createData,
@@ -846,7 +846,7 @@ const handleSegmentSubmit = async (data: Record<string, unknown>) => {
         throw new Error(result.error)
       }
 
-      console.log('✅ Segmento creado:', result.data)
+      // console.log('✅ Segmento creado:', result.data)
       alert('Segmento agregado al viaje correctamente')
     }
 
@@ -891,7 +891,7 @@ const loadCotizaciones = async () => {
     if (error) throw error
 
     cotizacionesDisponibles.value = data || []
-    console.log('📋 Cotizaciones disponibles:', cotizacionesDisponibles.value)
+    // console.log('📋 Cotizaciones disponibles:', cotizacionesDisponibles.value)
   } catch (error) {
     console.error('Error al cargar cotizaciones:', error)
   }
@@ -901,7 +901,7 @@ const importarCotizacion = async () => {
   if (!selectedCotizacionId.value) return
 
   try {
-    console.log('📥 Importando cotización:', selectedCotizacionId.value)
+    // console.log('📥 Importando cotización:', selectedCotizacionId.value)
 
     // Obtener segmentos de la cotización seleccionada
     const segmentosResult = await segmentosService.getByCotizacion(selectedCotizacionId.value)
@@ -911,7 +911,7 @@ const importarCotizacion = async () => {
     }
 
     const segmentosACopiar = segmentosResult.data
-    console.log('📦 Segmentos a copiar:', segmentosACopiar.length)
+    // console.log('📦 Segmentos a copiar:', segmentosACopiar.length)
 
     // Copiar cada segmento al viaje
     let segmentosCopiados = 0
@@ -922,7 +922,7 @@ const importarCotizacion = async () => {
       }
     }
 
-    console.log('✅ Segmentos copiados:', segmentosCopiados)
+    // console.log('✅ Segmentos copiados:', segmentosCopiados)
 
     // Recargar viaje
     await loadViaje()

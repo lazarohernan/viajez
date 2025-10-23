@@ -685,7 +685,7 @@ export const viajerozService = {
 // Función de prueba de conexión
 export const testConnection = async (): Promise<boolean> => {
   try {
-    console.log('🔍 Probando conexión con Supabase...')
+    // console.log('🔍 Probando conexión con Supabase...')
 
     // Intentar una consulta simple para verificar la conexión
     const { error } = await supabase.from('viajeroz').select('count').limit(1)
@@ -695,12 +695,12 @@ export const testConnection = async (): Promise<boolean> => {
       return false
     }
 
-    console.log('✅ Conexión exitosa con la base de datos "viajemoz"')
-    console.log('📊 Estado de la conexión:', {
-      url: supabaseUrl,
-      conectado: true,
-      timestamp: new Date().toISOString(),
-    })
+    // console.log('✅ Conexión exitosa con la base de datos "viajemoz"')
+    // console.log('📊 Estado de la conexión:', {
+    //   url: supabaseUrl,
+    //   conectado: true,
+    //   timestamp: new Date().toISOString(),
+    // })
 
     return true
   } catch (error) {

@@ -126,22 +126,22 @@ const navigateToClientes = () => {
 
 // Handlers para eventos de detalle
 const handleViajeDetalle = (viaje: ViajeWithId) => {
-  console.log('Navegando a detalle del viaje:', viaje)
+  // console.log('Navegando a detalle del viaje:', viaje)
   router.push(`/viajes/${viaje.id}`)
 }
 
 const handleVisaDetalle = (visa: VisaPorVencer) => {
-  console.log('Ver detalle de la visa:', visa)
+  // console.log('Ver detalle de la visa:', visa)
   alert(`Ver detalle de visa de ${visa.cliente.nombre} ${visa.cliente.apellido}`)
 }
 
 const handleCumpleanosDetalle = (cumpleanos: Cumpleanos) => {
-  console.log('Ver detalle del cumpleaños:', cumpleanos)
+  // console.log('Ver detalle del cumpleaños:', cumpleanos)
   alert(`Ver detalle de cumpleaños de ${cumpleanos.cliente.nombre} ${cumpleanos.cliente.apellido}`)
 }
 
 const handlePasaporteDetalle = (pasaporte: PasaportePorVencer) => {
-  console.log('Ver detalle del pasaporte:', pasaporte)
+  // console.log('Ver detalle del pasaporte:', pasaporte)
   alert(`Ver detalle de pasaporte de ${pasaporte.cliente.nombre} ${pasaporte.cliente.apellido}`)
 }
 </script>

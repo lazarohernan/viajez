@@ -222,46 +222,46 @@ export const useViajerosStore = defineStore('viajeros', () => {
   }
 
   const toggleViajeroStatus = async (id: string): Promise<boolean> => {
-    console.log('🔄 toggleViajeroStatus called with id:', id)
+    // console.log('🔄 toggleViajeroStatus called with id:', id)
     try {
       loading.value = true
       error.value = null
 
       // Obtener el estado actual del viajero
       const viajero = viajeros.value.find((v) => v.id === id)
-      console.log('📋 Viajero encontrado:', viajero)
+      // console.log('📋 Viajero encontrado:', viajero)
       if (!viajero) {
         error.value = 'Viajero no encontrado'
-        console.log('❌ Viajero no encontrado')
+        // console.log('❌ Viajero no encontrado')
         return false
       }
 
       const nuevoEstado = !viajero.activo
-      console.log('🔄 Estado actual:', viajero.activo, 'Nuevo estado:', nuevoEstado)
+      // console.log('🔄 Estado actual:', viajero.activo, 'Nuevo estado:', nuevoEstado)
 
-      console.log('📡 Llamando a viajerosService.update con:', { activo: nuevoEstado })
+      // console.log('📡 Llamando a viajerosService.update con:', { activo: nuevoEstado })
       const result = await viajerosService.update(id, { activo: nuevoEstado })
-      console.log('📡 Resultado de update:', result)
+      // console.log('📡 Resultado de update:', result)
 
       if (result.error || !result.data) {
         error.value = result.error || 'Error al actualizar estado del viajero'
-        console.log('❌ Error en update:', error.value)
+        // console.log('❌ Error en update:', error.value)
         return false
       }
 
       // Actualizar en la lista local
       const index = viajeros.value.findIndex((v) => v.id === id)
-      console.log('🔄 Actualizando estado local, index:', index)
+      // console.log('🔄 Actualizando estado local, index:', index)
       if (index !== -1) {
         viajeros.value[index] = result.data
-        console.log('✅ Estado local actualizado:', result.data.activo)
+        // console.log('✅ Estado local actualizado:', result.data.activo)
       }
 
-      console.log('✅ toggleViajeroStatus completado exitosamente')
+      // console.log('✅ toggleViajeroStatus completado exitosamente')
       return true
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Error al cambiar estado del viajero'
-      console.log('❌ Error en toggleViajeroStatus:', error.value)
+      // console.log('❌ Error en toggleViajeroStatus:', error.value)
       return false
     } finally {
       loading.value = false

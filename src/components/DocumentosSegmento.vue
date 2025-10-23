@@ -182,7 +182,7 @@ const onFilesUploaded = async (uploadedFiles: UploadedFile[]) => {
 }
 
 const onFileRemoved = (file: { id: string; name: string } | UploadedFile) => {
-  console.log('Archivo removido del componente de subida:', file)
+  // console.log('Archivo removido del componente de subida:', file)
 }
 
 const downloadFile = (documento: Documento) => {

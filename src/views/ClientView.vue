@@ -261,32 +261,55 @@ onMounted(async () => {
 })
 
 const handleSubmit = async (data: CreateViajeroData | UpdateViajeroData) => {
+  // console.log('🎯 handleSubmit called with data:', data)
   try {
     if (isEditing.value && editingData.value) {
       // Actualizar viajero existente
+      // console.log('🔄 Actualizando viajero existente:', editingData.value.id)
       const result = await viajerosStore.updateViajero(
         editingData.value.id,
         data as UpdateViajeroData,
       )
+      // console.log('📡 Resultado de actualización:', result)
       if (result) {
-        alert('Viajero actualizado correctamente')
+        alert('✅ Viajero actualizado correctamente')
         closeForm()
+        // Refrescar la lista
+        await viajerosStore.fetchViajeros()
       } else {
-        alert(`Error al actualizar: ${viajerosStore.error}`)
+        console.error('❌ Error al actualizar:', viajerosStore.error)
+        // Mostrar mensaje de error más visible
+        const errorMessage = viajerosStore.error || 'Error desconocido'
+        if (errorMessage.includes('Cliente ya ingresado en el sistema')) {
+          alert(`🚫 ${errorMessage}\n\nPor favor, verifica los datos o edita el cliente existente.`)
+        } else {
+          alert(`❌ Error al actualizar: ${errorMessage}`)
+        }
       }
     } else {
       // Crear nuevo viajero
+      // console.log('➕ Creando nuevo viajero')
       const result = await viajerosStore.createViajero(data as CreateViajeroData)
+      // console.log('📡 Resultado de creación:', result)
       if (result) {
-        alert('Viajero creado correctamente')
+        alert('✅ Viajero creado correctamente')
         closeForm()
+        // Refrescar la lista
+        await viajerosStore.fetchViajeros()
       } else {
-        alert(`Error al crear: ${viajerosStore.error}`)
+        console.error('❌ Error al crear:', viajerosStore.error)
+        // Mostrar mensaje de error más visible
+        const errorMessage = viajerosStore.error || 'Error desconocido'
+        if (errorMessage.includes('Cliente ya ingresado en el sistema')) {
+          alert(`🚫 ${errorMessage}\n\nPor favor, verifica los datos o edita el cliente existente.`)
+        } else {
+          alert(`❌ Error al crear: ${errorMessage}`)
+        }
       }
     }
   } catch (error) {
-    console.error('Error en handleSubmit:', error)
-    alert('Error al guardar el viajero')
+    console.error('❌ Error en handleSubmit:', error)
+    alert(`❌ Error al guardar el viajero: ${error instanceof Error ? error.message : 'Error desconocido'}`)
   }
 }
 
@@ -374,29 +397,29 @@ const handlePasswordSuccess = async () => {
 
 // Cambiar estado del usuario (activar/desactivar)
 const toggleUserStatus = async (viajero: Viajeroz) => {
-  console.log('🎯 toggleUserStatus called with viajero:', viajero)
+  // console.log('🎯 toggleUserStatus called with viajero:', viajero)
   const action = viajero.activo ? 'desactivar' : 'activar'
-  console.log('🔄 Action:', action, 'Estado actual:', viajero.activo)
+  // console.log('🔄 Action:', action, 'Estado actual:', viajero.activo)
 
   if (
     !confirm(`¿Está seguro que desea ${action} al usuario ${viajero.nombre} ${viajero.apellido}?`)
   ) {
-    console.log('❌ Usuario canceló la acción')
+    // console.log('❌ Usuario canceló la acción')
     return
   }
 
-  console.log('✅ Usuario confirmó, llamando a store...')
+  // console.log('✅ Usuario confirmó, llamando a store...')
   try {
     const success = await viajerosStore.toggleViajeroStatus(viajero.id)
-    console.log('📡 Resultado de toggleViajeroStatus:', success)
+    // console.log('📡 Resultado de toggleViajeroStatus:', success)
     if (success) {
       // Refrescar la lista para actualizar la UI
       await viajerosStore.fetchViajeros()
       alert(`Usuario ${action}do exitosamente`)
-      console.log('✅ Operación completada exitosamente')
+      // console.log('✅ Operación completada exitosamente')
     } else {
       alert(`Error al ${action} usuario: ${viajerosStore.error}`)
-      console.log('❌ Error en la operación:', viajerosStore.error)
+      // console.log('❌ Error en la operación:', viajerosStore.error)
     }
   } catch (error) {
     console.error('❌ Error al cambiar estado del usuario:', error)
