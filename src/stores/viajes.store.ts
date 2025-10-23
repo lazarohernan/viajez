@@ -1,7 +1,8 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { viajesService } from '@/services/viajes.service'
-import type { Viaje, ViajeWithDetails } from '@/services/viajes.service'
+import type { ViajeWithDetails } from '@/services/viajes.service'
+import type { Viaje } from '@/services/supabase'
 
 export const useViajesStore = defineStore('viajes', () => {
   // Estado
