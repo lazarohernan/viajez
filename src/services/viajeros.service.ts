@@ -54,13 +54,13 @@ export class ViajerosService extends BaseService {
         }
       }
 
-      // Verificar si la identidad ya existe (si se proporciona)
+      // Validar formato de identidad hondureña (XXXX-XXXX-XXXXX)
       if (data.identidad) {
-        const existingViajero = await this.findByIdentity(data.identidad)
-        if (existingViajero.data) {
+        const identidadRegex = /^\d{4}-\d{4}-\d{5}$/
+        if (!identidadRegex.test(data.identidad)) {
           return {
             data: null,
-            error: `⚠️ Cliente ya ingresado en el sistema con la identidad ${data.identidad}. Nombre: ${existingViajero.data.nombre} ${existingViajero.data.apellido}`,
+            error: 'La identidad debe tener el formato XXXX-XXXX-XXXXX',
           }
         }
       }

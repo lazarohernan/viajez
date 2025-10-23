@@ -86,8 +86,10 @@
           v-model="form.identidad"
           type="text"
           required
+          @input="formatIdentidad"
           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-          placeholder="0801-1990-00001"
+          placeholder="Ej: 0801-1990-00001"
+          maxlength="15"
         />
       </div>
 
@@ -396,6 +398,43 @@ const copyToClipboard = async () => {
   }
 }
 
+// Formatear identidad hondureña (XXXX-XXXX-XXXXX)
+const formatIdentidad = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  let value = target.value
+
+  // Remover todos los caracteres que no sean números
+  value = value.replace(/\D/g, '')
+
+  // Limitar a 13 dígitos (sin contar guiones)
+  if (value.length > 13) {
+    value = value.substring(0, 13)
+  }
+
+  // Aplicar formato XXXX-XXXX-XXXXX
+  if (value.length > 0) {
+    if (value.length <= 4) {
+      // Primer grupo: XXXX
+      value = value
+    } else if (value.length <= 8) {
+      // Segundo grupo: XXXX-XXXX
+      value = value.substring(0, 4) + '-' + value.substring(4)
+    } else {
+      // Tercer grupo: XXXX-XXXX-XXXXX
+      value = value.substring(0, 4) + '-' + value.substring(4, 8) + '-' + value.substring(8)
+    }
+  }
+
+  // Actualizar el valor del formulario
+  form.identidad = value
+
+  // Ajustar la posición del cursor si es necesario
+  // Esto es opcional pero mejora la UX
+  setTimeout(() => {
+    target.value = value
+  }, 0)
+}
+
 const handleSubmit = async () => {
   isLoading.value = true
   passwordError.value = ''
@@ -428,6 +467,14 @@ const handleSubmit = async () => {
 
     if (!form.identidad?.trim()) {
       passwordError.value = 'La identidad es requerida'
+      isLoading.value = false
+      return
+    }
+
+    // Validar formato de identidad hondureña (XXXX-XXXX-XXXXX)
+    const identidadRegex = /^\d{4}-\d{4}-\d{5}$/
+    if (!identidadRegex.test(form.identidad)) {
+      passwordError.value = 'La identidad debe tener el formato XXXX-XXXX-XXXXX (ej: 0801-1990-00001)'
       isLoading.value = false
       return
     }
