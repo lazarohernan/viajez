@@ -20,8 +20,10 @@
           />
         </svg>
       </div>
-      <h3 class="text-lg font-semibold text-gray-900 mb-2">Cotización de Actividades</h3>
-      <p class="text-sm text-gray-600">Complete los detalles de la actividad o tour</p>
+      <h3 class="text-lg font-semibold text-gray-900 mb-2">Agregar Actividad al Viaje</h3>
+      <p class="text-sm text-gray-600">
+        Complete los detalles de la actividad para agregar al viaje
+      </p>
     </div>
 
     <!-- Formulario -->
@@ -33,6 +35,18 @@
           v-model="formData.nombre"
           type="text"
           placeholder="Ej: City Tour, Excursión a la montaña, etc."
+          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+          required
+        />
+      </div>
+
+      <!-- Proveedor/Operador -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Proveedor/Operador</label>
+        <input
+          v-model="formData.proveedor"
+          type="text"
+          placeholder="Ej: Guía Local Tours, Aventura Extrema, etc."
           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
           required
         />
@@ -74,7 +88,11 @@
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2"> Duración (en horas) </label>
           <input
-            v-model.number="formData.duracionHoras"
+            :value="formData.duracionHoras"
+            @input="
+              (event) =>
+                (formData.duracionHoras = parseFloat((event.target as HTMLInputElement).value) || 0)
+            "
             type="number"
             min="0"
             step="0.5"
@@ -124,7 +142,7 @@
           type="submit"
           class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
         >
-          Guardar Cotización
+          Guardar Segmento
         </button>
       </div>
     </form>
@@ -132,7 +150,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 
 interface ActividadFormData extends Record<string, unknown> {
   nombre: string
@@ -147,6 +165,11 @@ interface ActividadFormData extends Record<string, unknown> {
   observaciones: string
 }
 
+// Props para recibir datos iniciales al editar
+const props = defineProps<{
+  initialData?: Record<string, unknown> | null
+}>()
+
 const emit = defineEmits<{
   submit: [data: ActividadFormData]
   cancel: []
@@ -154,12 +177,70 @@ const emit = defineEmits<{
 
 const formData = ref({
   nombre: '',
+  proveedor: '',
   fechaInicial: '',
   fechaFinal: '',
   horaInicio: '',
   duracionHoras: 0,
   observaciones: '',
 })
+
+console.log('🎭 ActividadesForm inicializado con datos:', {
+  initialData: props.initialData,
+  formData: formData.value,
+})
+
+// Watch para actualizar formData cuando cambien los initialData (al editar)
+watch(
+  () => props.initialData,
+  (newData) => {
+    if (newData) {
+      // segmento_actividad puede venir como array o como objeto
+      const segmentoActividadRaw = newData.segmento_actividad as
+        | Record<string, unknown>
+        | Record<string, unknown>[]
+        | undefined
+
+      console.log('🔄 ActividadesForm recibiendo initialData:', JSON.stringify(newData, null, 2))
+      console.log('🎭 segmento_actividad RAW:', JSON.stringify(segmentoActividadRaw, null, 2))
+
+      // Si viene como array, tomar el primer elemento
+      let segmentoActividad: Record<string, unknown> | undefined = undefined
+      if (Array.isArray(segmentoActividadRaw) && segmentoActividadRaw.length > 0) {
+        segmentoActividad = segmentoActividadRaw[0]
+      } else if (segmentoActividadRaw && !Array.isArray(segmentoActividadRaw)) {
+        segmentoActividad = segmentoActividadRaw
+      }
+
+      console.log('🎭 duracion_horas raw:', segmentoActividad?.duracion_horas)
+      console.log('🎭 duracion_horas type:', typeof segmentoActividad?.duracion_horas)
+
+      const duracionHorasValue = segmentoActividad?.duracion_horas
+        ? Number(segmentoActividad.duracion_horas)
+        : 0
+
+      console.log('🎭 duracionHorasValue convertido:', duracionHorasValue)
+
+      formData.value = {
+        nombre: (newData.nombre as string) || '',
+        proveedor: (newData.proveedor as string) || '',
+        fechaInicial: (newData.fecha_inicio as string) || '',
+        fechaFinal: (newData.fecha_fin as string) || '',
+        horaInicio: (newData.hora_inicio as string) || '',
+        duracionHoras: duracionHorasValue,
+        observaciones: (newData.observaciones as string) || '',
+      }
+      console.log(
+        '✅ ActividadesForm actualizado con nuevos datos:',
+        JSON.stringify(formData.value, null, 2),
+      )
+      console.log('✅ duracionHoras final:', formData.value.duracionHoras)
+    } else {
+      console.log('❌ ActividadesForm recibió initialData null/undefined')
+    }
+  },
+  { immediate: true },
+)
 
 const duracionCalculada = computed(() => {
   if (formData.value.fechaInicial && formData.value.fechaFinal) {

@@ -17,7 +17,7 @@
             >
               {{ col.label }}
             </th>
-            <th v-if="$slots.actions" class="px-4 py-3 font-semibold text-right whitespace-nowrap">
+            <th v-if="$slots.actions" class="px-4 py-3 font-semibold text-center whitespace-nowrap">
               Acciones
             </th>
           </tr>
@@ -32,7 +32,7 @@
                 {{ row[col.key] ?? '—' }}
               </slot>
             </td>
-            <td v-if="$slots.actions" class="px-4 py-3 text-right align-middle">
+            <td v-if="$slots.actions" class="px-4 py-3 text-center align-middle">
               <slot name="actions" :row="row" />
             </td>
           </tr>

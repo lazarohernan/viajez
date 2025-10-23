@@ -16,20 +16,13 @@
               <p class="text-gray-600">{{ viaje?.descripcion }}</p>
             </div>
           </div>
-          <div class="flex items-center gap-3">
+          <div>
             <span
               class="inline-flex px-3 py-1 text-sm font-medium rounded-full"
               :class="getEstadoClass(viaje?.estado)"
             >
               {{ getEstadoLabel(viaje?.estado) }}
             </span>
-            <button
-              @click="showAddSegment = true"
-              class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
-            >
-              <Plus class="w-4 h-4 mr-2" />
-              Agregar Segmento
-            </button>
           </div>
         </div>
       </div>
@@ -165,24 +158,31 @@
           </div>
         </div>
 
-        <!-- Columna derecha: Segmentos del viaje -->
+        <!-- Columna derecha: Itinerario del viaje -->
         <div class="lg:col-span-3">
           <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
             <div class="flex items-center justify-between mb-5">
               <h3 class="text-base font-semibold text-gray-900 flex items-center gap-2">
                 <MapPin class="w-4 h-4 text-orange-600" />
-                Segmentos del Viaje
+                Itinerario del Viaje
               </h3>
               <div class="flex items-center gap-3">
                 <span class="text-sm text-gray-500"
                   >{{ segmentos.length }} segmento{{ segmentos.length !== 1 ? 's' : '' }}</span
                 >
                 <button
+                  @click="showImportCotizacion = true"
+                  class="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <FileText class="w-4 h-4 mr-1.5" />
+                  Importar Cotización
+                </button>
+                <button
                   @click="showAddSegment = true"
                   class="inline-flex items-center px-3 py-1.5 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700 transition-colors"
                 >
                   <Plus class="w-4 h-4 mr-1.5" />
-                  Agregar
+                  Agregar Segmento
                 </button>
               </div>
             </div>
@@ -196,7 +196,7 @@
               </div>
               <h4 class="text-lg font-medium text-gray-900 mb-2">No hay segmentos agregados</h4>
               <p class="text-gray-600 mb-4">
-                Agrega segmentos para organizar el itinerario del viaje
+                Agrega segmentos al itinerario de este viaje para organizar todas las actividades
               </p>
               <button
                 @click="showAddSegment = true"
@@ -331,16 +331,16 @@
       </div>
     </div>
 
-    <!-- Modal para agregar/editar segmento -->
+    <!-- Modal para agregar/editar segmento al viaje -->
     <Modal
       v-model="showAddSegment"
       :max-width="'2xl'"
-      :title="editingSegment ? 'Editar Segmento' : 'Agregar Segmento'"
+      :title="editingSegment ? 'Editar Segmento del Viaje' : 'Agregar Segmento al Viaje'"
     >
       <!-- Formulario de segmento -->
       <div class="space-y-6">
-        <!-- Selector de tipo de segmento -->
-        <div>
+        <!-- Selector de tipo de segmento (solo para crear nuevos) -->
+        <div v-if="!editingSegment">
           <label class="block text-sm font-medium text-gray-700 mb-3">Tipo de Segmento</label>
           <div class="grid grid-cols-3 gap-3">
             <button
@@ -385,6 +385,36 @@
           </div>
         </div>
 
+        <!-- Indicador de tipo cuando se está editando -->
+        <div v-else class="mb-6">
+          <div class="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+            <div
+              class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+              :class="getSegmentoIconBg(editingSegment.tipo)"
+            >
+              <Plane v-if="editingSegment.tipo === 'transporte'" class="w-5 h-5 text-orange-600" />
+              <Home
+                v-else-if="editingSegment.tipo === 'hospedaje'"
+                class="w-5 h-5 text-orange-600"
+              />
+              <Compass v-else class="w-5 h-5 text-orange-600" />
+            </div>
+            <div>
+              <h4 class="font-semibold text-gray-900">
+                Editando
+                {{
+                  editingSegment.tipo === 'transporte'
+                    ? 'Transporte'
+                    : editingSegment.tipo === 'hospedaje'
+                      ? 'Hospedaje'
+                      : 'Actividad'
+                }}
+              </h4>
+              <p class="text-sm text-gray-600">{{ editingSegment.nombre }}</p>
+            </div>
+          </div>
+        </div>
+
         <!-- Formulario según tipo -->
         <TransporteForm
           v-if="selectedSegmentType === 'transporte'"
@@ -416,11 +446,68 @@
         <DocumentosSegmento :segmento-id="selectedSegmentForDocs.id" />
       </div>
     </Modal>
+
+    <!-- Modal para importar cotización -->
+    <Modal v-model="showImportCotizacion" :max-width="'2xl'" title="Importar Cotización al Viaje">
+      <div class="space-y-6">
+        <div class="text-center">
+          <div
+            class="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4"
+          >
+            <FileText class="w-8 h-8 text-blue-600" />
+          </div>
+          <h3 class="text-lg font-semibold text-gray-900 mb-2">
+            Importar Segmentos desde Cotización
+          </h3>
+          <p class="text-sm text-gray-600">
+            Selecciona una cotización existente para importar todos sus segmentos a este viaje
+          </p>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Seleccionar Cotización</label>
+          <select
+            v-model="selectedCotizacionId"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Seleccione una cotización...</option>
+            <option
+              v-for="cotizacion in cotizacionesDisponibles"
+              :key="cotizacion.id"
+              :value="cotizacion.id"
+            >
+              {{ cotizacion.nombre }} - {{ cotizacion.segmentos?.length || 0 }} segmentos
+            </option>
+          </select>
+          <p class="mt-1 text-xs text-gray-500">
+            Los segmentos de la cotización se agregarán al final del itinerario actual
+          </p>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-4">
+          <button
+            type="button"
+            @click="showImportCotizacion = false"
+            class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            @click="importarCotizacion"
+            :disabled="!selectedCotizacionId"
+            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Importar Segmentos
+          </button>
+        </div>
+      </div>
+    </Modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   ArrowLeft,
@@ -441,7 +528,6 @@ import { TransporteForm, HospedajeForm, ActividadesForm } from '@/components/cot
 import DocumentosSegmento from '@/components/DocumentosSegmento.vue'
 import {
   viajesService,
-  segmentosService,
   documentosService,
   supabase,
   type Viaje,
@@ -449,6 +535,12 @@ import {
   type Viajeroz,
   type Documento,
 } from '@/services/supabase'
+import {
+  segmentosService,
+  type CreateSegmentoData,
+  type SegmentoWithDetails,
+} from '@/services/segmentos.service'
+import type { ServiceResponse } from '@/services/base.service'
 
 const route = useRoute()
 
@@ -468,6 +560,11 @@ const selectedSegmentType = ref<'transporte' | 'hospedaje' | 'actividad'>('trans
 const editingSegment = ref<Segmento | null>(null)
 const showDocumentosModal = ref(false)
 const selectedSegmentForDocs = ref<Segmento | null>(null)
+const showImportCotizacion = ref(false)
+const cotizacionesDisponibles = ref<
+  Array<{ id: string; nombre: string; segmentos?: Array<{ count: number }> }>
+>([])
+const selectedCotizacionId = ref<string>('')
 
 // Refs para formularios
 const transporteFormRef = ref()
@@ -476,16 +573,32 @@ const actividadesFormRef = ref()
 
 // Cargar datos al montar
 onMounted(async () => {
+  console.log('🚀 ViajeDetailView montado con ID:', viajeId.value)
   await loadViaje()
+})
+
+// Cargar cotizaciones cuando se abre el modal
+watch(showImportCotizacion, (newValue) => {
+  if (newValue) {
+    loadCotizaciones()
+  }
 })
 
 // Funciones de carga de datos
 const loadViaje = async () => {
   try {
-    if (!viajeId.value) return
+    if (!viajeId.value) {
+      console.log('❌ No hay viajeId definido')
+      return
+    }
+
+    console.log('🔄 Cargando viaje con ID:', viajeId.value)
 
     // Cargar viaje con segmentos
     const viajeData = await viajesService.getById(viajeId.value)
+    console.log('📦 Datos del viaje obtenidos:', viajeData)
+    console.log('📋 Segmentos encontrados:', viajeData.segmentos?.length || 0)
+
     viaje.value = viajeData
     segmentos.value = viajeData.segmentos
 
@@ -494,8 +607,14 @@ const loadViaje = async () => {
 
     // Cargar documentos por segmento
     await loadDocumentosSegmentos()
+
+    console.log('✅ Viaje cargado exitosamente:', {
+      nombre: viaje.value?.nombre,
+      segmentos: segmentos.value.length,
+      viajeros: viajeros.value.length,
+    })
   } catch (error) {
-    console.error('Error al cargar viaje:', error)
+    console.error('❌ Error al cargar viaje:', error)
     alert('Error al cargar el viaje')
   }
 }
@@ -561,20 +680,35 @@ const segmentosOrdenados = computed(() => {
 
 // Funciones para segmentos
 const editarSegmento = (segmento: Segmento) => {
+  console.log('✏️ Editando segmento:', segmento)
+  console.log('📝 Datos del segmento:', {
+    id: segmento.id,
+    tipo: segmento.tipo,
+    nombre: segmento.nombre,
+    proveedor: segmento.proveedor,
+    fecha_inicio: segmento.fecha_inicio,
+    fecha_fin: segmento.fecha_fin,
+    segmento_transporte: segmento.segmento_transporte,
+    segmento_hospedaje: segmento.segmento_hospedaje,
+    segmento_actividad: segmento.segmento_actividad,
+  })
+
   editingSegment.value = segmento
   selectedSegmentType.value = segmento.tipo
   showAddSegment.value = true
 }
 
 const eliminarSegmento = async (segmentoId: string) => {
-  if (!confirm('¿Estás seguro de eliminar este segmento? Esta acción no se puede deshacer.')) {
+  if (
+    !confirm('¿Estás seguro de eliminar este segmento del viaje? Esta acción no se puede deshacer.')
+  ) {
     return
   }
 
   try {
     await segmentosService.delete(segmentoId)
     await loadViaje()
-    alert('Segmento eliminado correctamente')
+    alert('Segmento eliminado del viaje correctamente')
   } catch (error) {
     console.error('Error al eliminar segmento:', error)
     alert('Error al eliminar el segmento')
@@ -588,33 +722,46 @@ const gestionarDocumentos = (segmento: Segmento) => {
 
 const handleSegmentSubmit = async (data: Record<string, unknown>) => {
   try {
-    // Preparar datos del segmento
-    const segmentoBase = {
+    console.log('💾 Guardando segmento:', {
+      tipo: selectedSegmentType.value,
+      editando: !!editingSegment.value,
+      data,
+    })
+
+    // Preparar datos del segmento base
+    const segmentoData = {
       tipo: selectedSegmentType.value,
       nombre: (data.nombre as string) || (data.proveedor as string) || '',
-      proveedor: (data.proveedor as string) || '',
+      proveedor: (data.proveedor as string) || (data.nombre as string) || '',
       fecha_inicio:
         (data.fechaInicial as string) ||
         (data.fechaEntrada as string) ||
         (data.fecha_inicio as string) ||
         '',
-      fecha_fin: (data.fechaFinal as string) || (data.fechaSalida as string) || undefined,
+      fecha_fin:
+        (data.fechaFinal as string) ||
+        (data.fechaSalida as string) ||
+        (data.fecha_fin as string) ||
+        undefined,
       hora_inicio: (data.horaSalida as string) || (data.horaInicio as string) || undefined,
-      hora_fin: (data.horaEntrada as string) || undefined,
+      hora_fin: (data.horaEntrada as string) || (data.hora_fin as string) || undefined,
       duracion: (data.duracion as string) || '',
       observaciones: (data.observaciones as string) || '',
-      orden: segmentos.value.length + 1,
+      orden: editingSegment.value ? editingSegment.value.orden : segmentos.value.length + 1,
       viaje_id: viajeId.value,
     }
 
     if (editingSegment.value) {
-      // Actualizar segmento existente
-      await segmentosService.update(editingSegment.value.id, segmentoBase)
-      alert('Segmento actualizado correctamente')
-    } else {
-      // Crear nuevo segmento
+      // Actualizar segmento existente con sus datos específicos
+      console.log('📝 Actualizando segmento:', editingSegment.value.id)
+
+      const updateData: Partial<CreateSegmentoData> = {
+        ...segmentoData,
+      }
+
+      // Agregar datos específicos según el tipo
       if (selectedSegmentType.value === 'transporte') {
-        await segmentosService.createTransporte(segmentoBase, {
+        updateData.transporte = {
           tipo_transporte: ((data.tipo as string) || 'otro') as
             | 'aereo'
             | 'tren'
@@ -625,30 +772,98 @@ const handleSegmentSubmit = async (data: Record<string, unknown>) => {
           tiene_retorno: data.tieneRetorno !== false,
           origen: (data.origen as string) || '',
           destino: (data.destino as string) || '',
-        })
+        }
       } else if (selectedSegmentType.value === 'hospedaje') {
-        await segmentosService.createHospedaje(segmentoBase, {
+        updateData.hospedaje = {
           tipo_hospedaje: ((data.tipo as string) || 'otro') as
             | 'hotel'
             | 'renta_privada'
             | 'airbnb'
             | 'otro',
-          numero_habitaciones: (data.numero_habitaciones as number) || undefined,
-        })
-      } else {
-        await segmentosService.createActividad(segmentoBase, {
-          duracion_horas: (data.duracion_horas as number) || undefined,
-        })
+        }
+      } else if (selectedSegmentType.value === 'actividad') {
+        updateData.actividad = {
+          duracion_horas: (data.duracion_horas as number) ?? undefined,
+        }
       }
 
-      alert('Segmento agregado correctamente')
+      console.log('📦 Datos a actualizar:', updateData)
+
+      const result = (await segmentosService.update(
+        editingSegment.value.id,
+        updateData,
+      )) as ServiceResponse<SegmentoWithDetails>
+
+      if (result.error) {
+        throw new Error(result.error)
+      }
+
+      console.log('✅ Segmento actualizado:', result.data)
+      alert('Segmento del viaje actualizado correctamente')
+    } else {
+      // Crear nuevo segmento con datos específicos
+      console.log('✨ Creando nuevo segmento')
+
+      const createData: CreateSegmentoData = {
+        ...segmentoData,
+      }
+
+      // Agregar datos específicos según el tipo
+      if (selectedSegmentType.value === 'transporte') {
+        createData.transporte = {
+          tipo_transporte: ((data.tipo as string) || 'otro') as
+            | 'aereo'
+            | 'tren'
+            | 'bus'
+            | 'carro_privado'
+            | 'uber'
+            | 'otro',
+          tiene_retorno: data.tieneRetorno !== false,
+          origen: (data.origen as string) || '',
+          destino: (data.destino as string) || '',
+        }
+      } else if (selectedSegmentType.value === 'hospedaje') {
+        createData.hospedaje = {
+          tipo_hospedaje: ((data.tipo as string) || 'otro') as
+            | 'hotel'
+            | 'renta_privada'
+            | 'airbnb'
+            | 'otro',
+        }
+      } else if (selectedSegmentType.value === 'actividad') {
+        createData.actividad = {
+          duracion_horas: (data.duracion_horas as number) ?? undefined,
+        }
+      }
+
+      console.log('📦 Datos a crear:', createData)
+
+      const result = (await segmentosService.create(
+        createData,
+      )) as ServiceResponse<SegmentoWithDetails>
+
+      if (result.error) {
+        throw new Error(result.error)
+      }
+
+      console.log('✅ Segmento creado:', result.data)
+      alert('Segmento agregado al viaje correctamente')
     }
 
     await loadViaje()
     closeSegmentModal()
   } catch (error) {
-    console.error('Error al guardar segmento:', error)
-    alert('Error al guardar el segmento')
+    console.error('❌ Error al guardar segmento:', error)
+    console.error('❌ Error completo:', JSON.stringify(error, null, 2))
+
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : typeof error === 'object' && error !== null
+          ? JSON.stringify(error)
+          : 'Error desconocido'
+
+    alert(`Error al guardar el segmento: ${errorMessage}`)
   }
 }
 
@@ -656,6 +871,71 @@ const closeSegmentModal = () => {
   showAddSegment.value = false
   editingSegment.value = null
   selectedSegmentType.value = 'transporte'
+}
+
+// Funciones para importar cotización
+const loadCotizaciones = async () => {
+  try {
+    // Cargar todas las cotizaciones disponibles
+    const { data, error } = await supabase
+      .from('cotizaciones')
+      .select(
+        `
+        id,
+        nombre,
+        segmentos:segmentos(count)
+      `,
+      )
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+
+    cotizacionesDisponibles.value = data || []
+    console.log('📋 Cotizaciones disponibles:', cotizacionesDisponibles.value)
+  } catch (error) {
+    console.error('Error al cargar cotizaciones:', error)
+  }
+}
+
+const importarCotizacion = async () => {
+  if (!selectedCotizacionId.value) return
+
+  try {
+    console.log('📥 Importando cotización:', selectedCotizacionId.value)
+
+    // Obtener segmentos de la cotización seleccionada
+    const segmentosResult = await segmentosService.getByCotizacion(selectedCotizacionId.value)
+
+    if (segmentosResult.error || !segmentosResult.data) {
+      throw new Error(segmentosResult.error || 'No se encontraron segmentos')
+    }
+
+    const segmentosACopiar = segmentosResult.data
+    console.log('📦 Segmentos a copiar:', segmentosACopiar.length)
+
+    // Copiar cada segmento al viaje
+    let segmentosCopiados = 0
+    for (const segmento of segmentosACopiar) {
+      const result = await segmentosService.copyToViaje(segmento.id, viajeId.value)
+      if (!result.error) {
+        segmentosCopiados++
+      }
+    }
+
+    console.log('✅ Segmentos copiados:', segmentosCopiados)
+
+    // Recargar viaje
+    await loadViaje()
+
+    // Cerrar modal y limpiar selección
+    showImportCotizacion.value = false
+    selectedCotizacionId.value = ''
+
+    alert(`${segmentosCopiados} segmentos importados correctamente al viaje`)
+  } catch (error) {
+    console.error('❌ Error al importar cotización:', error)
+    alert('Error al importar la cotización')
+  }
 }
 
 // Funciones de utilidad

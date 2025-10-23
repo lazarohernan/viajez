@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import HomeView from '../views/HomeView.vue'
 import LoginView from '../views/LoginView.vue'
+import LoginViajeroView from '../views/LoginViajeroView.vue'
 import ClientView from '../views/ClientView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import ViajesView from '../views/ViajesView.vue'
@@ -23,6 +24,12 @@ const router = createRouter({
       path: '/login',
       name: 'login',
       component: LoginView,
+      meta: { requiresAuth: false, redirectIfAuthenticated: true },
+    },
+    {
+      path: '/login-viajero',
+      name: 'login-viajero',
+      component: LoginViajeroView,
       meta: { requiresAuth: false, redirectIfAuthenticated: true },
     },
     {
@@ -92,15 +99,41 @@ router.beforeEach(async (to, from, next) => {
   const requiresAuth = to.meta.requiresAuth !== false
   const redirectIfAuthenticated = to.meta.redirectIfAuthenticated === true
   const isAuthenticated = authStore.isAuthenticated
+  const isAdmin = authStore.isAdmin
+  const isClient = authStore.isClient
 
   // Si la ruta requiere autenticación y no está autenticado
   if (requiresAuth && !isAuthenticated) {
-    next({ name: 'login', query: { redirect: to.fullPath } })
+    // Redirigir al login apropiado según la ruta que intentaba acceder
+    if (to.path === '/cliente/viajes') {
+      next({ name: 'login-viajero', query: { redirect: to.fullPath } })
+    } else {
+      next({ name: 'login', query: { redirect: to.fullPath } })
+    }
     return
   }
 
   // Si la ruta redirige si está autenticado y está autenticado
   if (redirectIfAuthenticated && isAuthenticated) {
+    // Redirigir según el rol
+    if (isAdmin) {
+      next({ name: 'dashboard' })
+    } else if (isClient) {
+      next({ name: 'client-viajes' })
+    } else {
+      next({ name: 'home' })
+    }
+    return
+  }
+
+  // Proteger rutas de admin
+  if (requiresAuth && to.path.startsWith('/dashboard') && !isAdmin) {
+    next({ name: 'client-viajes' })
+    return
+  }
+
+  // Proteger rutas de cliente
+  if (requiresAuth && to.path === '/cliente/viajes' && isAdmin) {
     next({ name: 'dashboard' })
     return
   }

@@ -24,9 +24,6 @@ export interface Admin {
   apellido: string
   email: string
   telefono?: string
-  cargo?: string
-  departamento?: string
-  permisos_especiales?: string[]
   activo: boolean
   created_at: string
   updated_at: string
@@ -48,6 +45,7 @@ export interface Viajeroz {
   tipo_visa?: string
   fecha_vencimiento_visa?: string
   pais_residencia?: string
+  activo: boolean
   created_at: string
   updated_at: string
 }
@@ -60,7 +58,6 @@ export interface Viaje {
   fecha_fin?: string
   estado: 'por_iniciar' | 'en_curso' | 'finalizado'
   progreso_porcentaje: number
-  segmento_actual_id?: string
   cotizacion_id?: string
   created_at: string
   updated_at: string
@@ -100,7 +97,7 @@ export interface Segmento {
 export interface SegmentoTransporte {
   id: string
   segmento_id: string
-  tipo_transporte: 'aereo' | 'tren' | 'bus' | 'carro_privado' | 'uber' | 'otro'
+  tipo_transporte: 'aereo' | 'tren' | 'bus' | 'carro_privado' | 'auto_rentado' | 'uber' | 'otro'
   tiene_retorno: boolean
   origen?: string
   destino?: string
@@ -112,7 +109,6 @@ export interface SegmentoHospedaje {
   id: string
   segmento_id: string
   tipo_hospedaje: 'hotel' | 'renta_privada' | 'airbnb' | 'otro'
-  numero_habitaciones?: number
   created_at: string
   updated_at: string
 }

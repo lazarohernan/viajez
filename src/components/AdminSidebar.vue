@@ -11,7 +11,7 @@
       </div>
 
       <nav class="flex-1 py-3 overflow-y-auto">
-        <ul class="space-y-1 px-2 pr-3">
+        <ul class="space-y-2 px-2 pr-3">
           <li>
             <RouterLink
               to="/dashboard"

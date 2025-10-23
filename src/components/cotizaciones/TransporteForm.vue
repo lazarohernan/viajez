@@ -14,8 +14,10 @@
           />
         </svg>
       </div>
-      <h3 class="text-lg font-semibold text-gray-900 mb-2">Cotización de Transporte</h3>
-      <p class="text-sm text-gray-600">Complete los detalles del servicio de transporte</p>
+      <h3 class="text-lg font-semibold text-gray-900 mb-2">Agregar Transporte al Viaje</h3>
+      <p class="text-sm text-gray-600">
+        Complete los detalles del transporte para agregar al viaje
+      </p>
     </div>
 
     <!-- Formulario -->
@@ -29,24 +31,145 @@
           required
         >
           <option value="">Seleccione un tipo</option>
-          <option value="aereo">Aéreo</option>
-          <option value="tren">Tren</option>
-          <option value="bus">Bus</option>
-          <option value="carro_privado">Carro Privado</option>
-          <option value="otro">Otro</option>
+          <option v-for="(label, value) in ETIQUETAS_TRANSPORTE" :key="value" :value="value">
+            {{ label }}
+          </option>
         </select>
       </div>
 
-      <!-- Proveedor -->
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2">Proveedor</label>
+      <!-- Aerolínea (solo para transporte aéreo) -->
+      <div v-if="formData.tipo === 'aereo'" class="relative">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Aerolínea</label>
+
+        <!-- Campo de selección con búsqueda -->
+        <div class="relative">
+          <button
+            type="button"
+            @click="toggleDropdown"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white text-left flex items-center justify-between"
+            :class="{ 'border-orange-500': dropdownOpen }"
+          >
+            <span :class="{ 'text-gray-500': !proveedorSeleccionado }">
+              {{ proveedorSeleccionado || 'Seleccionar aerolínea...' }}
+            </span>
+            <svg
+              class="w-5 h-5 text-gray-400 transition-transform"
+              :class="{ 'rotate-180': dropdownOpen }"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </button>
+
+          <!-- Dropdown con búsqueda -->
+          <div
+            v-if="dropdownOpen"
+            class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-hidden"
+          >
+            <!-- Campo de búsqueda dentro del dropdown -->
+            <div class="p-2 border-b border-gray-200">
+              <div class="relative">
+                <input
+                  v-model="busquedaAerolinea"
+                  type="text"
+                  placeholder="Buscar aerolínea..."
+                  class="w-full px-3 py-2 pl-8 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                  @input="filtrarAerolineas"
+                  ref="searchInput"
+                />
+                <svg
+                  class="w-4 h-4 text-gray-400 absolute left-2 top-2.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+              </div>
+            </div>
+
+            <!-- Lista de aerolíneas filtradas -->
+            <div class="max-h-48 overflow-y-auto">
+              <!-- Opción para proveedores personalizados -->
+              <button
+                type="button"
+                @click="seleccionarAerolineaPersonalizada"
+                class="w-full px-3 py-2 text-left hover:bg-orange-50 focus:bg-orange-50 focus:outline-none text-sm border-b border-gray-100"
+              >
+                <span class="text-orange-600 font-medium">+ Otra aerolínea (especificar)</span>
+              </button>
+
+              <!-- Aerolíneas filtradas -->
+              <button
+                v-for="aerolinea in aerolineasFiltradas"
+                :key="aerolinea.codigo"
+                type="button"
+                @click="seleccionarAerolinea(aerolinea)"
+                class="w-full px-3 py-2 text-left hover:bg-orange-50 focus:bg-orange-50 focus:outline-none text-sm"
+              >
+                <div class="flex items-center justify-between">
+                  <span>{{ aerolinea.nombre }}</span>
+                  <span class="text-gray-500 text-xs bg-gray-100 px-2 py-1 rounded">{{
+                    aerolinea.codigo
+                  }}</span>
+                </div>
+              </button>
+
+              <!-- Mensaje cuando no hay resultados -->
+              <div
+                v-if="aerolineasFiltradas.length === 0 && busquedaAerolinea"
+                class="px-3 py-2 text-sm text-gray-500 text-center"
+              >
+                No se encontraron aerolíneas
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Campo adicional para aerolínea personalizada -->
+        <div v-if="proveedorSeleccionado === 'personalizado'" class="mt-2">
+          <input
+            v-model="proveedorPersonalizado"
+            type="text"
+            placeholder="Ej: Aerolínea XYZ, LATAM, etc."
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+            required
+          />
+        </div>
+
+        <p class="text-xs text-gray-500 mt-1">
+          Busca entre todas las aerolíneas o selecciona "Otra aerolínea"
+        </p>
+      </div>
+
+      <!-- Proveedor (para otros tipos de transporte) -->
+      <div v-else-if="formData.tipo && formData.tipo !== 'aereo'">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Proveedor/Transporte</label>
         <input
           v-model="formData.proveedor"
           type="text"
-          placeholder="Ej: Avianca, Uber, etc."
+          :placeholder="getPlaceholderPorTipo()"
           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
           required
         />
+        <p class="text-xs text-gray-500 mt-1">
+          Ingresa el nombre del proveedor o servicio de
+          {{
+            ETIQUETAS_TRANSPORTE[formData.tipo as keyof typeof ETIQUETAS_TRANSPORTE].toLowerCase()
+          }}
+        </p>
       </div>
 
       <!-- Origen y Destino -->
@@ -182,7 +305,7 @@
           type="submit"
           class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
         >
-          Guardar Cotización
+          Guardar Segmento
         </button>
       </div>
     </form>
@@ -190,7 +313,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { ETIQUETAS_TRANSPORTE } from '@/utils/constants'
+import { AEROLINEAS } from '@/data/aerolineas'
 
 interface TransporteFormData extends Record<string, unknown> {
   tipo: string
@@ -209,22 +334,200 @@ interface TransporteFormData extends Record<string, unknown> {
   observaciones: string
 }
 
+// Props para recibir datos iniciales al editar
+const props = defineProps<{
+  initialData?: Record<string, unknown> | null
+}>()
+
 const emit = defineEmits<{
   submit: [data: TransporteFormData]
   cancel: []
 }>()
 
+// Inicializar formData con datos iniciales si existen
 const formData = ref({
-  tipo: '',
-  proveedor: '',
-  origen: '',
-  destino: '',
-  tieneRetorno: true,
-  fechaInicial: '',
-  fechaFinal: '',
-  horaSalida: '',
-  horaEntrada: '',
-  observaciones: '',
+  tipo:
+    ((props.initialData?.segmento_transporte as Record<string, unknown>)
+      ?.tipo_transporte as string) || '',
+  proveedor: (props.initialData?.proveedor as string) || '',
+  origen:
+    ((props.initialData?.segmento_transporte as Record<string, unknown>)?.origen as string) || '',
+  destino:
+    ((props.initialData?.segmento_transporte as Record<string, unknown>)?.destino as string) || '',
+  tieneRetorno:
+    ((props.initialData?.segmento_transporte as Record<string, unknown>)
+      ?.tiene_retorno as boolean) !== false,
+  fechaInicial: (props.initialData?.fecha_inicio as string) || '',
+  fechaFinal: (props.initialData?.fecha_fin as string) || '',
+  horaSalida: (props.initialData?.hora_inicio as string) || '',
+  horaEntrada: (props.initialData?.hora_fin as string) || '',
+  observaciones: (props.initialData?.observaciones as string) || '',
+})
+
+console.log('🎯 TransporteForm inicializado con datos:', {
+  initialData: props.initialData,
+  formData: formData.value,
+})
+
+const proveedorPersonalizado = ref('')
+const proveedorSeleccionado = ref('')
+const dropdownOpen = ref(false)
+const busquedaAerolinea = ref('')
+
+// Watch para actualizar formData cuando cambien los initialData (al editar)
+watch(
+  () => props.initialData,
+  (newData) => {
+    if (newData) {
+      // segmento_transporte puede venir como array o como objeto
+      const segmentoTransporteRaw = newData.segmento_transporte as
+        | Record<string, unknown>
+        | Record<string, unknown>[]
+        | undefined
+
+      console.log('🔄 TransporteForm recibiendo initialData:', JSON.stringify(newData, null, 2))
+      console.log('🚗 segmento_transporte RAW:', JSON.stringify(segmentoTransporteRaw, null, 2))
+      console.log('🚗 segmento_transporte TYPE:', typeof segmentoTransporteRaw)
+      console.log('🚗 segmento_transporte IS ARRAY:', Array.isArray(segmentoTransporteRaw))
+
+      // Si viene como array, tomar el primer elemento
+      let segmentoTransporte: Record<string, unknown> | undefined = undefined
+      if (Array.isArray(segmentoTransporteRaw) && segmentoTransporteRaw.length > 0) {
+        segmentoTransporte = segmentoTransporteRaw[0]
+        console.log(
+          '🚗 segmento_transporte después de tomar [0]:',
+          JSON.stringify(segmentoTransporte, null, 2),
+        )
+      } else if (segmentoTransporteRaw && !Array.isArray(segmentoTransporteRaw)) {
+        segmentoTransporte = segmentoTransporteRaw
+      }
+
+      const proveedor = (newData.proveedor as string) || ''
+      const tipo = (segmentoTransporte?.tipo_transporte as string) || ''
+      const origen = (segmentoTransporte?.origen as string) || ''
+      const destino = (segmentoTransporte?.destino as string) || ''
+      const tieneRetorno = (segmentoTransporte?.tiene_retorno as boolean) !== false
+
+      console.log('📦 Datos extraídos:', {
+        tipo,
+        proveedor,
+        origen,
+        destino,
+        tieneRetorno,
+      })
+
+      formData.value = {
+        tipo,
+        proveedor,
+        origen,
+        destino,
+        tieneRetorno,
+        fechaInicial: (newData.fecha_inicio as string) || '',
+        fechaFinal: (newData.fecha_fin as string) || '',
+        horaSalida: (newData.hora_inicio as string) || '',
+        horaEntrada: (newData.hora_fin as string) || '',
+        observaciones: (newData.observaciones as string) || '',
+      }
+
+      // Actualizar también proveedorSeleccionado para que el dropdown muestre la aerolínea
+      if (proveedor && tipo === 'aereo') {
+        proveedorSeleccionado.value = proveedor
+        console.log('✈️ Aerolínea seleccionada en dropdown:', proveedor)
+      }
+
+      console.log(
+        '✅ TransporteForm actualizado con nuevos datos:',
+        JSON.stringify(formData.value, null, 2),
+      )
+    } else {
+      console.log('❌ TransporteForm recibió initialData null/undefined')
+    }
+  },
+  { immediate: true },
+)
+
+// Aerolíneas filtradas para el dropdown
+const aerolineasFiltradas = computed(() => {
+  if (!busquedaAerolinea.value.trim()) {
+    return AEROLINEAS // Mostrar todas las aerolíneas si no hay búsqueda
+  }
+
+  const busqueda = busquedaAerolinea.value.toLowerCase()
+  return AEROLINEAS.filter(
+    (aerolinea) =>
+      aerolinea.nombre.toLowerCase().includes(busqueda) ||
+      aerolinea.codigo.toLowerCase().includes(busqueda),
+  )
+})
+
+// Funciones para el dropdown
+const toggleDropdown = () => {
+  dropdownOpen.value = !dropdownOpen.value
+  if (dropdownOpen.value) {
+    // Enfocar el input de búsqueda cuando se abre
+    nextTick(() => {
+      const searchInput = document.querySelector(
+        'input[placeholder="Buscar aerolínea..."]',
+      ) as HTMLInputElement
+      if (searchInput) searchInput.focus()
+    })
+  }
+}
+
+const filtrarAerolineas = () => {
+  // La lógica de filtrado está en el computed aerolineasFiltradas
+}
+
+const seleccionarAerolinea = (aerolinea: { codigo: string; nombre: string }) => {
+  const valorCompleto = `${aerolinea.nombre} (${aerolinea.codigo})`
+  proveedorSeleccionado.value = valorCompleto
+  formData.value.proveedor = valorCompleto
+  dropdownOpen.value = false
+  busquedaAerolinea.value = ''
+}
+
+const seleccionarAerolineaPersonalizada = () => {
+  proveedorSeleccionado.value = 'personalizado'
+  formData.value.proveedor = 'personalizado'
+  dropdownOpen.value = false
+  busquedaAerolinea.value = ''
+}
+
+// Función para obtener placeholder según el tipo de transporte
+const getPlaceholderPorTipo = (): string => {
+  switch (formData.value.tipo) {
+    case 'tren':
+      return 'Ej: Renfe, Amtrak, TGV, etc.'
+    case 'bus':
+      return 'Ej: Greyhound, FlixBus, etc.'
+    case 'carro_privado':
+      return 'Ej: Conductor particular, Taxi, etc.'
+    case 'auto_rentado':
+      return 'Ej: Hertz, Avis, Europcar, etc.'
+    case 'uber':
+      return 'Ej: Uber, Didi, Cabify, etc.'
+    case 'otro':
+      return 'Ej: Ferry, Bicicleta, etc.'
+    default:
+      return 'Ej: Nombre del proveedor o transporte'
+  }
+}
+const handleClickOutside = (event: Event) => {
+  const target = event.target as HTMLElement
+  const dropdown = target.closest('.relative')
+  if (!dropdown) {
+    dropdownOpen.value = false
+    busquedaAerolinea.value = ''
+  }
+}
+
+// Agregar listener para cerrar dropdown
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
 })
 
 const duracionCalculada = computed(() => {
@@ -251,20 +554,33 @@ const duracionCalculada = computed(() => {
   return ''
 })
 
-// Limpiar fecha final y hora entrada cuando se desmarca retorno
+// Limpiar valores relacionados con aerolíneas cuando cambie el tipo
 watch(
-  () => formData.value.tieneRetorno,
-  (tieneRetorno) => {
-    if (!tieneRetorno) {
-      formData.value.fechaFinal = formData.value.fechaInicial
-      formData.value.horaEntrada = ''
+  () => formData.value.tipo,
+  (nuevoTipo) => {
+    // Si cambió a algo que no es aereo, limpiar valores de aerolíneas
+    if (nuevoTipo !== 'aereo') {
+      proveedorSeleccionado.value = ''
+      proveedorPersonalizado.value = ''
+      busquedaAerolinea.value = ''
+      dropdownOpen.value = false
+      formData.value.proveedor = ''
     }
   },
 )
 
 const handleSubmit = () => {
+  // Determinar el proveedor final
+  let proveedorFinal = proveedorSeleccionado.value || formData.value.proveedor
+
+  // Si es personalizado, usar el valor del input personalizado
+  if (proveedorFinal === 'personalizado') {
+    proveedorFinal = proveedorPersonalizado.value
+  }
+
   emit('submit', {
     ...formData.value,
+    proveedor: proveedorFinal,
     fechaSalida: formData.value.fechaInicial || '',
     fechaEntrada: formData.value.fechaFinal || '',
     fecha_inicio: formData.value.fechaInicial || '',

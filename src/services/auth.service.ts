@@ -27,7 +27,6 @@ export interface LoginCredentials {
   email?: string
   password?: string
   identidad?: string
-  telefono?: string
 }
 
 export interface SignUpData {
@@ -47,61 +46,145 @@ export class AuthService extends BaseService {
   /**
    * Login con diferentes métodos según el rol
    * - Admin: email + password
-   * - Cliente: identidad + telefono
+   * - Viajero: identidad (DNI) + password
    */
   async login(credentials: LoginCredentials): Promise<ServiceResponse<AuthUser>> {
     try {
-      // Solo login de admin con email/password
-      if (!credentials.email || !credentials.password) {
+      // Validar que se proporcionen credenciales
+      if (!credentials.password) {
         return {
           data: null,
-          error: 'Por favor proporcione email y contraseña.',
+          error: 'Por favor proporcione una contraseña.',
         }
       }
 
-      // Login de administrador con email/password
-      console.log('Intentando login con Supabase Auth...')
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: credentials.email,
-        password: credentials.password,
-      })
+      // Determinar si es login de admin o viajero
+      const isAdminLogin = !!credentials.email
+      const isViajeroLogin = !!credentials.identidad
 
-      if (error) {
-        console.error('Error en signInWithPassword:', error)
-        return { data: null, error: error.message }
+      if (!isAdminLogin && !isViajeroLogin) {
+        return {
+          data: null,
+          error: 'Por favor proporcione email o DNI para iniciar sesión.',
+        }
       }
 
-      console.log('Login exitoso en Supabase Auth, usuario:', data.user.email)
+      let authData
+      let userId: string
+
+      if (isViajeroLogin && credentials.identidad) {
+        console.log('Intentando login de viajero con DNI:', credentials.identidad)
+
+        // Buscar viajero por identidad
+        const { data: viajero, error: viajeroError } = await supabase
+          .from('viajeroz')
+          .select('id, email')
+          .eq('identidad', credentials.identidad)
+          .maybeSingle()
+
+        console.log('Resultado búsqueda viajero:', {
+          viajero,
+          viajeroError,
+          identidadBuscada: credentials.identidad,
+        })
+
+        if (viajeroError || !viajero) {
+          console.error('Error en búsqueda de viajero:', viajeroError)
+          return {
+            data: null,
+            error: 'DNI no encontrado. Verifique sus credenciales.',
+          }
+        }
+
+        console.log('Viajero encontrado:', viajero.email, 'con ID:', viajero.id)
+
+        // Intentar login con el email asociado al viajero
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: viajero.email,
+          password: credentials.password,
+        })
+
+        if (error) {
+          console.error('Error en signInWithPassword (viajero):', error)
+          return { data: null, error: 'Contraseña incorrecta.' }
+        }
+
+        authData = data
+        userId = data.user.id
+      } else if (isAdminLogin && credentials.email) {
+        // Login de administrador con email/password
+        console.log('Intentando login de administrador con email...')
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: credentials.email,
+          password: credentials.password,
+        })
+
+        if (error) {
+          console.error('Error en signInWithPassword (admin):', error)
+          return { data: null, error: 'Email o contraseña incorrectos.' }
+        }
+
+        authData = data
+        userId = data.user.id
+      } else {
+        return {
+          data: null,
+          error: 'Credenciales inválidas.',
+        }
+      }
+
+      console.log('Login exitoso en Supabase Auth, usuario:', authData.user.email)
 
       // Verificar el rol desde user_roles
       const { data: roleData, error: roleError } = await supabase
         .from('user_roles')
-        .select('role')
-        .eq('user_id', data.user.id)
+        .select('role, viajero_id')
+        .eq('user_id', userId)
         .maybeSingle()
 
       console.log('Role data:', roleData, 'Role error:', roleError)
 
-      if (!roleData || roleData.role !== 'admin') {
-        // Cerrar sesión si no es admin
+      // 🔧 TEMPORAL: Si no hay rol asignado, verificar si es el primer usuario (admin)
+      if (!roleData) {
+        console.log('Usuario sin rol asignado, contactar administrador')
         await supabase.auth.signOut()
-        return { data: null, error: 'Usuario no autorizado como administrador' }
+        return { data: null, error: 'Usuario sin rol asignado. Contacta al administrador.' }
       }
 
-      // Obtener perfil del administrador desde la tabla admins
-      const { data: adminData, error: adminError } = await supabase
-        .from('admins')
-        .select('*')
-        .eq('id', data.user.id)
-        .maybeSingle()
+      let authUser: AuthUser
 
-      console.log('Admin data:', adminData, 'Admin error:', adminError)
+      if (roleData.role === 'admin') {
+        // Es admin - obtener perfil de admins
+        const { data: adminData, error: adminError } = await supabase
+          .from('admins')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle()
 
-      // Retornar usuario con perfil de admin
-      const authUser: AuthUser = Object.assign({}, data.user, {
-        adminProfile: adminData || undefined,
-        isAdmin: true,
-      })
+        console.log('Admin data:', adminData, 'Admin error:', adminError)
+
+        authUser = Object.assign({}, authData.user, {
+          adminProfile: adminData || undefined,
+          isAdmin: true,
+        })
+      } else if (roleData.role === 'cliente') {
+        // Es cliente - obtener perfil de viajeroz
+        const { data: viajeroData, error: viajeroError } = await supabase
+          .from('viajeroz')
+          .select('*')
+          .eq('id', roleData.viajero_id)
+          .maybeSingle()
+
+        console.log('Viajero data:', viajeroData, 'Viajero error:', viajeroError)
+
+        authUser = Object.assign({}, authData.user, {
+          profile: viajeroData || undefined,
+          isAdmin: false,
+        })
+      } else {
+        await supabase.auth.signOut()
+        return { data: null, error: 'Rol de usuario no reconocido.' }
+      }
 
       console.log('AuthUser creado:', authUser.email, 'isAdmin:', authUser.isAdmin)
 
@@ -209,7 +292,7 @@ export class AuthService extends BaseService {
       // Verificar si es admin o cliente
       const { data: roleData } = await supabase
         .from('user_roles')
-        .select('role')
+        .select('role, viajero_id')
         .eq('user_id', session.user.id)
         .maybeSingle()
 
@@ -227,12 +310,12 @@ export class AuthService extends BaseService {
           adminProfile: adminData || undefined,
           isAdmin: true,
         })
-      } else {
-        // Es cliente - obtener perfil de viajeroz
+      } else if (roleData?.role === 'cliente' && roleData.viajero_id) {
+        // Es cliente - obtener perfil de viajeroz usando viajero_id
         const { data: profile } = await supabase
           .from('viajeroz')
           .select('*')
-          .eq('id', session.user.user_metadata?.viajero_id || session.user.id)
+          .eq('id', roleData.viajero_id)
           .maybeSingle()
 
         authUser = Object.assign({}, session.user, {

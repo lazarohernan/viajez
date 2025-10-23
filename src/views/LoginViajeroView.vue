@@ -14,28 +14,28 @@
                 stroke-linecap="round"
                 stroke-linejoin="round"
                 stroke-width="2"
-                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
               />
             </svg>
           </div>
 
           <h1 class="text-xl font-semibold text-gray-900 mb-2">ViajeMoz</h1>
-          <p class="text-gray-600 text-sm">Panel de Administración</p>
+          <p class="text-gray-600 text-sm">Portal del Viajero</p>
         </div>
 
         <!-- Login Form -->
         <form @submit.prevent="handleLogin" class="space-y-5">
           <div>
-            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
-              Correo Electrónico
+            <label for="identidad" class="block text-sm font-medium text-gray-700 mb-1">
+              DNI / Identidad
             </label>
             <input
-              id="email"
-              v-model="form.email"
-              type="email"
+              id="identidad"
+              v-model="form.identidad"
+              type="text"
               required
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-              placeholder="admin@viajemoz.com"
+              placeholder="0801-1990-00001"
             />
           </div>
 
@@ -54,7 +54,7 @@
           </div>
 
           <!-- Error Message -->
-          <div v-if="error" class="bg-red-50 border border-red-200 rounded-md p-3">
+          <div v-if="error" class="bg-red-50 border border-red-200 rounded-lg p-3">
             <p class="text-sm text-red-600">{{ error }}</p>
           </div>
 
@@ -90,6 +90,16 @@
             </span>
           </button>
         </form>
+
+        <!-- Link to Admin Login -->
+        <div class="mt-6 text-center">
+          <p class="text-sm text-gray-600">
+            ¿Eres administrador?
+            <router-link to="/login" class="text-orange-600 hover:text-orange-700 font-medium">
+              Inicia sesión aquí
+            </router-link>
+          </p>
+        </div>
       </div>
     </div>
   </div>
@@ -105,19 +115,19 @@ const { login, loading, error } = useAuth()
 
 // Form state
 const form = reactive({
-  email: '',
+  identidad: '',
   password: '',
 })
 
 // Handle login
 const handleLogin = async () => {
   const result = await login({
-    email: form.email,
+    identidad: form.identidad,
     password: form.password,
   })
 
   if (result) {
-    router.push('/dashboard')
+    router.push('/cliente/viajes')
   } else {
     console.error('Error al iniciar sesión:', error.value)
   }

@@ -14,10 +14,10 @@ export interface ViajeroFilters {
 export interface CreateViajeroData {
   nombre: string
   apellido: string
-  email: string
   telefono: string
-  identidad: string
-  fecha_nacimiento: string
+  email?: string
+  identidad?: string
+  fecha_nacimiento?: string
   numero_pasaporte?: string
   fecha_vencimiento_pasaporte?: string
   numero_visa?: string
@@ -25,6 +25,9 @@ export interface CreateViajeroData {
   tipo_visa?: string
   fecha_vencimiento_visa?: string
   pais_residencia?: string
+  activo?: boolean
+  password?: string // Contraseña para crear credenciales de acceso
+  crear_credenciales?: boolean // Flag para indicar si se deben crear credenciales
 }
 
 export interface UpdateViajeroData extends Partial<CreateViajeroData> {}
@@ -33,27 +36,87 @@ export interface UpdateViajeroData extends Partial<CreateViajeroData> {}
  * Servicio para gestión de viajeros (clientes)
  */
 export class ViajerosService extends BaseService {
-  /**
-   * Crear un nuevo viajero
-   */
   async create(data: CreateViajeroData): Promise<ServiceResponse<Viajeroz>> {
     try {
+      // Validar que tenga email si se van a crear credenciales
+      if (data.crear_credenciales && !data.email) {
+        return {
+          data: null,
+          error: 'Se requiere email para crear credenciales de acceso',
+        }
+      }
+
+      // Validar que tenga contraseña si se van a crear credenciales
+      if (data.crear_credenciales && !data.password) {
+        return {
+          data: null,
+          error: 'Se requiere contraseña para crear credenciales de acceso',
+        }
+      }
+
+      // Crear el viajero en la base de datos
       const { data: viajero, error } = await supabase
         .from('viajeroz')
         .insert({
-          ...data,
-          fecha_nacimiento: this.formatDate(data.fecha_nacimiento),
+          nombre: data.nombre,
+          apellido: data.apellido,
+          telefono: data.telefono,
+          email: data.email || null,
+          identidad: data.identidad || null,
+          fecha_nacimiento: data.fecha_nacimiento ? this.formatDate(data.fecha_nacimiento) : null,
+          numero_pasaporte: data.numero_pasaporte || null,
           fecha_vencimiento_pasaporte: data.fecha_vencimiento_pasaporte
             ? this.formatDate(data.fecha_vencimiento_pasaporte)
-            : undefined,
+            : null,
+          numero_visa: data.numero_visa || null,
+          pais_visa: data.pais_visa || null,
+          tipo_visa: data.tipo_visa || null,
           fecha_vencimiento_visa: data.fecha_vencimiento_visa
             ? this.formatDate(data.fecha_vencimiento_visa)
-            : undefined,
+            : null,
+          pais_residencia: data.pais_residencia || null,
         })
         .select()
         .single()
 
       if (error) this.handleError(error)
+
+      // Si se deben crear credenciales, crear usuario en Supabase Auth
+      if (data.crear_credenciales && viajero && data.email && data.password) {
+        try {
+          // Usar función RPC para crear usuario (requiere permisos de admin)
+          const { data: rpcResult, error: rpcError } = await supabase.rpc('create_viajero_user', {
+            user_email: data.email,
+            user_password: data.password,
+            viajero_id: viajero.id,
+          })
+
+          if (rpcError) {
+            console.error('Error en RPC create_viajero_user:', rpcError)
+            return {
+              data: viajero,
+              error: `Viajero creado pero error al crear credenciales: ${rpcError.message}`,
+            }
+          }
+
+          // Verificar resultado de la función
+          if (rpcResult && !rpcResult.success) {
+            console.error('Error en función RPC:', rpcResult.error)
+            return {
+              data: viajero,
+              error: `Viajero creado pero error al crear credenciales: ${rpcResult.error}`,
+            }
+          }
+
+          console.log('✅ Credenciales creadas exitosamente para:', data.email)
+        } catch (authError) {
+          console.error('Error en proceso de creación de credenciales:', authError)
+          return {
+            data: viajero,
+            error: 'Viajero creado pero error al crear credenciales de acceso',
+          }
+        }
+      }
 
       return { data: viajero, error: null }
     } catch (error) {
@@ -130,26 +193,41 @@ export class ViajerosService extends BaseService {
     }
   }
 
-  /**
-   * Actualizar viajero
-   */
   async update(id: string, data: UpdateViajeroData): Promise<ServiceResponse<Viajeroz>> {
+    console.log('🔄 ViajerosService.update called with:', { id, data })
     try {
-      const updateData: Record<string, unknown> = { ...data }
+      const updateData: Record<string, unknown> = {}
 
-      // Formatear fechas si existen
-      if (data.fecha_nacimiento) {
-        updateData.fecha_nacimiento = this.formatDate(data.fecha_nacimiento)
-      }
-      if (data.fecha_vencimiento_pasaporte) {
-        updateData.fecha_vencimiento_pasaporte = this.formatDate(data.fecha_vencimiento_pasaporte)
-      }
-      if (data.fecha_vencimiento_visa) {
-        updateData.fecha_vencimiento_visa = this.formatDate(data.fecha_vencimiento_visa)
-      }
+      // Solo incluir campos que no sean undefined
+      if (data.nombre !== undefined) updateData.nombre = data.nombre
+      if (data.apellido !== undefined) updateData.apellido = data.apellido
+      if (data.telefono !== undefined) updateData.telefono = data.telefono
+      if (data.email !== undefined) updateData.email = data.email || null
+      if (data.identidad !== undefined) updateData.identidad = data.identidad || null
+      if (data.fecha_nacimiento !== undefined)
+        updateData.fecha_nacimiento = data.fecha_nacimiento
+          ? this.formatDate(data.fecha_nacimiento)
+          : null
+      if (data.numero_pasaporte !== undefined)
+        updateData.numero_pasaporte = data.numero_pasaporte || null
+      if (data.fecha_vencimiento_pasaporte !== undefined)
+        updateData.fecha_vencimiento_pasaporte = data.fecha_vencimiento_pasaporte
+          ? this.formatDate(data.fecha_vencimiento_pasaporte)
+          : null
+      if (data.numero_visa !== undefined) updateData.numero_visa = data.numero_visa || null
+      if (data.pais_visa !== undefined) updateData.pais_visa = data.pais_visa || null
+      if (data.tipo_visa !== undefined) updateData.tipo_visa = data.tipo_visa || null
+      if (data.fecha_vencimiento_visa !== undefined)
+        updateData.fecha_vencimiento_visa = data.fecha_vencimiento_visa
+          ? this.formatDate(data.fecha_vencimiento_visa)
+          : null
+      if (data.pais_residencia !== undefined)
+        updateData.pais_residencia = data.pais_residencia || null
+      if (data.activo !== undefined) updateData.activo = data.activo
 
       updateData.updated_at = new Date().toISOString()
 
+      console.log('📡 Sending update to Supabase:', updateData)
       const { data: viajero, error } = await supabase
         .from('viajeroz')
         .update(updateData)
@@ -157,10 +235,15 @@ export class ViajerosService extends BaseService {
         .select()
         .single()
 
-      if (error) this.handleError(error)
+      console.log('📡 Supabase response:', { viajero, error })
+      if (error) {
+        console.error('❌ Error from Supabase:', error)
+        this.handleError(error)
+      }
 
       return { data: viajero, error: null }
     } catch (error) {
+      console.error('❌ Exception in update:', error)
       return {
         data: null,
         error: error instanceof Error ? error.message : 'Error actualizando viajero',
@@ -285,6 +368,76 @@ export class ViajerosService extends BaseService {
         error: error instanceof Error ? error.message : 'Error obteniendo cumpleaños del día',
       }
     }
+  }
+
+  /**
+   * Resetear contraseña de un viajero
+   */
+  async resetPassword(viajeroId: string): Promise<ServiceResponse<{ newPassword: string }>> {
+    try {
+      // Generar nueva contraseña aleatoria
+      const newPassword = this.generateRandomPassword()
+
+      // Buscar el email del viajero
+      const { data: viajero, error: findError } = await supabase
+        .from('viajeroz')
+        .select('email')
+        .eq('id', viajeroId)
+        .single()
+
+      if (findError || !viajero?.email) {
+        return {
+          data: null,
+          error: 'Viajero no encontrado o sin email registrado',
+        }
+      }
+
+      // Usar función RPC para resetear contraseña
+      const { data: rpcResult, error: rpcError } = await supabase.rpc('reset_viajero_password', {
+        viajero_id_param: viajeroId,
+        new_password: newPassword,
+      })
+
+      if (rpcError) {
+        console.error('Error en RPC reset_viajero_password:', rpcError)
+        return {
+          data: null,
+          error: 'Error al actualizar la contraseña',
+        }
+      }
+
+      // Verificar resultado de la función
+      if (rpcResult && !rpcResult.success) {
+        console.error('Error en función RPC:', rpcResult.error)
+        return {
+          data: null,
+          error: rpcResult.error || 'Error al actualizar la contraseña',
+        }
+      }
+
+      console.log('✅ Contraseña reseteada exitosamente para:', viajero.email)
+      return { data: { newPassword }, error: null }
+    } catch (error) {
+      return {
+        data: null,
+        error: error instanceof Error ? error.message : 'Error al resetear contraseña',
+      }
+    }
+  }
+
+  /**
+   * Generar contraseña aleatoria segura
+   */
+  private generateRandomPassword(): string {
+    const length = 10
+    const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*'
+    let password = ''
+
+    for (let i = 0; i < length; i++) {
+      password += charset.charAt(Math.floor(Math.random() * charset.length))
+    }
+
+    return password
   }
 }
 

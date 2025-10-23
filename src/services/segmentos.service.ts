@@ -31,7 +31,7 @@ export interface CreateSegmentoData {
 
   // Datos específicos por tipo
   transporte?: {
-    tipo_transporte: 'aereo' | 'tren' | 'bus' | 'carro_privado' | 'uber' | 'otro'
+    tipo_transporte: 'aereo' | 'tren' | 'bus' | 'carro_privado' | 'auto_rentado' | 'uber' | 'otro'
     tiene_retorno?: boolean
     origen?: string
     destino?: string
@@ -39,7 +39,6 @@ export interface CreateSegmentoData {
 
   hospedaje?: {
     tipo_hospedaje: 'hotel' | 'renta_privada' | 'airbnb' | 'otro'
-    numero_habitaciones?: number
   }
 
   actividad?: {
@@ -158,19 +157,82 @@ export class SegmentosService extends BaseService {
         .from('segmentos')
         .select(
           `
-          *,
-          segmento_transporte(*),
-          segmento_hospedaje(*),
-          segmento_actividad(*),
-          documentos(*)
+          id,
+          tipo,
+          nombre,
+          proveedor,
+          fecha_inicio,
+          fecha_fin,
+          hora_inicio,
+          hora_fin,
+          duracion,
+          observaciones,
+          orden,
+          cotizacion_id,
+          viaje_id,
+          created_at,
+          updated_at,
+          segmento_transporte (
+            id,
+            segmento_id,
+            tipo_transporte,
+            tiene_retorno,
+            origen,
+            destino,
+            created_at,
+            updated_at
+          ),
+          segmento_hospedaje (
+            id,
+            segmento_id,
+            tipo_hospedaje,
+            numero_habitaciones,
+            created_at,
+            updated_at
+          ),
+          segmento_actividad (
+            id,
+            segmento_id,
+            duracion_horas,
+            created_at,
+            updated_at
+          ),
+          documentos (
+            id,
+            segmento_id,
+            nombre_archivo,
+            ruta_storage,
+            tipo_archivo,
+            tamano_bytes,
+            created_at,
+            updated_at
+          )
         `,
         )
         .eq('id', id)
         .single()
 
-      if (error) this.handleError(error)
+      if (error) {
+        // Si es error de "no rows", devolver error específico
+        if (error.code === 'PGRST116') {
+          return {
+            data: null,
+            error: `Segmento con ID ${id} no encontrado`,
+          }
+        }
+        this.handleError(error)
+      }
 
-      return { data, error: null }
+      // Transformar la estructura para que coincida con SegmentoWithDetails
+      const segmentoWithDetails: SegmentoWithDetails = {
+        ...data,
+        segmento_transporte: data.segmento_transporte?.[0] || null,
+        segmento_hospedaje: data.segmento_hospedaje?.[0] || null,
+        segmento_actividad: data.segmento_actividad?.[0] || null,
+        documentos: data.documentos || [],
+      }
+
+      return { data: segmentoWithDetails, error: null }
     } catch (error) {
       return {
         data: null,
@@ -188,11 +250,56 @@ export class SegmentosService extends BaseService {
         .from('segmentos')
         .select(
           `
-          *,
-          segmento_transporte(*),
-          segmento_hospedaje(*),
-          segmento_actividad(*),
-          documentos(*)
+          id,
+          tipo,
+          nombre,
+          proveedor,
+          fecha_inicio,
+          fecha_fin,
+          hora_inicio,
+          hora_fin,
+          duracion,
+          observaciones,
+          orden,
+          cotizacion_id,
+          viaje_id,
+          created_at,
+          updated_at,
+          segmento_transporte (
+            id,
+            segmento_id,
+            tipo_transporte,
+            tiene_retorno,
+            origen,
+            destino,
+            created_at,
+            updated_at
+          ),
+          segmento_hospedaje (
+            id,
+            segmento_id,
+            tipo_hospedaje,
+            numero_habitaciones,
+            created_at,
+            updated_at
+          ),
+          segmento_actividad (
+            id,
+            segmento_id,
+            duracion_horas,
+            created_at,
+            updated_at
+          ),
+          documentos (
+            id,
+            segmento_id,
+            nombre_archivo,
+            ruta_storage,
+            tipo_archivo,
+            tamano_bytes,
+            created_at,
+            updated_at
+          )
         `,
         )
         .eq('cotizacion_id', cotizacionId)
@@ -200,7 +307,16 @@ export class SegmentosService extends BaseService {
 
       if (error) this.handleError(error)
 
-      return { data: data || [], error: null }
+      // Transformar cada segmento para que coincida con SegmentoWithDetails
+      const segmentosWithDetails = (data || []).map((segmento) => ({
+        ...segmento,
+        segmento_transporte: segmento.segmento_transporte?.[0] || null,
+        segmento_hospedaje: segmento.segmento_hospedaje?.[0] || null,
+        segmento_actividad: segmento.segmento_actividad?.[0] || null,
+        documentos: segmento.documentos || [],
+      }))
+
+      return { data: segmentosWithDetails, error: null }
     } catch (error) {
       return {
         data: [],
@@ -218,11 +334,56 @@ export class SegmentosService extends BaseService {
         .from('segmentos')
         .select(
           `
-          *,
-          segmento_transporte(*),
-          segmento_hospedaje(*),
-          segmento_actividad(*),
-          documentos(*)
+          id,
+          tipo,
+          nombre,
+          proveedor,
+          fecha_inicio,
+          fecha_fin,
+          hora_inicio,
+          hora_fin,
+          duracion,
+          observaciones,
+          orden,
+          cotizacion_id,
+          viaje_id,
+          created_at,
+          updated_at,
+          segmento_transporte (
+            id,
+            segmento_id,
+            tipo_transporte,
+            tiene_retorno,
+            origen,
+            destino,
+            created_at,
+            updated_at
+          ),
+          segmento_hospedaje (
+            id,
+            segmento_id,
+            tipo_hospedaje,
+            numero_habitaciones,
+            created_at,
+            updated_at
+          ),
+          segmento_actividad (
+            id,
+            segmento_id,
+            duracion_horas,
+            created_at,
+            updated_at
+          ),
+          documentos (
+            id,
+            segmento_id,
+            nombre_archivo,
+            ruta_storage,
+            tipo_archivo,
+            tamano_bytes,
+            created_at,
+            updated_at
+          )
         `,
         )
         .eq('viaje_id', viajeId)
@@ -230,7 +391,16 @@ export class SegmentosService extends BaseService {
 
       if (error) this.handleError(error)
 
-      return { data: data || [], error: null }
+      // Transformar cada segmento para que coincida con SegmentoWithDetails
+      const segmentosWithDetails = (data || []).map((segmento) => ({
+        ...segmento,
+        segmento_transporte: segmento.segmento_transporte?.[0] || null,
+        segmento_hospedaje: segmento.segmento_hospedaje?.[0] || null,
+        segmento_actividad: segmento.segmento_actividad?.[0] || null,
+        documentos: segmento.documentos || [],
+      }))
+
+      return { data: segmentosWithDetails, error: null }
     } catch (error) {
       return {
         data: [],
@@ -273,34 +443,92 @@ export class SegmentosService extends BaseService {
 
       // Actualizar datos específicos si se proporcionaron
       if (data.transporte && segmento.tipo === 'transporte') {
-        const { error } = await supabase
+        // Verificar si existe registro en segmento_transporte
+        const { data: existingTransporte, error: checkError } = await supabase
           .from('segmento_transporte')
-          .update(data.transporte)
+          .select('id')
           .eq('segmento_id', id)
+          .single()
 
-        if (error) this.handleError(error)
+        if (existingTransporte && !checkError) {
+          // Actualizar registro existente
+          const { error } = await supabase
+            .from('segmento_transporte')
+            .update(data.transporte)
+            .eq('segmento_id', id)
+          if (error) this.handleError(error)
+        } else {
+          // Crear nuevo registro
+          const { error } = await supabase.from('segmento_transporte').insert({
+            segmento_id: id,
+            ...data.transporte,
+          })
+          if (error) this.handleError(error)
+        }
       }
 
       if (data.hospedaje && segmento.tipo === 'hospedaje') {
-        const { error } = await supabase
+        // Verificar si existe registro en segmento_hospedaje
+        const { data: existingHospedaje, error: checkError } = await supabase
           .from('segmento_hospedaje')
-          .update(data.hospedaje)
+          .select('id')
           .eq('segmento_id', id)
+          .single()
 
-        if (error) this.handleError(error)
+        if (existingHospedaje && !checkError) {
+          // Actualizar registro existente
+          const { error } = await supabase
+            .from('segmento_hospedaje')
+            .update(data.hospedaje)
+            .eq('segmento_id', id)
+          if (error) this.handleError(error)
+        } else {
+          // Crear nuevo registro
+          const { error } = await supabase.from('segmento_hospedaje').insert({
+            segmento_id: id,
+            ...data.hospedaje,
+          })
+          if (error) this.handleError(error)
+        }
       }
 
       if (data.actividad && segmento.tipo === 'actividad') {
-        const { error } = await supabase
+        // Verificar si existe registro en segmento_actividad
+        const { data: existingActividad, error: checkError } = await supabase
           .from('segmento_actividad')
-          .update(data.actividad)
+          .select('id')
           .eq('segmento_id', id)
+          .single()
 
-        if (error) this.handleError(error)
+        if (existingActividad && !checkError) {
+          // Actualizar registro existente
+          const { error } = await supabase
+            .from('segmento_actividad')
+            .update(data.actividad)
+            .eq('segmento_id', id)
+          if (error) this.handleError(error)
+        } else {
+          // Crear nuevo registro
+          const { error } = await supabase.from('segmento_actividad').insert({
+            segmento_id: id,
+            ...data.actividad,
+          })
+          if (error) this.handleError(error)
+        }
       }
 
       // Obtener segmento actualizado con detalles
-      return await this.getById(id)
+      const segmentoActualizado = await this.getById(id)
+      if (segmentoActualizado.error) {
+        // Si falla getById, devolver al menos el segmento básico
+        console.warn(
+          'Error obteniendo segmento actualizado con detalles:',
+          segmentoActualizado.error,
+        )
+        return { data: segmento, error: null }
+      }
+
+      return segmentoActualizado
     } catch (error) {
       return {
         data: null,
@@ -506,7 +734,6 @@ export class SegmentosService extends BaseService {
       } else if (originalSegmento.tipo === 'hospedaje' && originalSegmento.segmento_hospedaje) {
         newSegmentoData.hospedaje = {
           tipo_hospedaje: originalSegmento.segmento_hospedaje.tipo_hospedaje,
-          numero_habitaciones: originalSegmento.segmento_hospedaje.numero_habitaciones,
         }
       } else if (originalSegmento.tipo === 'actividad' && originalSegmento.segmento_actividad) {
         newSegmentoData.actividad = {

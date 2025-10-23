@@ -18,12 +18,7 @@ export const useAuthStore = defineStore('auth', () => {
   const adminProfile = computed(() => user.value?.adminProfile || null)
 
   // Acciones
-  const login = async (credentials: {
-    email?: string
-    password?: string
-    identidad?: string
-    telefono?: string
-  }) => {
+  const login = async (credentials: { email?: string; password?: string; identidad?: string }) => {
     try {
       loading.value = true
       const result = await authService.login(credentials)

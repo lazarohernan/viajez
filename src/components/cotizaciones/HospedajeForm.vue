@@ -14,8 +14,10 @@
           />
         </svg>
       </div>
-      <h3 class="text-lg font-semibold text-gray-900 mb-2">Cotización de Hospedaje</h3>
-      <p class="text-sm text-gray-600">Complete los detalles del servicio de alojamiento</p>
+      <h3 class="text-lg font-semibold text-gray-900 mb-2">Agregar Hospedaje al Viaje</h3>
+      <p class="text-sm text-gray-600">
+        Complete los detalles del alojamiento para agregar al viaje
+      </p>
     </div>
 
     <!-- Formulario -->
@@ -35,16 +37,55 @@
         </select>
       </div>
 
-      <!-- Proveedor -->
+      <!-- Hotel/Proveedor -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2">Proveedor/Nombre</label>
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          {{ formData.tipo === 'hotel' ? 'Hotel' : 'Proveedor/Alojamiento' }}
+        </label>
+
+        <!-- Select para hoteles cuando es tipo 'hotel' -->
+        <select
+          v-if="formData.tipo === 'hotel'"
+          v-model="formData.proveedor"
+          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+          required
+        >
+          <option value="">Seleccionar hotel...</option>
+          <optgroup v-for="(hoteles, cadena) in hotelesPorCadena" :key="cadena" :label="cadena">
+            <option v-for="hotel in hoteles" :key="hotel.nombre" :value="hotel.nombre">
+              {{ hotel.nombre }}
+            </option>
+          </optgroup>
+          <option value="otro">Otro hotel (especificar)</option>
+        </select>
+
+        <!-- Campo de texto para otros tipos de hospedaje -->
         <input
+          v-else
           v-model="formData.proveedor"
           type="text"
-          placeholder="Ej: Hotel Hilton, Airbnb, etc."
+          :placeholder="getPlaceholderForProvider()"
           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
           required
         />
+
+        <!-- Campo para hotel personalizado -->
+        <input
+          v-if="formData.tipo === 'hotel' && formData.proveedor === 'otro'"
+          v-model="proveedorPersonalizado"
+          type="text"
+          placeholder="Escriba el nombre del hotel..."
+          class="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+          required
+        />
+
+        <p class="mt-1 text-xs text-gray-500">
+          {{
+            formData.tipo === 'hotel'
+              ? 'Busca entre todas las cadenas hoteleras o selecciona "Otro hotel"'
+              : getHelpTextForProvider()
+          }}
+        </p>
       </div>
 
       <!-- Fechas -->
@@ -108,7 +149,7 @@
           type="submit"
           class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
         >
-          Guardar Cotización
+          Guardar Segmento
         </button>
       </div>
     </form>
@@ -116,7 +157,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { HOTELES } from '@/data/hoteles'
 
 interface HospedajeFormData extends Record<string, unknown> {
   tipo: string
@@ -127,23 +169,168 @@ interface HospedajeFormData extends Record<string, unknown> {
   fecha_fin: string
   horaEntrada: string
   horaSalida: string
-  numero_habitaciones: number
   duracion: string
   segmento: string
   observaciones: string
 }
+
+// Props para recibir datos iniciales al editar
+const props = defineProps<{
+  initialData?: Record<string, unknown> | null
+}>()
 
 const emit = defineEmits<{
   submit: [data: HospedajeFormData]
   cancel: []
 }>()
 
+// Inicializar formData con datos iniciales si existen
 const formData = ref({
-  tipo: '',
-  proveedor: '',
-  fechaEntrada: '',
-  fechaSalida: '',
-  observaciones: '',
+  tipo:
+    ((props.initialData?.segmento_hospedaje as Record<string, unknown>)
+      ?.tipo_hospedaje as string) || '',
+  proveedor: (props.initialData?.proveedor as string) || '',
+  fechaEntrada: (props.initialData?.fecha_inicio as string) || '',
+  fechaSalida: (props.initialData?.fecha_fin as string) || '',
+  observaciones: (props.initialData?.observaciones as string) || '',
+})
+
+console.log('🏨 HospedajeForm inicializado con datos:', {
+  initialData: props.initialData,
+  formData: formData.value,
+})
+
+const proveedorSeleccionado = ref('')
+const dropdownOpen = ref(false)
+const busquedaHotel = ref('')
+const proveedorPersonalizado = ref('')
+
+// Watch para actualizar formData cuando cambien los initialData (al editar)
+watch(
+  () => props.initialData,
+  (newData) => {
+    if (newData) {
+      // segmento_hospedaje puede venir como array o como objeto
+      const segmentoHospedajeRaw = newData.segmento_hospedaje as
+        | Record<string, unknown>
+        | Record<string, unknown>[]
+        | undefined
+
+      console.log('🔄 HospedajeForm recibiendo initialData:', JSON.stringify(newData, null, 2))
+      console.log('🏨 segmento_hospedaje RAW:', JSON.stringify(segmentoHospedajeRaw, null, 2))
+
+      // Si viene como array, tomar el primer elemento
+      let segmentoHospedaje: Record<string, unknown> | undefined = undefined
+      if (Array.isArray(segmentoHospedajeRaw) && segmentoHospedajeRaw.length > 0) {
+        segmentoHospedaje = segmentoHospedajeRaw[0]
+      } else if (segmentoHospedajeRaw && !Array.isArray(segmentoHospedajeRaw)) {
+        segmentoHospedaje = segmentoHospedajeRaw
+      }
+
+      const proveedor = (newData.proveedor as string) || ''
+
+      formData.value = {
+        tipo: (segmentoHospedaje?.tipo_hospedaje as string) || '',
+        proveedor,
+        fechaEntrada: (newData.fecha_inicio as string) || '',
+        fechaSalida: (newData.fecha_fin as string) || '',
+        observaciones: (newData.observaciones as string) || '',
+      }
+
+      // Actualizar también proveedorSeleccionado para que el dropdown muestre el hotel
+      // Solo si es tipo hotel y el proveedor está en la lista de hoteles
+      if (proveedor && formData.value.tipo === 'hotel') {
+        // Verificar si el proveedor está en la lista de hoteles
+        const hotelEncontrado = HOTELES.find((hotel) => hotel.nombre === proveedor)
+        if (hotelEncontrado) {
+          proveedorSeleccionado.value = proveedor
+        } else {
+          // Si no está en la lista, marcar como "otro"
+          formData.value.proveedor = 'otro'
+          proveedorPersonalizado.value = proveedor
+        }
+        console.log('🏨 Hotel seleccionado en dropdown:', proveedor)
+      }
+
+      console.log(
+        '✅ HospedajeForm actualizado con nuevos datos:',
+        JSON.stringify(formData.value, null, 2),
+      )
+    }
+  },
+  { immediate: true },
+)
+
+// Agrupar hoteles por cadena para el select
+const hotelesPorCadena = computed(() => {
+  const grupos: Record<string, Array<{ nombre: string; cadena: string }>> = {}
+
+  HOTELES.forEach((hotel) => {
+    if (!grupos[hotel.cadena]) {
+      grupos[hotel.cadena] = []
+    }
+    grupos[hotel.cadena].push(hotel)
+  })
+
+  return grupos
+})
+
+// Función para obtener placeholder según el tipo de hospedaje
+const getPlaceholderForProvider = (): string => {
+  switch (formData.value.tipo) {
+    case 'renta_privada':
+      return 'Ej: Airbnb, Booking.com, HomeAway...'
+    case 'otro':
+      return 'Ej: Hostal, Posada, Camping...'
+    default:
+      return 'Nombre del proveedor o alojamiento'
+  }
+}
+
+// Función para obtener texto de ayuda según el tipo de hospedaje
+const getHelpTextForProvider = (): string => {
+  switch (formData.value.tipo) {
+    case 'renta_privada':
+      return 'Ingresa el nombre de la plataforma de renta privada'
+    case 'otro':
+      return 'Ingresa el nombre del alojamiento o servicio'
+    default:
+      return 'Ingresa el nombre del proveedor'
+  }
+}
+
+// Limpiar valores relacionados con hoteles cuando cambie el tipo
+watch(
+  () => formData.value.tipo,
+  (nuevoTipo) => {
+    // Si cambió a algo que no es hotel, limpiar valores de hoteles
+    if (nuevoTipo !== 'hotel') {
+      proveedorSeleccionado.value = ''
+      proveedorPersonalizado.value = ''
+      busquedaHotel.value = ''
+      dropdownOpen.value = false
+      formData.value.proveedor = ''
+    }
+  },
+)
+
+// Cerrar dropdown al hacer clic fuera
+const handleClickOutside = (event: Event) => {
+  const target = event.target as HTMLElement
+  const dropdown = target.closest('.relative')
+  if (!dropdown) {
+    dropdownOpen.value = false
+    busquedaHotel.value = ''
+  }
+}
+
+// Agregar listener para cerrar dropdown
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
 })
 
 const duracionCalculada = computed(() => {
@@ -161,8 +348,17 @@ const duracionCalculada = computed(() => {
 })
 
 const handleSubmit = () => {
+  // Determinar el proveedor final
+  let proveedorFinal = formData.value.proveedor
+
+  // Si es hotel personalizado, usar el valor del campo personalizado
+  if (formData.value.tipo === 'hotel' && proveedorFinal === 'otro') {
+    proveedorFinal = proveedorPersonalizado.value
+  }
+
   emit('submit', {
     ...formData.value,
+    proveedor: proveedorFinal,
     fecha_inicio: formData.value.fechaEntrada,
     fecha_fin: formData.value.fechaSalida,
     horaEntrada: '',

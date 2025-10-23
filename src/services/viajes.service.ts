@@ -2,8 +2,72 @@ import { supabase } from './supabase'
 import { BaseService, type ServiceResponse, type PaginatedResponse } from './base.service'
 import type { Viaje, Segmento, Viajeroz } from './supabase'
 
-// Re-exportar tipos para uso en stores y composables
-export type { Viaje, Segmento, Viajeroz }
+// Sistema de caché simple
+interface CacheEntry<T = unknown> {
+  data: T
+  timestamp: number
+  ttl: number // Time to live in milliseconds
+}
+
+class SimpleCache {
+  private cache = new Map<string, CacheEntry>()
+
+  set<T>(key: string, data: T, ttl = 5 * 60 * 1000): void {
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now(),
+      ttl,
+    })
+  }
+
+  get<T>(key: string): T | null {
+    const entry = this.cache.get(key)
+    if (!entry) return null
+
+    if (Date.now() - entry.timestamp > entry.ttl) {
+      this.cache.delete(key)
+      return null
+    }
+
+    return entry.data as T
+  }
+
+  clear(): void {
+    this.cache.clear()
+  }
+
+  delete(key: string): void {
+    this.cache.delete(key)
+  }
+}
+
+const viajesCache = new SimpleCache()
+
+// Tipos para resultados de Supabase con relaciones
+interface ViajeWithRelations {
+  id: string
+  nombre: string
+  descripcion?: string
+  fecha_inicio: string
+  fecha_fin?: string
+  estado: 'por_iniciar' | 'en_curso' | 'finalizado'
+  progreso_porcentaje: number
+  created_at: string
+  updated_at: string
+  cotizacion?: {
+    id: string
+    nombre: string
+  }
+  segmentos?: Segmento[]
+  viaje_viajeroz?: Array<{
+    viajero: Viajeroz
+  }>
+}
+
+interface ViajeroViajeResult {
+  viaje_id: string
+  viajes: ViajeWithRelations[]
+}
 
 export interface ViajeWithDetails extends Viaje {
   segmentos: Segmento[]
@@ -158,17 +222,28 @@ export class ViajesService extends BaseService {
   }
 
   /**
-   * Obtener viaje por ID con todos los detalles
+   * Obtener viaje por ID con todos los detalles - OPTIMIZADO
    */
   async getById(id: string): Promise<ServiceResponse<ViajeWithDetails>> {
     try {
-      // Obtener viaje con cotización
+      console.log(`🚀 Ejecutando consulta optimizada getById() para viaje: ${id}`)
+
       const { data: viaje, error: viajeError } = await supabase
         .from('viajes')
         .select(
           `
           *,
-          cotizacion:cotizaciones(id, nombre)
+          cotizacion:cotizaciones(id, nombre),
+          segmentos(
+            *,
+            segmento_transporte(*),
+            segmento_hospedaje(*),
+            segmento_actividad(*),
+            documentos(*)
+          ),
+          viaje_viajeroz(
+            viajero:viajeroz(*)
+          )
         `,
         )
         .eq('id', id)
@@ -176,43 +251,21 @@ export class ViajesService extends BaseService {
 
       if (viajeError) this.handleError(viajeError)
 
-      // Obtener segmentos
-      const { data: segmentos, error: segError } = await supabase
-        .from('segmentos')
-        .select(
-          `
-          *,
-          segmento_transporte(*),
-          segmento_hospedaje(*),
-          segmento_actividad(*),
-          documentos(*)
-        `,
-        )
-        .eq('viaje_id', id)
-        .order('orden', { ascending: true })
-
-      if (segError) this.handleError(segError)
-
-      // Obtener viajeros
-      const { data: viajeros, error: viajError } = await supabase
-        .from('viaje_viajeroz')
-        .select(
-          `
-          viajero:viajeroz(*)
-        `,
-        )
-        .eq('viaje_id', id)
-
-      if (viajError) this.handleError(viajError)
+      console.log('📦 Consulta ejecutada exitosamente, procesando resultados...')
 
       const viajeWithDetails: ViajeWithDetails = {
         ...viaje,
-        segmentos: segmentos || [],
-        viajeros: viajeros?.map((v) => v.viajero).filter(Boolean) || [],
+        segmentos: viaje.segmentos || [],
+        viajeros:
+          viaje.viaje_viajeroz?.map((vv: { viajero: Viajeroz }) => vv.viajero).filter(Boolean) ||
+          [],
       }
+
+      console.log(`✅ Optimización completada: viaje ${viaje.nombre} obtenido en 1 consulta`)
 
       return { data: viajeWithDetails, error: null }
     } catch (error) {
+      console.error('❌ Error en consulta optimizada getById:', error)
       return {
         data: null,
         error: error instanceof Error ? error.message : 'Error obteniendo viaje',
@@ -307,6 +360,9 @@ export class ViajesService extends BaseService {
         .single()
 
       if (error) this.handleError(error)
+
+      // Invalidar caché cuando se actualiza un viaje
+      viajesCache.delete('viajes_in_progress')
 
       return { data: viaje, error: null }
     } catch (error) {
@@ -457,16 +513,35 @@ export class ViajesService extends BaseService {
   }
 
   /**
-   * Obtener viajes en curso y por iniciar (viajes activos)
+   * Obtener viajes en curso y por iniciar (viajes activos) - OPTIMIZADO con caché
    */
   async getInProgress(): Promise<ServiceResponse<ViajeWithDetails[]>> {
     try {
+      // Verificar caché primero
+      const cacheKey = 'viajes_in_progress'
+      const cached = viajesCache.get<ViajeWithDetails[]>(cacheKey)
+      if (cached) {
+        console.log('🚀 Datos obtenidos desde caché')
+        return { data: cached, error: null }
+      }
+
+      console.log('🚀 Ejecutando consulta optimizada getInProgress()')
+
       const { data, error } = await supabase
         .from('viajes')
         .select(
           `
           *,
-          cotizacion:cotizaciones(id, nombre)
+          cotizacion:cotizaciones(id, nombre),
+          segmentos(
+            *,
+            segmento_transporte(*),
+            segmento_hospedaje(*),
+            segmento_actividad(*)
+          ),
+          viaje_viajeroz(
+            viajero:viajeroz(*)
+          )
         `,
         )
         .in('estado', ['en_curso', 'por_iniciar'])
@@ -474,27 +549,29 @@ export class ViajesService extends BaseService {
 
       if (error) this.handleError(error)
 
-      const viajesWithDetails = await Promise.all(
-        (data || []).map(async (viaje) => {
-          const [segmentosResult, viajerosResult] = await Promise.all([
-            supabase
-              .from('segmentos')
-              .select('*')
-              .eq('viaje_id', viaje.id)
-              .order('orden', { ascending: true }),
-            supabase.from('viaje_viajeroz').select('viajero:viajeroz(*)').eq('viaje_id', viaje.id),
-          ])
+      console.log('📦 Consulta ejecutada exitosamente, procesando resultados...')
 
-          return {
-            ...viaje,
-            segmentos: segmentosResult.data || [],
-            viajeros: viajerosResult.data?.map((v) => v.viajero).filter(Boolean) || [],
-          }
+      // Transformar los datos para el formato esperado
+      const viajesWithDetails: ViajeWithDetails[] = (data || []).map(
+        (viaje: ViajeWithRelations) => ({
+          ...viaje,
+          segmentos: viaje.segmentos || [],
+          viajeros:
+            viaje.viaje_viajeroz?.map((vv: { viajero: Viajeroz }) => vv.viajero).filter(Boolean) ||
+            [],
         }),
+      )
+
+      // Guardar en caché por 2 minutos
+      viajesCache.set(cacheKey, viajesWithDetails, 2 * 60 * 1000)
+
+      console.log(
+        `✅ Optimización completada: ${viajesWithDetails.length} viajes obtenidos en 1 consulta`,
       )
 
       return { data: viajesWithDetails, error: null }
     } catch (error) {
+      console.error('❌ Error en consulta optimizada:', error)
       return {
         data: [],
         error: error instanceof Error ? error.message : 'Error obteniendo viajes en curso',
@@ -533,6 +610,58 @@ export class ViajesService extends BaseService {
       return {
         data: null,
         error: error instanceof Error ? error.message : 'Error obteniendo estadísticas',
+      }
+    }
+  }
+
+  /**
+   * Obtener viajes de un viajero específico - OPTIMIZADO
+   */
+  async getViajesByViajero(viajeroId: string): Promise<ServiceResponse<ViajeWithDetails[]>> {
+    try {
+      console.log('🔍 Obteniendo viajes para viajero (optimizado):', viajeroId)
+
+      // Consulta optimizada que obtiene todos los viajes del viajero en una sola operación
+      const { data, error } = await supabase
+        .from('viaje_viajeroz')
+        .select(
+          `
+          viaje_id,
+          viajes!inner(
+            *,
+            cotizacion:cotizaciones(id, nombre),
+            segmentos(
+              *,
+              segmento_transporte(*),
+              segmento_hospedaje(*),
+              segmento_actividad(*)
+            )
+          )
+        `,
+        )
+        .eq('viajero_id', viajeroId)
+        .order('viajes.fecha_inicio', { ascending: false })
+
+      if (error) this.handleError(error)
+
+      console.log('📦 Consulta ejecutada exitosamente, procesando resultados...')
+
+      // Transformar los datos para el formato esperado
+      const viajesWithDetails: ViajeWithDetails[] = (data || []).map(
+        (item: ViajeroViajeResult) => ({
+          ...(item.viajes[0] as ViajeWithRelations),
+          segmentos: item.viajes[0]?.segmentos || [],
+          viajeros: [], // Se puede agregar si es necesario
+        }),
+      )
+
+      console.log('✅ Viajes obtenidos:', viajesWithDetails.length)
+      return { data: viajesWithDetails, error: null }
+    } catch (error) {
+      console.error('❌ Error obteniendo viajes del viajero:', error)
+      return {
+        data: [],
+        error: error instanceof Error ? error.message : 'Error obteniendo viajes del viajero',
       }
     }
   }

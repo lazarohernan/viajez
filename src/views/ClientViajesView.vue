@@ -15,13 +15,37 @@
               <p class="text-gray-600">{{ authStore.user?.profile?.email }}</p>
             </div>
           </div>
-          <button
-            @click="logout"
-            class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            <LogOut class="w-4 h-4 mr-2" />
-            Salir
-          </button>
+          <div class="flex items-center gap-3">
+            <button
+              @click="cargarViajes"
+              :disabled="loading"
+              class="inline-flex items-center px-4 py-2 border border-orange-300 rounded-xl text-orange-700 hover:bg-orange-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Recargar viajes"
+            >
+              <svg
+                class="w-4 h-4 mr-2"
+                :class="{ 'animate-spin': loading }"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+              {{ loading ? 'Cargando...' : 'Recargar' }}
+            </button>
+            <button
+              @click="logout"
+              class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <LogOut class="w-4 h-4 mr-2" />
+              Salir
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -316,172 +340,171 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, watch, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { User, LogOut, PlayCircle, CheckCircle, Calendar, MapPin, Clock } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import Modal from '@/components/ui/Modal.vue'
+import { viajesService, type ViajeWithDetails } from '@/services/viajes.service'
+import type { Segmento } from '@/services/supabase'
 
-// Interfaces
-interface Segmento {
-  id: number
-  nombre: string
-  tipo: 'transporte' | 'hospedaje' | 'actividad'
+// Interfaz extendida para la UI con campos en camelCase
+interface SegmentoUI extends Segmento {
   estado: 'activo' | 'inactivo' | 'finalizado'
   duracion: string
 }
 
-interface Viaje {
-  id: number
-  nombre: string
-  destino: string
+interface ViajeUI extends ViajeWithDetails {
   fechaInicio: string
   fechaFin: string
   progreso: number
-  segmentos: Segmento[]
-  cliente: string
+  destino: string
+  segmentos: SegmentoUI[]
 }
 
 const router = useRouter()
 const authStore = useAuthStore()
 
 const activeTab = ref<'en-curso' | 'finalizados'>('en-curso')
+const loading = ref(false)
+
+// Intervalo para verificar estado del usuario periódicamente
+let statusCheckInterval: number | null = null
 
 // Estado para el modal de detalle del viaje
 const showViajeModal = ref(false)
-const selectedViaje = ref<Viaje | null>(null)
+const selectedViaje = ref<ViajeUI | null>(null)
 
-// Datos mock para viajes en curso
-const viajesEnCurso = ref<Viaje[]>([
-  {
-    id: 1,
-    nombre: 'Viaje a Bogotá',
-    destino: 'Bogotá, Colombia',
-    fechaInicio: '2024-12-15',
-    fechaFin: '2024-12-20',
-    progreso: 65,
-    cliente: 'Ana López',
-    segmentos: [
-      {
-        id: 1,
-        nombre: 'Vuelo de ida',
-        tipo: 'transporte',
-        estado: 'finalizado',
-        duracion: '2 horas',
-      },
-      {
-        id: 2,
-        nombre: 'Hotel Bogotá',
-        tipo: 'hospedaje',
-        estado: 'activo',
-        duracion: '4 días',
-      },
-      {
-        id: 3,
-        nombre: 'City Tour',
-        tipo: 'actividad',
-        estado: 'inactivo',
-        duracion: '1 día',
-      },
-      {
-        id: 4,
-        nombre: 'Vuelo de regreso',
-        tipo: 'transporte',
-        estado: 'inactivo',
-        duracion: '2 horas',
-      },
-    ],
-  },
-  {
-    id: 2,
-    nombre: 'Escapada a Cancún',
-    destino: 'Cancún, México',
-    fechaInicio: '2024-12-28',
-    fechaFin: '2025-01-03',
-    progreso: 20,
-    cliente: 'Ana López',
-    segmentos: [
-      {
-        id: 5,
-        nombre: 'Vuelo a Cancún',
-        tipo: 'transporte',
-        estado: 'inactivo',
-        duracion: '3 horas',
-      },
-      {
-        id: 6,
-        nombre: 'Resort Cancún',
-        tipo: 'hospedaje',
-        estado: 'inactivo',
-        duracion: '5 días',
-      },
-      {
-        id: 7,
-        nombre: 'Tour Chichén Itzá',
-        tipo: 'actividad',
-        estado: 'inactivo',
-        duracion: '1 día',
-      },
-    ],
-  },
-])
+// Datos de viajes del usuario (reemplaza mock data)
+const viajes = ref<ViajeUI[]>([])
 
-// Datos mock para viajes finalizados
-const viajesFinalizados = ref<Viaje[]>([
-  {
-    id: 3,
-    nombre: 'Tour por Europa',
-    destino: 'París, Roma, Barcelona',
-    fechaInicio: '2024-10-01',
-    fechaFin: '2024-10-15',
-    progreso: 100,
-    cliente: 'Ana López',
-    segmentos: [
-      {
-        id: 8,
-        nombre: 'Vuelo a París',
-        tipo: 'transporte',
-        estado: 'finalizado',
-        duracion: '8 horas',
-      },
-      {
-        id: 9,
-        nombre: 'Hotel París',
-        tipo: 'hospedaje',
-        estado: 'finalizado',
-        duracion: '4 días',
-      },
-      {
-        id: 10,
-        nombre: 'Tour Torre Eiffel',
-        tipo: 'actividad',
-        estado: 'finalizado',
-        duracion: '1 día',
-      },
-      {
-        id: 11,
-        nombre: 'Tren a Roma',
-        tipo: 'transporte',
-        estado: 'finalizado',
-        duracion: '6 horas',
-      },
-      {
-        id: 12,
-        nombre: 'Hotel Roma',
-        tipo: 'hospedaje',
-        estado: 'finalizado',
-        duracion: '5 días',
-      },
-      {
-        id: 13,
-        nombre: 'Coliseo Tour',
-        tipo: 'actividad',
-        estado: 'finalizado',
-        duracion: '1 día',
-      },
-    ],
-  },
-])
+// Función para determinar el estado de un segmento
+const determinarEstadoSegmento = (segmento: Segmento): 'activo' | 'inactivo' | 'finalizado' => {
+  const ahora = new Date()
+  const fechaInicio = segmento.fecha_inicio ? new Date(segmento.fecha_inicio) : null
+  const fechaFin = segmento.fecha_fin ? new Date(segmento.fecha_fin) : null
+
+  if (!fechaInicio) return 'inactivo'
+
+  if (fechaFin && ahora > fechaFin) {
+    return 'finalizado'
+  }
+
+  if (ahora >= fechaInicio && (!fechaFin || ahora <= fechaFin)) {
+    return 'activo'
+  }
+
+  return 'inactivo'
+}
+
+// Función para calcular duración de un segmento
+const calcularDuracionSegmento = (segmento: Segmento): string => {
+  if (!segmento.fecha_inicio) return 'Sin fecha'
+
+  const inicio = new Date(segmento.fecha_inicio)
+  const fin = segmento.fecha_fin ? new Date(segmento.fecha_fin) : inicio
+
+  const diffTime = Math.abs(fin.getTime() - inicio.getTime())
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+  if (diffDays === 0) {
+    const diffHours = Math.ceil(diffTime / (1000 * 60 * 60))
+    return `${diffHours} ${diffHours === 1 ? 'hora' : 'horas'}`
+  }
+
+  return `${diffDays} ${diffDays === 1 ? 'día' : 'días'}`
+}
+
+// Función para transformar ViajeWithDetails a ViajeUI
+const transformarViaje = (viaje: ViajeWithDetails): ViajeUI => {
+  // Extraer destino de la descripción o nombre del viaje
+  let destino = viaje.descripcion || viaje.nombre || 'Destino no especificado'
+
+  // Si hay segmentos de transporte, intentar extraer destino del nombre
+  const segmentoTransporte = viaje.segmentos.find((s) => s.tipo === 'transporte')
+  if (segmentoTransporte) {
+    // Intentar extraer destino del nombre del segmento (ej: "Vuelo a Bogotá")
+    const match = segmentoTransporte.nombre.match(/a\s+(.+)$/i)
+    if (match) {
+      destino = match[1]
+    }
+  }
+
+  // Transformar segmentos
+  const segmentosUI: SegmentoUI[] = viaje.segmentos.map((seg) => ({
+    ...seg,
+    estado: determinarEstadoSegmento(seg),
+    duracion: calcularDuracionSegmento(seg),
+  }))
+
+  return {
+    ...viaje,
+    fechaInicio: viaje.fecha_inicio,
+    fechaFin: viaje.fecha_fin || viaje.fecha_inicio,
+    progreso: viaje.progreso_porcentaje || 0,
+    destino,
+    segmentos: segmentosUI,
+  }
+}
+
+// Computed para filtrar viajes en curso
+const viajesEnCurso = computed(() => {
+  return viajes.value.filter(
+    (viaje) => viaje.estado === 'en_curso' || viaje.estado === 'por_iniciar',
+  )
+})
+
+// Computed para filtrar viajes finalizados
+const viajesFinalizados = computed(() => {
+  return viajes.value.filter((viaje) => viaje.estado === 'finalizado')
+})
+
+// Cargar viajes del usuario desde Supabase
+const cargarViajes = async () => {
+  if (!authStore.user?.profile?.id) {
+    console.log('❌ No hay usuario logueado')
+    console.log('📊 Estado del authStore:', {
+      isAuthenticated: authStore.isAuthenticated,
+      user: authStore.user,
+      profile: authStore.user?.profile,
+    })
+    return
+  }
+
+  loading.value = true
+  const userId = authStore.user.profile.id
+  console.log('🔄 Cargando viajes del usuario:', userId)
+  console.log('📊 Información del usuario:', {
+    id: userId,
+    email: authStore.user.email,
+    identidad: authStore.user.profile.identidad,
+    nombre: authStore.user.profile.nombre,
+  })
+
+  try {
+    const result = await viajesService.getViajesByViajero(userId)
+
+    if (result.error) {
+      console.error('❌ Error cargando viajes:', result.error)
+    } else {
+      console.log('📦 Viajes recibidos de Supabase:', result.data?.length || 0)
+      if (result.data && result.data.length > 0) {
+        console.log(
+          '📋 Detalle de viajes:',
+          result.data.map((v) => ({ id: v.id, nombre: v.nombre })),
+        )
+      }
+
+      // Transformar los viajes de Supabase al formato de la UI
+      viajes.value = (result.data || []).map(transformarViaje)
+      console.log('✅ Viajes cargados y transformados:', viajes.value.length)
+    }
+  } catch (error) {
+    console.error('❌ Error al cargar viajes:', error)
+  } finally {
+    loading.value = false
+  }
+}
 
 // Funciones auxiliares
 const formatDate = (dateString: string) => {
@@ -543,13 +566,94 @@ const getSegmentoTextClass = (estado: string) => {
   }
 }
 
-const verDetalleViaje = (viaje: Viaje) => {
+const verDetalleViaje = (viaje: ViajeUI) => {
   selectedViaje.value = viaje
   showViajeModal.value = true
+}
+
+// Verificar si el usuario está activo
+const verificarUsuarioActivo = async () => {
+  console.log('🔍 Verificando usuario activo:', authStore.user)
+
+  // Refrescar la sesión para obtener la información más actualizada
+  await authStore.refreshSession()
+
+  if (!authStore.user) {
+    console.log('❌ No hay usuario logueado')
+    router.push('/login-viajero')
+    return false
+  }
+
+  // Verificar si el usuario tiene un perfil y está activo
+  if (authStore.user.profile && authStore.user.profile.activo === false) {
+    console.log('❌ Usuario desactivado, redirigiendo al login')
+    alert('Tu cuenta ha sido desactivada. Contacta al administrador.')
+    authStore.logout()
+    router.push('/login-viajero')
+    return false
+  }
+
+  console.log('✅ Usuario activo')
+  return true
 }
 
 const logout = () => {
   authStore.logout()
   router.push('/')
 }
+
+// Verificar estado del usuario al montar el componente
+onMounted(async () => {
+  console.log('🚀 ClientViajesView montado')
+  await verificarUsuarioActivo()
+
+  // Cargar viajes del usuario
+  await cargarViajes()
+
+  // Verificar estado del usuario cada 30 segundos
+  statusCheckInterval = window.setInterval(async () => {
+    if (authStore.isAuthenticated) {
+      console.log('🔄 Verificación periódica del estado del usuario')
+      await verificarUsuarioActivo()
+    }
+  }, 30000) // 30 segundos
+})
+
+// Limpiar intervalo al desmontar
+onUnmounted(() => {
+  if (statusCheckInterval) {
+    clearInterval(statusCheckInterval)
+    statusCheckInterval = null
+  }
+})
+
+// Monitorear cambios en el estado del usuario
+watch(
+  () => authStore.user,
+  async (nuevoUsuario, usuarioAnterior) => {
+    console.log('👀 Usuario cambió:', nuevoUsuario)
+
+    // Si no hay usuario, redirigir
+    if (!nuevoUsuario) {
+      console.log('❌ Usuario se deslogueó')
+      router.push('/login-viajero')
+      return
+    }
+
+    // Si el usuario cambió o si es la primera vez, refrescar la sesión
+    if (!usuarioAnterior || nuevoUsuario.id !== usuarioAnterior.id) {
+      console.log('🔄 Refrescando sesión por cambio de usuario')
+      await authStore.refreshSession()
+    }
+
+    // Verificar si el usuario fue desactivado
+    if (nuevoUsuario.profile && nuevoUsuario.profile.activo === false) {
+      console.log('❌ Usuario fue desactivado')
+      alert('Tu cuenta ha sido desactivada. Contacta al administrador.')
+      authStore.logout()
+      router.push('/login-viajero')
+    }
+  },
+  { deep: true },
+)
 </script>

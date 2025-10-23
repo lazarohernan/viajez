@@ -134,19 +134,32 @@
             </div>
           </template>
           <template #actions="{ row }">
-            <button
-              class="text-orange-700 hover:text-orange-900 text-sm font-medium mr-3"
-              @click="editCotizacion(row)"
-            >
-              Editar
-            </button>
-            <button
-              v-if="row.estado === 'aprobada'"
-              class="text-green-700 hover:text-green-900 text-sm font-medium"
-              @click="convertirAViaje(row)"
-            >
-              Crear Viaje
-            </button>
+            <div class="flex items-center justify-center gap-2">
+              <button
+                @click="verCotizacion(row)"
+                class="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200"
+                title="Ver cotización"
+                type="button"
+              >
+                <Eye class="w-4 h-4" />
+              </button>
+              <button
+                @click="editCotizacion(row)"
+                class="p-2 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors duration-200"
+                title="Editar cotización"
+                type="button"
+              >
+                <Pencil class="w-4 h-4" />
+              </button>
+              <button
+                @click="eliminarCotizacion(row)"
+                class="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                title="Eliminar cotización"
+                type="button"
+              >
+                <Trash2 class="w-4 h-4" />
+              </button>
+            </div>
           </template>
           <template #cell:cliente="{ row }">
             <div class="font-medium text-gray-900">{{ row.cliente }}</div>
@@ -175,6 +188,7 @@
         <!-- Transporte -->
         <TransporteForm
           v-if="selectedSegment === 'transporte'"
+          :initial-data="editandoSegmento"
           @submit="handleFormSubmit"
           @cancel="closeForm"
         />
@@ -182,6 +196,7 @@
         <!-- Hospedaje -->
         <HospedajeForm
           v-else-if="selectedSegment === 'hospedaje'"
+          :initial-data="editandoSegmento"
           @submit="handleFormSubmit"
           @cancel="closeForm"
         />
@@ -189,6 +204,7 @@
         <!-- Actividades -->
         <ActividadesForm
           v-else-if="selectedSegment === 'actividades'"
+          :initial-data="editandoSegmento"
           @submit="handleFormSubmit"
           @cancel="closeForm"
         />
@@ -207,14 +223,14 @@ import {
   ActividadesForm,
   SegmentoCard,
 } from '@/components/cotizaciones'
-import { Plane, Home, Compass } from 'lucide-vue-next'
+import { Plane, Home, Compass, Eye, Pencil, Trash2 } from 'lucide-vue-next'
+import { cotizacionesService, type Cotizacion, type Segmento } from '@/services/supabase'
 import {
-  cotizacionesService,
   segmentosService,
-  viajesService,
-  type Cotizacion,
-  type Segmento,
-} from '@/services/supabase'
+  type CreateSegmentoData,
+  type SegmentoWithDetails,
+} from '@/services/segmentos.service'
+import type { ServiceResponse } from '@/services/base.service'
 
 // Tipos para formularios
 // Interfaces de formularios definidas en componentes individuales
@@ -288,104 +304,113 @@ const closeForm = () => {
 
 const handleFormSubmit = async (data: Record<string, unknown>) => {
   try {
+    console.log('📥 Datos recibidos del formulario:', data)
+
     // Crear cotización si no existe
     if (!cotizacionActual.value) {
       cotizacionActual.value = await cotizacionesService.create({
         nombre: `Cotización ${new Date().toLocaleDateString('es-ES')}`,
         estado: 'borrador',
       })
+      console.log('✅ Cotización creada:', cotizacionActual.value)
+    }
+
+    // Determinar el tipo de segmento basado en selectedSegment
+    let tipoSegmento: 'transporte' | 'hospedaje' | 'actividad'
+    if (selectedSegment.value === 'transporte') {
+      tipoSegmento = 'transporte'
+    } else if (selectedSegment.value === 'hospedaje') {
+      tipoSegmento = 'hospedaje'
+    } else {
+      tipoSegmento = 'actividad'
     }
 
     // Preparar datos del segmento
-    const segmentoBase = {
-      tipo: (data.segmento as string).toLowerCase() as 'transporte' | 'hospedaje' | 'actividad',
+    const segmentoData = {
+      tipo: tipoSegmento,
       nombre: (data.nombre as string) || (data.proveedor as string) || '',
-      proveedor: (data.proveedor as string) || '',
+      proveedor: (data.proveedor as string) || (data.nombre as string) || '',
       fecha_inicio:
         (data.fechaInicial as string) ||
         (data.fechaEntrada as string) ||
         (data.fecha_inicio as string) ||
         '',
-      fecha_fin: (data.fechaFinal as string) || (data.fechaSalida as string) || undefined,
+      fecha_fin:
+        (data.fechaFinal as string) ||
+        (data.fechaSalida as string) ||
+        (data.fecha_fin as string) ||
+        undefined,
       hora_inicio: (data.horaSalida as string) || (data.horaInicio as string) || undefined,
-      hora_fin: (data.horaEntrada as string) || undefined,
+      hora_fin: (data.horaEntrada as string) || (data.hora_fin as string) || undefined,
       duracion: (data.duracion as string) || '',
       observaciones: (data.observaciones as string) || '',
       orden: segmentosAgregados.value.length + 1,
       cotizacion_id: cotizacionActual.value.id,
     }
 
+    console.log('📦 Datos del segmento preparados:', segmentoData)
+
+    // Preparar datos específicos según el tipo
+    const createData: CreateSegmentoData = {
+      ...segmentoData,
+    }
+
+    if (tipoSegmento === 'transporte') {
+      createData.transporte = {
+        tipo_transporte: ((data.tipo as string) || 'otro') as
+          | 'aereo'
+          | 'tren'
+          | 'bus'
+          | 'carro_privado'
+          | 'uber'
+          | 'otro',
+        tiene_retorno: data.tieneRetorno !== false,
+        origen: (data.origen as string) || '',
+        destino: (data.destino as string) || '',
+      }
+    } else if (tipoSegmento === 'hospedaje') {
+      createData.hospedaje = {
+        tipo_hospedaje: ((data.tipo as string) || 'otro') as
+          | 'hotel'
+          | 'renta_privada'
+          | 'airbnb'
+          | 'otro',
+      }
+    } else if (tipoSegmento === 'actividad') {
+      createData.actividad = {
+        duracion_horas: (data.duracion_horas as number) ?? undefined,
+      }
+    }
+
     if (editandoSegmento.value) {
       // Actualizar segmento existente
-      if ((data.segmento as string) === 'Transporte') {
-        await segmentosService.createTransporte(segmentoBase, {
-          tipo_transporte: ((data.tipo as string) || 'otro') as
-            | 'aereo'
-            | 'tren'
-            | 'bus'
-            | 'carro_privado'
-            | 'uber'
-            | 'otro',
-          tiene_retorno: data.tieneRetorno !== false,
-          origen: (data.origen as string) || '',
-          destino: (data.destino as string) || '',
-        })
-      } else if ((data.segmento as string) === 'Hospedaje') {
-        await segmentosService.createHospedaje(segmentoBase, {
-          tipo_hospedaje: ((data.tipo as string) || 'otro') as
-            | 'hotel'
-            | 'renta_privada'
-            | 'airbnb'
-            | 'otro',
-          numero_habitaciones: (data.numero_habitaciones as number) || undefined,
-        })
-      } else if ((data.segmento as string) === 'Actividades') {
-        await segmentosService.createActividad(segmentoBase, {
-          duracion_horas: (data.duracion_horas as number) || undefined,
-        })
+      console.log('📝 Actualizando segmento:', editandoSegmento.value.id)
+      const result = (await segmentosService.update(
+        editandoSegmento.value.id,
+        createData,
+      )) as ServiceResponse<SegmentoWithDetails>
+
+      if (result.error) {
+        throw new Error(result.error)
       }
 
-      // Actualizar en la lista local
-      const index = segmentosAgregados.value.findIndex((s) => s.id === editandoSegmento.value!.id)
-      if (index !== -1) {
-        // Recargar segmentos
-        await loadSegmentos()
-      }
-      alert(`Segmento actualizado correctamente`)
+      // Recargar segmentos
+      await loadSegmentos()
+      alert('Segmento actualizado correctamente')
     } else {
       // Crear nuevo segmento
-      let nuevoSegmento: Segmento
+      console.log('✨ Creando nuevo segmento')
+      const result = (await segmentosService.create(
+        createData,
+      )) as ServiceResponse<SegmentoWithDetails>
 
-      if ((data.segmento as string) === 'Transporte') {
-        nuevoSegmento = await segmentosService.createTransporte(segmentoBase, {
-          tipo_transporte: ((data.tipo as string) || 'otro') as
-            | 'aereo'
-            | 'tren'
-            | 'bus'
-            | 'carro_privado'
-            | 'uber'
-            | 'otro',
-          tiene_retorno: data.tieneRetorno !== false,
-          origen: (data.origen as string) || '',
-          destino: (data.destino as string) || '',
-        })
-      } else if ((data.segmento as string) === 'Hospedaje') {
-        nuevoSegmento = await segmentosService.createHospedaje(segmentoBase, {
-          tipo_hospedaje: ((data.tipo as string) || 'otro') as
-            | 'hotel'
-            | 'renta_privada'
-            | 'airbnb'
-            | 'otro',
-          numero_habitaciones: (data.numero_habitaciones as number) || undefined,
-        })
-      } else {
-        nuevoSegmento = await segmentosService.createActividad(segmentoBase, {
-          duracion_horas: (data.duracion_horas as number) || undefined,
-        })
+      if (result.error || !result.data) {
+        throw new Error(result.error || 'Error al crear segmento')
       }
 
-      segmentosAgregados.value.push(nuevoSegmento)
-      alert(`Segmento agregado. Puedes agregar más o guardar la cotización completa.`)
+      segmentosAgregados.value.push(result.data as Segmento)
+      console.log('✅ Segmento creado:', result.data)
+      alert('Segmento agregado. Puedes agregar más o guardar la cotización completa.')
     }
 
     closeForm()
@@ -521,28 +546,53 @@ const editCotizacion = async (row: CotizacionRow) => {
   }
 }
 
-const convertirAViaje = async (row: CotizacionRow) => {
+const verCotizacion = async (row: CotizacionRow) => {
+  try {
+    // Cargar la cotización completa con segmentos
+    const cotizacion = await cotizacionesService.getById(row.id)
+
+    const segmentosInfo =
+      cotizacion.segmentos
+        ?.map((s, i) => `${i + 1}. ${s.tipo.toUpperCase()}: ${s.nombre}`)
+        .join('\n') || 'Sin segmentos'
+
+    alert(
+      `📋 Cotización: ${cotizacion.nombre}\n` +
+        `📅 Fecha: ${formatDate(cotizacion.created_at)}\n` +
+        `📊 Estado: ${cotizacion.estado}\n` +
+        `\n🎯 Segmentos (${cotizacion.segmentos?.length || 0}):\n${segmentosInfo}`,
+    )
+  } catch (error) {
+    console.error('Error al ver cotización:', error)
+    alert('Error al cargar los detalles de la cotización')
+  }
+}
+
+const eliminarCotizacion = async (row: CotizacionRow) => {
   if (
     !confirm(
-      `¿Crear un viaje desde la cotización "${row.nombre}"?\n\nEsto copiará todos los segmentos a un nuevo viaje.`,
+      `¿Estás seguro de eliminar la cotización "${row.nombre}"?\n\n` +
+        `Esta acción eliminará la cotización y todos sus segmentos.\n` +
+        `Esta acción no se puede deshacer.`,
     )
   ) {
     return
   }
 
   try {
-    // Crear viaje desde cotización
-    const viaje = await viajesService.createFromCotizacion(row.id, row.viajero_id)
+    console.log('🗑️ Eliminando cotización:', row.id)
 
-    alert(
-      `¡Viaje creado exitosamente!\n\nNombre: ${viaje.nombre}\nID: ${viaje.id}\n\nAhora puedes gestionar el viaje desde el módulo de Viajes.`,
-    )
+    // Eliminar la cotización (los segmentos se eliminarán en cascada si está configurado)
+    await cotizacionesService.delete(row.id)
 
-    // Opcional: redirigir al módulo de viajes
-    // router.push('/viajes')
+    console.log('✅ Cotización eliminada')
+    alert('Cotización eliminada correctamente')
+
+    // Recargar la tabla
+    await recargarCotizaciones()
   } catch (error) {
-    console.error('Error al crear viaje desde cotización:', error)
-    alert('Error al crear el viaje desde la cotización')
+    console.error('❌ Error al eliminar cotización:', error)
+    alert('Error al eliminar la cotización. Inténtalo de nuevo.')
   }
 }
 

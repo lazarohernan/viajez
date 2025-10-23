@@ -59,16 +59,8 @@ import {
   PasaportesPorVencer,
 } from '@/components/dashboard'
 
-interface ViajeEnCurso {
-  id: number
-  nombre: string
-  destino: string
-  fechaInicio: string
-  fechaFin: string
-  progreso: number
-  estado: 'En Curso' | 'Por Iniciar' | 'Finalizando'
-  cliente: string
-  presupuesto: number
+interface ViajeWithId {
+  id: string | number
 }
 
 interface VisaPorVencer {
@@ -133,9 +125,9 @@ const navigateToClientes = () => {
 }
 
 // Handlers para eventos de detalle
-const handleViajeDetalle = (viaje: ViajeEnCurso) => {
-  console.log('Ver detalle del viaje:', viaje)
-  alert(`Ver detalle del viaje: ${viaje.nombre}`)
+const handleViajeDetalle = (viaje: ViajeWithId) => {
+  console.log('Navegando a detalle del viaje:', viaje)
+  router.push(`/viajes/${viaje.id}`)
 }
 
 const handleVisaDetalle = (visa: VisaPorVencer) => {

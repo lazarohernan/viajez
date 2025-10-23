@@ -25,7 +25,7 @@
             v-model="form.nombre"
             type="text"
             required
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
             placeholder="Ingrese el nombre"
           />
         </div>
@@ -39,7 +39,7 @@
             v-model="form.apellido"
             type="text"
             required
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
             placeholder="Ingrese el apellido"
           />
         </div>
@@ -48,13 +48,12 @@
       <!-- Información de Contacto -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label for="email" class="block text-sm font-medium text-gray-700 mb-2"> Email * </label>
+          <label for="email" class="block text-sm font-medium text-gray-700 mb-2"> Email </label>
           <input
             id="email"
             v-model="form.email"
             type="email"
-            required
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
             placeholder="ejemplo@email.com"
           />
         </div>
@@ -68,69 +67,53 @@
             v-model="form.telefono"
             type="tel"
             required
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
             placeholder="+504 1234-5678"
           />
         </div>
       </div>
 
-      <!-- Dirección -->
+      <!-- Identidad -->
       <div>
-        <label for="direccion" class="block text-sm font-medium text-gray-700 mb-2">
-          Dirección *
+        <label for="identidad" class="block text-sm font-medium text-gray-700 mb-2">
+          Identidad
         </label>
-        <textarea
-          id="direccion"
-          v-model="form.direccion"
-          rows="3"
-          required
-          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-          placeholder="Ingrese la dirección completa"
-        ></textarea>
+        <input
+          id="identidad"
+          v-model="form.identidad"
+          type="text"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+          placeholder="0801-1990-00001"
+        />
       </div>
 
       <!-- Información de Pasaporte -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label for="numeroPasaporte" class="block text-sm font-medium text-gray-700 mb-2">
-            Número de Pasaporte *
+          <label for="numero_pasaporte" class="block text-sm font-medium text-gray-700 mb-2">
+            Número de Pasaporte
           </label>
           <input
-            id="numeroPasaporte"
-            v-model="form.numeroPasaporte"
+            id="numero_pasaporte"
+            v-model="form.numero_pasaporte"
             type="text"
-            required
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
             placeholder="A12345678"
           />
         </div>
 
         <div>
-          <label for="fechaEmisionPasaporte" class="block text-sm font-medium text-gray-700 mb-2">
-            Fecha de Emisión del Pasaporte *
-          </label>
-          <input
-            id="fechaEmisionPasaporte"
-            v-model="form.fechaEmisionPasaporte"
-            type="date"
-            required
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-          />
-        </div>
-
-        <div>
           <label
-            for="fechaVencimientoPasaporte"
+            for="fecha_vencimiento_pasaporte"
             class="block text-sm font-medium text-gray-700 mb-2"
           >
-            Fecha de Vencimiento del Pasaporte *
+            Fecha de Vencimiento del Pasaporte
           </label>
           <input
-            id="fechaVencimientoPasaporte"
-            v-model="form.fechaVencimientoPasaporte"
+            id="fecha_vencimiento_pasaporte"
+            v-model="form.fecha_vencimiento_pasaporte"
             type="date"
-            required
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
           />
         </div>
       </div>
@@ -138,115 +121,156 @@
       <!-- Información de Visa -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div>
-          <label for="fechaEmisionVisa" class="block text-sm font-medium text-gray-700 mb-2">
-            Fecha de Emisión de la Visa
+          <label for="numero_visa" class="block text-sm font-medium text-gray-700 mb-2">
+            Número de Visa
           </label>
           <input
-            id="fechaEmisionVisa"
-            v-model="form.fechaEmisionVisa"
-            type="date"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-          />
-        </div>
-
-        <div>
-          <label for="fechaVencimientoVisa" class="block text-sm font-medium text-gray-700 mb-2">
-            Fecha de Vencimiento de la Visa
-          </label>
-          <input
-            id="fechaVencimientoVisa"
-            v-model="form.fechaVencimientoVisa"
-            type="date"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-          />
-        </div>
-
-        <div>
-          <label for="identidad" class="block text-sm font-medium text-gray-700 mb-2">
-            Identidad
-          </label>
-          <input
-            id="identidad"
-            v-model="form.identidad"
+            id="numero_visa"
+            v-model="form.numero_visa"
             type="text"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-            placeholder="Número de identidad"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+            placeholder="Número de visa"
+          />
+        </div>
+
+        <div>
+          <label for="tipo_visa" class="block text-sm font-medium text-gray-700 mb-2">
+            Tipo de Visa
+          </label>
+          <input
+            id="tipo_visa"
+            v-model="form.tipo_visa"
+            type="text"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+            placeholder="Turista, Trabajo, etc."
+          />
+        </div>
+
+        <div>
+          <label for="pais_visa" class="block text-sm font-medium text-gray-700 mb-2">
+            País de Visa
+          </label>
+          <input
+            id="pais_visa"
+            v-model="form.pais_visa"
+            type="text"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+            placeholder="Estados Unidos, Canadá, etc."
           />
         </div>
       </div>
 
+      <!-- Fecha de Vencimiento de Visa -->
+      <div>
+        <label for="fecha_vencimiento_visa" class="block text-sm font-medium text-gray-700 mb-2">
+          Fecha de Vencimiento de la Visa
+        </label>
+        <input
+          id="fecha_vencimiento_visa"
+          v-model="form.fecha_vencimiento_visa"
+          type="date"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+        />
+      </div>
+
       <!-- Información Personal Adicional -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label for="fechaNacimiento" class="block text-sm font-medium text-gray-700 mb-2">
-            Fecha de Nacimiento *
+          <label for="fecha_nacimiento" class="block text-sm font-medium text-gray-700 mb-2">
+            Fecha de Nacimiento
           </label>
           <input
-            id="fechaNacimiento"
-            v-model="form.fechaNacimiento"
+            id="fecha_nacimiento"
+            v-model="form.fecha_nacimiento"
             type="date"
-            required
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
           />
         </div>
 
         <div>
-          <label for="sexo" class="block text-sm font-medium text-gray-700 mb-2"> Sexo * </label>
-          <select
-            id="sexo"
-            v-model="form.sexo"
-            required
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-          >
-            <option value="">Seleccione...</option>
-            <option value="M">Masculino</option>
-            <option value="F">Femenino</option>
-            <option value="O">Otro</option>
-          </select>
-        </div>
-
-        <div>
-          <label for="paisResidencia" class="block text-sm font-medium text-gray-700 mb-2">
-            País de Residencia *
+          <label for="pais_residencia" class="block text-sm font-medium text-gray-700 mb-2">
+            País de Residencia
           </label>
           <input
-            id="paisResidencia"
-            v-model="form.paisResidencia"
+            id="pais_residencia"
+            v-model="form.pais_residencia"
             type="text"
-            required
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
             placeholder="Honduras"
           />
         </div>
       </div>
 
-      <div>
-        <label for="paisNacimiento" class="block text-sm font-medium text-gray-700 mb-2">
-          País de Nacimiento *
-        </label>
-        <input
-          id="paisNacimiento"
-          v-model="form.paisNacimiento"
-          type="text"
-          required
-          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-          placeholder="Honduras"
-        />
+      <!-- Credenciales de Acceso (solo al crear) -->
+      <div v-if="!isEditing" class="space-y-2">
+        <div>
+          <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
+            Contraseña
+          </label>
+          <div class="flex gap-2 max-w-sm">
+            <input
+              id="password"
+              v-model="form.password"
+              type="text"
+              class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-gray-50 font-mono shadow-sm"
+              placeholder="Generar..."
+            />
+            <button
+              v-if="form.password"
+              type="button"
+              @click="copyToClipboard"
+              class="px-3 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all duration-200 flex items-center gap-1 text-sm font-medium shadow-sm"
+              title="Copiar contraseña"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                />
+              </svg>
+            </button>
+            <button
+              type="button"
+              @click="generatePassword"
+              class="px-3 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-all duration-200 flex items-center gap-1 text-sm font-medium shadow-sm"
+              title="Generar contraseña segura"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+              Generar
+            </button>
+          </div>
+          <p class="text-xs text-gray-500 mt-1 max-w-sm">
+            Si defines una contraseña, el viajero podrá iniciar sesión con su DNI.
+          </p>
+        </div>
+
+        <div v-if="passwordError" class="bg-red-50 border border-red-200 rounded-lg p-3 max-w-sm">
+          <p class="text-sm text-red-600">{{ passwordError }}</p>
+        </div>
       </div>
 
       <!-- Botones de Acción -->
-      <div class="flex justify-end space-x-4 pt-6 border-t border-gray-200">
+      <div class="flex justify-end gap-3 pt-6 border-t border-gray-200">
         <button
           type="button"
           @click="$emit('cancel')"
-          class="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+          class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
         >
           Cancelar
         </button>
         <button
           type="submit"
           :disabled="isLoading"
-          class="px-6 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          class="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           <span v-if="!isLoading"> {{ isEditing ? 'Actualizar' : 'Crear' }} Cliente </span>
           <span v-else class="flex items-center">
@@ -279,27 +303,25 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, defineProps, defineEmits } from 'vue'
+import { ref, reactive, computed } from 'vue'
 
 interface ClientForm {
   nombre: string
   apellido: string
-  email: string
+  email?: string
   telefono: string
-  direccion: string
-  numeroPasaporte: string
-  fechaEmisionPasaporte: string
-  fechaVencimientoPasaporte: string
-  fechaEmisionVisa: string
-  fechaVencimientoVisa: string
-  identidad: string
-  fechaNacimiento: string
-  sexo: string
-  paisResidencia: string
-  paisNacimiento: string
+  identidad?: string
+  fecha_nacimiento?: string
+  numero_pasaporte?: string
+  fecha_vencimiento_pasaporte?: string
+  numero_visa?: string
+  pais_visa?: string
+  tipo_visa?: string
+  fecha_vencimiento_visa?: string
+  pais_residencia?: string
+  password?: string
+  crear_credenciales?: boolean
 }
-
-import { computed } from 'vue'
 
 const props = defineProps<{
   isEditing?: boolean
@@ -316,38 +338,104 @@ const emit = defineEmits<{
 }>()
 
 const isLoading = ref(false)
+const passwordError = ref('')
 
 const form = reactive<ClientForm>({
   nombre: props.initialData?.nombre || '',
   apellido: props.initialData?.apellido || '',
   email: props.initialData?.email || '',
   telefono: props.initialData?.telefono || '',
-  direccion: props.initialData?.direccion || '',
-  numeroPasaporte: props.initialData?.numeroPasaporte || '',
-  fechaEmisionPasaporte: props.initialData?.fechaEmisionPasaporte || '',
-  fechaVencimientoPasaporte: props.initialData?.fechaVencimientoPasaporte || '',
-  fechaEmisionVisa: props.initialData?.fechaEmisionVisa || '',
-  fechaVencimientoVisa: props.initialData?.fechaVencimientoVisa || '',
   identidad: props.initialData?.identidad || '',
-  fechaNacimiento: props.initialData?.fechaNacimiento || '',
-  sexo: props.initialData?.sexo || '',
-  paisResidencia: props.initialData?.paisResidencia || '',
-  paisNacimiento: props.initialData?.paisNacimiento || '',
+  fecha_nacimiento: props.initialData?.fecha_nacimiento || '',
+  numero_pasaporte: props.initialData?.numero_pasaporte || '',
+  fecha_vencimiento_pasaporte: props.initialData?.fecha_vencimiento_pasaporte || '',
+  numero_visa: props.initialData?.numero_visa || '',
+  pais_visa: props.initialData?.pais_visa || '',
+  tipo_visa: props.initialData?.tipo_visa || '',
+  fecha_vencimiento_visa: props.initialData?.fecha_vencimiento_visa || '',
+  pais_residencia: props.initialData?.pais_residencia || '',
+  password: '',
 })
+
+// Generar contraseña aleatoria
+const generatePassword = () => {
+  const length = 12
+  const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*'
+  let password = ''
+
+  for (let i = 0; i < length; i++) {
+    password += charset.charAt(Math.floor(Math.random() * charset.length))
+  }
+
+  form.password = password
+}
+
+// Copiar al portapapeles
+const copyToClipboard = async () => {
+  if (!form.password) return
+
+  try {
+    await navigator.clipboard.writeText(form.password)
+    // Mostrar feedback temporal
+    alert('✅ Contraseña copiada al portapapeles')
+  } catch (error) {
+    console.error('Error al copiar:', error)
+    // Fallback para navegadores que no soportan clipboard API
+    const textArea = document.createElement('textarea')
+    textArea.value = form.password
+    document.body.appendChild(textArea)
+    textArea.select()
+    document.execCommand('copy')
+    document.body.removeChild(textArea)
+    alert('✅ Contraseña copiada al portapapeles')
+  }
+}
 
 const handleSubmit = async () => {
   isLoading.value = true
+  passwordError.value = ''
 
   try {
-    // Aquí iría la lógica para enviar los datos
-    console.log('Datos del formulario:', form)
+    // Validar si se proporciona contraseña
+    if (form.password) {
+      if (!form.email) {
+        passwordError.value = 'Se requiere email para crear credenciales de acceso'
+        isLoading.value = false
+        return
+      }
+
+      if (!form.identidad) {
+        passwordError.value = 'Se requiere DNI/Identidad para crear credenciales de acceso'
+        isLoading.value = false
+        return
+      }
+
+      if (form.password.length < 6) {
+        passwordError.value = 'La contraseña debe tener al menos 6 caracteres'
+        isLoading.value = false
+        return
+      }
+    }
+
+    // Preparar datos para enviar
+    const dataToSubmit: ClientForm = {
+      ...form,
+      crear_credenciales: !!form.password,
+    }
+
+    // Si no hay contraseña, eliminar campos relacionados
+    if (!form.password) {
+      delete dataToSubmit.password
+      delete dataToSubmit.crear_credenciales
+    }
 
     // Simular envío
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    await new Promise((resolve) => setTimeout(resolve, 500))
 
-    emit('submit', { ...form })
+    emit('submit', dataToSubmit)
   } catch (error) {
     console.error('Error al enviar formulario:', error)
+    passwordError.value = 'Error al procesar el formulario'
   } finally {
     isLoading.value = false
   }

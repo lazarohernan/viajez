@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import Modal from '@/components/ui/Modal.vue'
+import { useAuthStore } from '@/stores/auth'
 
 // Asegurar que el fondo cubra toda la pantalla
 onMounted(() => {
@@ -12,94 +14,86 @@ onMounted(() => {
 })
 
 const router = useRouter()
+const authStore = useAuthStore()
 
-// Form state
-const searchForm = reactive({
-  dni: '',
+// Estado del modal
+const showLoginModal = ref(false)
+
+// Form state para login
+const loginForm = reactive({
+  identidad: '',
+  password: '',
 })
 
 const isLoading = ref(false)
-const showResults = ref(false)
-interface TripInfo {
-  id: number
-  nombre: string
-  fechaInicio: string
-  fechaFin: string
-  estado: string
-  cliente: {
-    nombre: string
-    apellido: string
-    email: string
-  }
+const loginError = ref('')
+
+// Abrir modal de login
+const openLoginModal = () => {
+  showLoginModal.value = true
+  loginError.value = ''
 }
 
-const tripInfo = ref<TripInfo | null>(null)
-const dniError = ref('')
+// Cerrar modal de login
+const closeLoginModal = () => {
+  showLoginModal.value = false
+  loginForm.identidad = ''
+  loginForm.password = ''
+  loginError.value = ''
+}
 
-// Search trip by DNI
-const searchTrip = async () => {
+// Login del viajero
+const loginViajero = async () => {
   // Reset errors
-  dniError.value = ''
+  loginError.value = ''
 
-  // Validate DNI format
-  if (!/^\d{8}$/.test(searchForm.dni)) {
-    dniError.value = 'El DNI debe tener exactamente 8 dígitos numéricos'
+  // Validate DNI
+  if (!loginForm.identidad.trim()) {
+    loginError.value = 'El DNI es obligatorio'
+    return
+  }
+
+  if (!loginForm.password.trim()) {
+    loginError.value = 'La contraseña es obligatoria'
     return
   }
 
   isLoading.value = true
 
   try {
-    // Simulate API call - replace with real Supabase query
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    const result = await authStore.login({
+      identidad: loginForm.identidad,
+      password: loginForm.password,
+    })
 
-    // Mock data - replace with real data from Supabase
-    const mockTrip: TripInfo = {
-      id: 1,
-      nombre: 'Viaje a Bogotá - Agosto 2025',
-      fechaInicio: '13/08/2025',
-      fechaFin: '16/08/2025',
-      estado: 'Confirmado',
-      cliente: {
-        nombre: 'Ana',
-        apellido: 'López',
-        email: 'ana@correo.com',
-      },
+    if (result.success) {
+      console.log('Login exitoso, verificando estado del usuario')
+
+      // Verificar si el usuario está activo
+      if (authStore.user?.profile && authStore.user.profile.activo === false) {
+        console.log('❌ Usuario desactivado, bloqueando acceso')
+        loginError.value = 'Tu cuenta ha sido desactivada. Contacta al administrador.'
+        await authStore.logout()
+        return
+      }
+
+      console.log('✅ Usuario activo, redirigiendo a viajes del cliente')
+      closeLoginModal()
+      router.push('/cliente/viajes')
+    } else {
+      loginError.value = result.error || 'Error al iniciar sesión'
     }
-
-    tripInfo.value = mockTrip
-    showResults.value = true
   } catch (error) {
-    console.error('Error searching trip:', error)
-    dniError.value = 'Error al consultar el viaje. Intenta nuevamente.'
+    console.error('Error en login:', error)
+    loginError.value = 'Error al iniciar sesión. Intenta nuevamente.'
   } finally {
     isLoading.value = false
   }
 }
 
-// Close results modal
-const closeResults = () => {
-  showResults.value = false
-  tripInfo.value = null
-}
-
 // Go to admin
 const goToAdmin = () => {
   router.push('/login')
-}
-
-// Get status class
-const getStatusClass = (status: string) => {
-  switch (status?.toLowerCase()) {
-    case 'confirmado':
-      return 'bg-green-100 text-green-800'
-    case 'borrador':
-      return 'bg-yellow-100 text-yellow-800'
-    case 'cancelado':
-      return 'bg-red-100 text-red-800'
-    default:
-      return 'bg-gray-100 text-gray-800'
-  }
 }
 </script>
 
@@ -156,70 +150,36 @@ const getStatusClass = (status: string) => {
           </span>
         </h1>
         <p class="text-xl text-gray-600 max-w-2xl mx-auto">
-          Ingresa tu número de DNI para acceder a toda la información de tu viaje, incluyendo
-          fechas, destinos, alojamiento y actividades.
+          Accede de forma segura a toda la información de tu viaje con tu DNI y contraseña.
         </p>
       </div>
 
       <!-- Search Form -->
       <div class="bg-white rounded-2xl border border-gray-200 p-8 mb-12">
-        <form @submit.prevent="searchTrip" class="max-w-md mx-auto">
-          <div class="mb-6">
-            <label for="dni" class="block text-sm font-medium text-gray-700 mb-2">
-              Número de DNI
-            </label>
-            <input
-              id="dni"
-              v-model="searchForm.dni"
-              type="text"
-              required
-              maxlength="8"
-              pattern="[0-9]{8}"
-              class="w-full px-4 py-3 text-lg text-center border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
-              placeholder="12345678"
-              :class="{ 'border-red-300 focus:ring-red-500 focus:border-red-500': dniError }"
-            />
-            <p v-if="dniError" class="mt-2 text-sm text-red-600 text-center">
-              {{ dniError }}
-            </p>
-          </div>
-
+        <div class="text-center">
           <button
-            type="submit"
-            :disabled="isLoading"
-            class="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white py-3 px-6 rounded-xl font-medium text-lg hover:from-orange-600 hover:to-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+            @click="openLoginModal"
+            class="inline-flex items-center px-8 sm:px-10 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-medium rounded-xl hover:from-orange-600 hover:to-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl text-sm sm:text-base"
           >
-            <span v-if="!isLoading" class="flex items-center justify-center">
-              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-              Consultar Viaje
-            </span>
-            <span v-else class="flex items-center justify-center">
-              <svg class="animate-spin w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24">
-                <circle
-                  class="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  stroke-width="4"
-                ></circle>
-                <path
-                  class="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              Consultando...
-            </span>
+            <svg
+              class="w-4 h-4 sm:w-5 sm:h-5 mr-2 flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+            <span class="whitespace-nowrap">Consultar Mi Viaje</span>
           </button>
-        </form>
+          <p class="text-sm text-gray-600 mt-4 max-w-sm mx-auto">
+            Ingresa tu número de identidad y contraseña para acceder a tu información de viaje
+          </p>
+        </div>
       </div>
 
       <!-- Features Section -->
@@ -291,114 +251,96 @@ const getStatusClass = (status: string) => {
         </div>
       </div>
 
-      <!-- Trip Results Modal -->
-      <div v-if="showResults" class="fixed inset-0 z-50 overflow-y-auto">
-        <div
-          class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0"
-        >
-          <div class="fixed inset-0 transition-opacity" @click="closeResults">
-            <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
+      <!-- Modal de Login -->
+      <Modal
+        v-model="showLoginModal"
+        :max-width="'md'"
+        title="Acceder a mi itinerario"
+        @close="closeLoginModal"
+      >
+        <form @submit.prevent="loginViajero" class="space-y-6">
+          <div>
+            <label for="login-dni" class="block text-sm font-medium text-gray-700 mb-2">
+              Número de Identidad
+            </label>
+            <input
+              id="login-dni"
+              v-model="loginForm.identidad"
+              type="text"
+              required
+              maxlength="13"
+              class="w-full px-4 py-3 text-lg border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+              placeholder="Número de identidad"
+              :disabled="isLoading"
+            />
           </div>
 
-          <div
-            class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full"
-          >
-            <div class="bg-white px-6 py-4">
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold text-gray-900">Información del Viaje</h3>
-                <button
-                  @click="closeResults"
-                  class="text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              </div>
+          <div>
+            <label for="login-password" class="block text-sm font-medium text-gray-700 mb-2">
+              Contraseña
+            </label>
+            <input
+              id="login-password"
+              v-model="loginForm.password"
+              type="password"
+              required
+              class="w-full px-4 py-3 text-lg border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+              placeholder="Tu contraseña"
+              :disabled="isLoading"
+            />
+          </div>
 
-              <!-- Trip Info -->
-              <div v-if="tripInfo" class="space-y-4">
-                <div class="bg-gray-50 rounded-lg p-4">
-                  <h4 class="font-medium text-gray-900 mb-2">{{ tripInfo.nombre }}</h4>
-                  <div class="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span class="text-gray-600">Fecha de inicio:</span>
-                      <p class="font-medium">{{ tripInfo.fechaInicio }}</p>
-                    </div>
-                    <div>
-                      <span class="text-gray-600">Fecha de fin:</span>
-                      <p class="font-medium">{{ tripInfo.fechaFin }}</p>
-                    </div>
-                  </div>
-                  <div class="mt-3">
-                    <span class="text-gray-600">Estado:</span>
-                    <span
-                      class="ml-2 px-2 py-1 text-xs font-medium rounded-full"
-                      :class="getStatusClass(tripInfo.estado)"
-                    >
-                      {{ tripInfo.estado }}
-                    </span>
-                  </div>
-                </div>
+          <p v-if="loginError" class="text-sm text-red-600 text-center bg-red-50 p-3 rounded-lg">
+            {{ loginError }}
+          </p>
 
-                <!-- Client Info -->
-                <div class="bg-gray-50 rounded-lg p-4">
-                  <h4 class="font-medium text-gray-900 mb-2">Información del Cliente</h4>
-                  <div class="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span class="text-gray-600">Nombre:</span>
-                      <p class="font-medium">
-                        {{ tripInfo.cliente?.nombre }} {{ tripInfo.cliente?.apellido }}
-                      </p>
-                    </div>
-                    <div>
-                      <span class="text-gray-600">Email:</span>
-                      <p class="font-medium">{{ tripInfo.cliente?.email }}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <p class="text-sm text-gray-600 text-center">
-                  Para más detalles sobre segmentos y anexos, contacta a tu agente de viajes.
-                </p>
-              </div>
-
-              <!-- No Trip Found -->
-              <div v-else class="text-center py-8">
-                <div
-                  class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4"
-                >
-                  <svg
-                    class="w-8 h-8 text-gray-400"
-                    fill="none"
+          <div class="flex gap-3">
+            <button
+              type="button"
+              @click="closeLoginModal"
+              :disabled="isLoading"
+              class="flex-1 px-4 py-3 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              :disabled="isLoading"
+              class="flex-1 bg-gradient-to-r from-orange-500 to-orange-600 text-white py-3 px-4 rounded-xl font-medium hover:from-orange-600 hover:to-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span v-if="!isLoading" class="flex items-center justify-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
+                  />
+                </svg>
+                Acceder
+              </span>
+              <span v-else class="flex items-center justify-center">
+                <svg class="animate-spin w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24">
+                  <circle
+                    class="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
                     stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
-                  </svg>
-                </div>
-                <h4 class="text-lg font-medium text-gray-900 mb-2">No se encontró el viaje</h4>
-                <p class="text-gray-600 mb-4">
-                  No se encontró ningún viaje asociado al DNI {{ searchForm.dni }}.
-                </p>
-                <p class="text-sm text-gray-500">
-                  Verifica que el número sea correcto o contacta a tu agente de viajes.
-                </p>
-              </div>
-            </div>
+                    stroke-width="4"
+                  ></circle>
+                  <path
+                    class="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                Accediendo...
+              </span>
+            </button>
           </div>
-        </div>
-      </div>
+        </form>
+      </Modal>
     </main>
   </div>
 </template>
