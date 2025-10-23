@@ -463,23 +463,14 @@ const viajesFinalizados = computed(() => {
 const cargarViajes = async () => {
   if (!authStore.user?.profile?.id) {
     // console.log('❌ No hay usuario logueado')
-    // console.log('📊 Estado del authStore:', {
-      isAuthenticated: authStore.isAuthenticated,
-      user: authStore.user,
-      profile: authStore.user?.profile,
-    })
+    // console.log('📊 Estado del authStore:', { isAuthenticated: authStore.isAuthenticated, user: authStore.user, profile: authStore.user?.profile })
     return
   }
 
   loading.value = true
   const userId = authStore.user.profile.id
   // console.log('🔄 Cargando viajes del usuario:', userId)
-  // console.log('📊 Información del usuario:', {
-    id: userId,
-    email: authStore.user.email,
-    identidad: authStore.user.profile.identidad,
-    nombre: authStore.user.profile.nombre,
-  })
+  // console.log('📊 Información del usuario:', { id: userId, email: authStore.user.email, identidad: authStore.user.profile.identidad, nombre: authStore.user.profile.nombre })
 
   try {
     const result = await viajesService.getViajesByViajero(userId)
@@ -489,10 +480,7 @@ const cargarViajes = async () => {
     } else {
       // console.log('📦 Viajes recibidos de Supabase:', result.data?.length || 0)
       if (result.data && result.data.length > 0) {
-        // console.log(
-          '📋 Detalle de viajes:',
-          result.data.map((v) => ({ id: v.id, nombre: v.nombre })),
-        )
+        // console.log('📋 Detalle de viajes:', result.data.map((v) => ({ id: v.id, nombre: v.nombre })))
       }
 
       // Transformar los viajes de Supabase al formato de la UI

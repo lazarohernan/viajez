@@ -195,10 +195,7 @@ const formData = ref({
   observaciones: (props.initialData?.observaciones as string) || '',
 })
 
-// console.log('🏨 HospedajeForm inicializado con datos:', {
-  initialData: props.initialData,
-  formData: formData.value,
-})
+// console.log('🏨 HospedajeForm inicializado con datos:', { initialData: props.initialData, formData: formData.value })
 
 const proveedorSeleccionado = ref('')
 const dropdownOpen = ref(false)
@@ -252,10 +249,7 @@ watch(
         // console.log('🏨 Hotel seleccionado en dropdown:', proveedor)
       }
 
-      // console.log(
-        '✅ HospedajeForm actualizado con nuevos datos:',
-        JSON.stringify(formData.value, null, 2),
-      )
+      // console.log('✅ HospedajeForm actualizado con nuevos datos:', JSON.stringify(formData.value, null, 2))
     }
   },
   { immediate: true },

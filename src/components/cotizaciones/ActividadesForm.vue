@@ -185,10 +185,7 @@ const formData = ref({
   observaciones: '',
 })
 
-// console.log('🎭 ActividadesForm inicializado con datos:', {
-  initialData: props.initialData,
-  formData: formData.value,
-})
+// console.log('🎭 ActividadesForm inicializado con datos:', { initialData: props.initialData, formData: formData.value })
 
 // Watch para actualizar formData cuando cambien los initialData (al editar)
 watch(
@@ -230,10 +227,7 @@ watch(
         duracionHoras: duracionHorasValue,
         observaciones: (newData.observaciones as string) || '',
       }
-      // console.log(
-        '✅ ActividadesForm actualizado con nuevos datos:',
-        JSON.stringify(formData.value, null, 2),
-      )
+      // console.log('✅ ActividadesForm actualizado con nuevos datos:', JSON.stringify(formData.value, null, 2))
       // console.log('✅ duracionHoras final:', formData.value.duracionHoras)
     } else {
       // console.log('❌ ActividadesForm recibió initialData null/undefined')

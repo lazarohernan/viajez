@@ -565,9 +565,7 @@ export class ViajesService extends BaseService {
       // Guardar en caché por 2 minutos
       viajesCache.set(cacheKey, viajesWithDetails, 2 * 60 * 1000)
 
-      // console.log(
-        `✅ Optimización completada: ${viajesWithDetails.length} viajes obtenidos en 1 consulta`,
-      )
+      // console.log(`✅ Optimización completada: ${viajesWithDetails.length} viajes obtenidos en 1 consulta`)
 
       return { data: viajesWithDetails, error: null }
     } catch (error) {

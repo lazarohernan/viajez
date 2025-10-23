@@ -364,10 +364,7 @@ const formData = ref({
   observaciones: (props.initialData?.observaciones as string) || '',
 })
 
-// console.log('🎯 TransporteForm inicializado con datos:', {
-  initialData: props.initialData,
-  formData: formData.value,
-})
+// console.log('🎯 TransporteForm inicializado con datos:', { initialData: props.initialData, formData: formData.value })
 
 const proveedorPersonalizado = ref('')
 const proveedorSeleccionado = ref('')
@@ -394,10 +391,7 @@ watch(
       let segmentoTransporte: Record<string, unknown> | undefined = undefined
       if (Array.isArray(segmentoTransporteRaw) && segmentoTransporteRaw.length > 0) {
         segmentoTransporte = segmentoTransporteRaw[0]
-        // console.log(
-          '🚗 segmento_transporte después de tomar [0]:',
-          JSON.stringify(segmentoTransporte, null, 2),
-        )
+        // console.log('🚗 segmento_transporte después de tomar [0]:', JSON.stringify(segmentoTransporte, null, 2))
       } else if (segmentoTransporteRaw && !Array.isArray(segmentoTransporteRaw)) {
         segmentoTransporte = segmentoTransporteRaw
       }
@@ -408,13 +402,7 @@ watch(
       const destino = (segmentoTransporte?.destino as string) || ''
       const tieneRetorno = (segmentoTransporte?.tiene_retorno as boolean) !== false
 
-      // console.log('📦 Datos extraídos:', {
-        tipo,
-        proveedor,
-        origen,
-        destino,
-        tieneRetorno,
-      })
+      // console.log('📦 Datos extraídos:', { tipo, proveedor, origen, destino, tieneRetorno })
 
       formData.value = {
         tipo,
@@ -435,10 +423,7 @@ watch(
         // console.log('✈️ Aerolínea seleccionada en dropdown:', proveedor)
       }
 
-      // console.log(
-        '✅ TransporteForm actualizado con nuevos datos:',
-        JSON.stringify(formData.value, null, 2),
-      )
+      // console.log('✅ TransporteForm actualizado con nuevos datos:', JSON.stringify(formData.value, null, 2))
     } else {
       // console.log('❌ TransporteForm recibió initialData null/undefined')
     }

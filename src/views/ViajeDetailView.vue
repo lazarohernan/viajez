@@ -608,11 +608,7 @@ const loadViaje = async () => {
     // Cargar documentos por segmento
     await loadDocumentosSegmentos()
 
-    // console.log('✅ Viaje cargado exitosamente:', {
-      nombre: viaje.value?.nombre,
-      segmentos: segmentos.value.length,
-      viajeros: viajeros.value.length,
-    })
+    // console.log('✅ Viaje cargado exitosamente:', { nombre: viaje.value?.nombre, segmentos: segmentos.value.length, viajeros: viajeros.value.length })
   } catch (error) {
     console.error('❌ Error al cargar viaje:', error)
     alert('Error al cargar el viaje')
@@ -681,17 +677,7 @@ const segmentosOrdenados = computed(() => {
 // Funciones para segmentos
 const editarSegmento = (segmento: Segmento) => {
   // console.log('✏️ Editando segmento:', segmento)
-  // console.log('📝 Datos del segmento:', {
-    id: segmento.id,
-    tipo: segmento.tipo,
-    nombre: segmento.nombre,
-    proveedor: segmento.proveedor,
-    fecha_inicio: segmento.fecha_inicio,
-    fecha_fin: segmento.fecha_fin,
-    segmento_transporte: segmento.segmento_transporte,
-    segmento_hospedaje: segmento.segmento_hospedaje,
-    segmento_actividad: segmento.segmento_actividad,
-  })
+  // console.log('📝 Datos del segmento:', { id: segmento.id, tipo: segmento.tipo, nombre: segmento.nombre, proveedor: segmento.proveedor, fecha_inicio: segmento.fecha_inicio, fecha_fin: segmento.fecha_fin, segmento_transporte: segmento.segmento_transporte, segmento_hospedaje: segmento.segmento_hospedaje, segmento_actividad: segmento.segmento_actividad })
 
   editingSegment.value = segmento
   selectedSegmentType.value = segmento.tipo
@@ -722,11 +708,7 @@ const gestionarDocumentos = (segmento: Segmento) => {
 
 const handleSegmentSubmit = async (data: Record<string, unknown>) => {
   try {
-    // console.log('💾 Guardando segmento:', {
-      tipo: selectedSegmentType.value,
-      editando: !!editingSegment.value,
-      data,
-    })
+    // console.log('💾 Guardando segmento:', { tipo: selectedSegmentType.value, editando: !!editingSegment.value, data })
 
     // Preparar datos del segmento base
     const segmentoData = {
