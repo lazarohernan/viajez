@@ -83,6 +83,8 @@ Relación de viajeroz que forman parte de un viaje.
 - duracion (string, calculada automáticamente)
 - observaciones (text, opcional - comentarios adicionales)
 - orden (integer, para ordenamiento por fecha)
+- es_primero (boolean, default: false - indica si es el primer segmento)
+- es_ultimo (boolean, default: false - indica si es el último segmento)
 - cotizacion_id (UUID, FK → cotizaciones.id, opcional - nullable)
 - viaje_id (UUID, FK → viajes.id, opcional - nullable)
 - created_at (timestamp)
@@ -236,6 +238,8 @@ CREATE TABLE segmentos (
   duracion TEXT,
   observaciones TEXT,
   orden INTEGER,
+  es_primero BOOLEAN DEFAULT false,
+  es_ultimo BOOLEAN DEFAULT false,
   cotizacion_id UUID REFERENCES cotizaciones(id) ON DELETE CASCADE,
   viaje_id UUID REFERENCES viajes(id) ON DELETE CASCADE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
@@ -295,6 +299,8 @@ CREATE INDEX idx_viajes_fecha_inicio ON viajes(fecha_inicio);
 CREATE INDEX idx_segmentos_cotizacion ON segmentos(cotizacion_id);
 CREATE INDEX idx_segmentos_viaje ON segmentos(viaje_id);
 CREATE INDEX idx_segmentos_fecha_inicio ON segmentos(fecha_inicio);
+CREATE INDEX idx_segmentos_es_primero ON segmentos(es_primero) WHERE es_primero = true;
+CREATE INDEX idx_segmentos_es_ultimo ON segmentos(es_ultimo) WHERE es_ultimo = true;
 CREATE INDEX idx_viajeroz_identidad ON viajeroz(identidad);
 CREATE INDEX idx_viajeroz_email ON viajeroz(email);
 

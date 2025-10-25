@@ -136,13 +136,13 @@ export class AuthService extends BaseService {
       // console.log('Login exitoso en Supabase Auth, usuario:', authData.user.email)
 
       // Verificar el rol desde user_roles
-      const { data: roleData, error: roleError } = await supabase
+      const { data: roleData } = await supabase
         .from('user_roles')
         .select('role, viajero_id')
         .eq('user_id', userId)
         .maybeSingle()
 
-      // console.log('Role data:', roleData, 'Role error:', roleError)
+      // console.log('Role data:', roleData)
 
       // 🔧 TEMPORAL: Si no hay rol asignado, verificar si es el primer usuario (admin)
       if (!roleData) {
@@ -155,13 +155,13 @@ export class AuthService extends BaseService {
 
       if (roleData.role === 'admin') {
         // Es admin - obtener perfil de admins
-        const { data: adminData, error: adminError } = await supabase
+        const { data: adminData } = await supabase
           .from('admins')
           .select('*')
           .eq('id', userId)
           .maybeSingle()
 
-        // console.log('Admin data:', adminData, 'Admin error:', adminError)
+        // console.log('Admin data:', adminData)
 
         authUser = Object.assign({}, authData.user, {
           adminProfile: adminData || undefined,
@@ -169,13 +169,13 @@ export class AuthService extends BaseService {
         })
       } else if (roleData.role === 'cliente') {
         // Es cliente - obtener perfil de viajeroz
-        const { data: viajeroData, error: viajeroError } = await supabase
+        const { data: viajeroData } = await supabase
           .from('viajeroz')
           .select('*')
           .eq('id', roleData.viajero_id)
           .maybeSingle()
 
-        // console.log('Viajero data:', viajeroData, 'Viajero error:', viajeroError)
+        // console.log('Viajero data:', viajeroData)
 
         authUser = Object.assign({}, authData.user, {
           profile: viajeroData || undefined,

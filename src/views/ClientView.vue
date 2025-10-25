@@ -309,7 +309,9 @@ const handleSubmit = async (data: CreateViajeroData | UpdateViajeroData) => {
     }
   } catch (error) {
     console.error('❌ Error en handleSubmit:', error)
-    alert(`❌ Error al guardar el viajero: ${error instanceof Error ? error.message : 'Error desconocido'}`)
+    alert(
+      `❌ Error al guardar el viajero: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+    )
   }
 }
 

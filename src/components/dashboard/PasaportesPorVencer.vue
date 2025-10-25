@@ -8,7 +8,7 @@
           </div>
           <h3 class="text-lg font-semibold text-gray-900">Pasaportes por Vencer</h3>
         </div>
-        <p class="text-sm text-gray-600 ml-10">Documentos que requieren renovación</p>
+        <p class="text-sm text-gray-600 ml-10">Todos los pasaportes registrados</p>
       </div>
       <button
         type="button"
@@ -34,7 +34,7 @@
     </div>
 
     <div v-else-if="pasaportes.length === 0" class="text-center py-8">
-      <p class="text-gray-500 text-sm">No hay pasaportes por vencer en los próximos 30 días.</p>
+      <p class="text-gray-500 text-sm">No hay pasaportes registrados.</p>
     </div>
 
     <div v-else class="space-y-4">
@@ -202,18 +202,6 @@ import { ref, onMounted } from 'vue'
 import { Calendar, Clock, FileText } from 'lucide-vue-next'
 import { supabase } from '@/services/supabase'
 
-type ViajeroPasaporte = {
-  id: string
-  nombre: string
-  apellido: string
-  email: string
-  telefono?: string | null
-  pais_residencia?: string | null
-  numero_pasaporte: string | null
-  fecha_vencimiento_pasaporte: string | null
-  fecha_emision_pasaporte?: string | null
-}
-
 interface Cliente {
   id: string
   nombre: string
@@ -250,78 +238,49 @@ defineEmits<{
   verDetalle: [pasaporte: PasaportePorVencer]
 }>()
 
-// Conectado a Supabase
+// Conectado a Supabase - Optimizado con función RPC
 const fetchPasaportesPorVencer = async () => {
   loading.value = true
   error.value = null
 
   try {
-    const hoy = new Date()
-    const en90Dias = new Date()
-    en90Dias.setDate(hoy.getDate() + 90)
-
-    const { data, error: supabaseError } = await supabase
-      .from('viajeroz')
-      .select(
-        `
-        id,
-        nombre,
-        apellido,
-        email,
-        telefono,
-        pais_residencia,
-        numero_pasaporte,
-        fecha_vencimiento_pasaporte
-      `,
-      )
-      .not('numero_pasaporte', 'is', null)
-      .not('fecha_vencimiento_pasaporte', 'is', null)
-      .gte('fecha_vencimiento_pasaporte', hoy.toISOString().split('T')[0])
-      .lte('fecha_vencimiento_pasaporte', en90Dias.toISOString().split('T')[0])
-      .order('fecha_vencimiento_pasaporte', { ascending: true })
+    // Usar función que trae TODOS los pasaportes activos
+    const { data, error: supabaseError } = await supabase.rpc('get_todos_pasaportes')
 
     if (supabaseError) throw supabaseError
 
-    const pasaportesData = (data || []).reduce<PasaportePorVencer[]>(
-      (acc: PasaportePorVencer[], viajero: ViajeroPasaporte) => {
-        if (!viajero.numero_pasaporte || !viajero.fecha_vencimiento_pasaporte) {
-          return acc
-        }
-
-        const fechaVencimiento = new Date(viajero.fecha_vencimiento_pasaporte)
-        const diffTime = fechaVencimiento.getTime() - hoy.getTime()
-        const diasRestantes = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-
-        let estado: 'Activo' | 'Por Vencer' | 'Vencido' = 'Activo'
-        if (diasRestantes <= 0) estado = 'Vencido'
-        else if (diasRestantes <= 30) estado = 'Por Vencer'
-
-        acc.push({
+    // Mapear datos de la función a la estructura del componente
+    const pasaportesData = (data || []).map(
+      (viajero: {
+        id: string
+        nombre: string
+        apellido: string
+        email: string
+        telefono: string | null
+        pais_residencia: string
+        numero_pasaporte: string
+        fecha_vencimiento_pasaporte: string
+        dias_restantes: number
+        estado: string
+      }) => ({
+        id: viajero.id,
+        cliente: {
           id: viajero.id,
-          cliente: {
-            id: viajero.id,
-            nombre: viajero.nombre,
-            apellido: viajero.apellido,
-            email: viajero.email,
-            telefono: viajero.telefono || undefined,
-          },
-          numero: viajero.numero_pasaporte,
-          nacionalidad: viajero.pais_residencia || 'No especificada',
-          fechaEmision: '',
-          fechaVencimiento: viajero.fecha_vencimiento_pasaporte,
-          diasRestantes,
-          estado,
-        })
-
-        return acc
-      },
-      [],
+          nombre: viajero.nombre,
+          apellido: viajero.apellido,
+          email: viajero.email,
+          telefono: viajero.telefono || undefined,
+        },
+        numero: viajero.numero_pasaporte,
+        nacionalidad: viajero.pais_residencia,
+        fechaEmision: '',
+        fechaVencimiento: viajero.fecha_vencimiento_pasaporte,
+        diasRestantes: viajero.dias_restantes,
+        estado: viajero.estado as 'Activo' | 'Por Vencer' | 'Vencido',
+      }),
     )
 
-    const ordenados = pasaportesData.sort(
-      (a: PasaportePorVencer, b: PasaportePorVencer) => a.diasRestantes - b.diasRestantes,
-    )
-    pasaportes.value = props.maxItems ? ordenados.slice(0, props.maxItems) : ordenados
+    pasaportes.value = props.maxItems ? pasaportesData.slice(0, props.maxItems) : pasaportesData
   } catch (err) {
     error.value = 'Error al cargar los pasaportes por vencer'
     console.error('Error fetching pasaportes por vencer:', err)

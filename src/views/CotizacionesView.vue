@@ -93,16 +93,23 @@
           </button>
         </div>
 
-        <!-- Segmentos ordenados por fecha -->
-        <div class="space-y-3">
-          <SegmentoCard
-            v-for="segmento in segmentosOrdenados"
-            :key="segmento.id"
-            :segmento="segmento"
-            @editar="editarSegmento(segmento)"
-            @eliminar="eliminarSegmento(segmento.id)"
-          />
-        </div>
+        <!-- Segmentos ordenados - Drag & Drop habilitado -->
+        <draggable
+          v-model="segmentosAgregados"
+          item-key="id"
+          class="space-y-3"
+          handle=".drag-handle"
+          @end="onDragEnd"
+        >
+          <template #item="{ element }">
+            <SegmentoCard
+              :key="element.id"
+              :segmento="element"
+              @editar="editarSegmento(element)"
+              @eliminar="eliminarSegmento(element.id)"
+            />
+          </template>
+        </draggable>
 
         <!-- Botón para limpiar todos -->
         <div class="mt-4 pt-4 border-t border-gray-200">
@@ -215,6 +222,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import draggable from 'vuedraggable'
 import Modal from '@/components/ui/Modal.vue'
 import DataTable, { type DataTableColumn } from '@/components/ui/DataTable.vue'
 import {
@@ -281,14 +289,8 @@ const tableRows = computed(() => {
   )
 })
 
-// Computed: segmentos ordenados por fecha
-const segmentosOrdenados = computed(() => {
-  return [...segmentosAgregados.value].sort((a, b) => {
-    const fechaA = a.fecha_inicio || ''
-    const fechaB = b.fecha_inicio || ''
-    return fechaA.localeCompare(fechaB)
-  })
-})
+// Los segmentos ahora se ordenan mediante drag & drop, no por fecha
+// segmentosAgregados ya contiene el orden correcto según el campo 'orden'
 
 const selectSegment = (segment: string) => {
   selectedSegment.value = segment
@@ -340,8 +342,8 @@ const handleFormSubmit = async (data: Record<string, unknown>) => {
         (data.fechaSalida as string) ||
         (data.fecha_fin as string) ||
         undefined,
-      hora_inicio: (data.horaSalida as string) || (data.horaInicio as string) || undefined,
-      hora_fin: (data.horaEntrada as string) || (data.hora_fin as string) || undefined,
+      hora_inicio: (data.horaEntrada as string) || (data.horaInicio as string) || undefined,
+      hora_fin: (data.horaSalida as string) || (data.hora_fin as string) || undefined,
       duracion: (data.duracion as string) || '',
       observaciones: (data.observaciones as string) || '',
       orden: segmentosAgregados.value.length + 1,
@@ -456,6 +458,45 @@ const eliminarSegmento = async (id: string) => {
       console.error('Error al eliminar segmento:', error)
       alert('Error al eliminar el segmento')
     }
+  }
+}
+
+// Función para manejar el reordenamiento de segmentos
+const onDragEnd = async () => {
+  try {
+    const totalSegmentos = segmentosAgregados.value.length
+
+    // Actualizar marcadores de primero y último según la nueva posición
+    for (let index = 0; index < totalSegmentos; index++) {
+      const segmento = segmentosAgregados.value[index]
+      const nuevoOrden = index + 1
+      const esPrimero = nuevoOrden === 1
+      const esUltimo = nuevoOrden === totalSegmentos
+
+      // Actualizar el segmento si cambió su posición de primero/último
+      if (
+        segmento.orden !== nuevoOrden ||
+        segmento.es_primero !== esPrimero ||
+        segmento.es_ultimo !== esUltimo
+      ) {
+        await segmentosService.update(segmento.id, {
+          orden: nuevoOrden,
+          es_primero: esPrimero,
+          es_ultimo: esUltimo,
+        })
+
+        // Actualizar localmente
+        segmento.orden = nuevoOrden
+        segmento.es_primero = esPrimero
+        segmento.es_ultimo = esUltimo
+      }
+    }
+
+    console.log('✅ Segmentos reordenados y marcadores actualizados exitosamente')
+  } catch (error) {
+    console.error('Error en drag & drop:', error)
+    alert('Error al reordenar los segmentos')
+    await loadSegmentos()
   }
 }
 

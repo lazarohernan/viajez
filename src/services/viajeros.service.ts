@@ -116,9 +116,13 @@ export class ViajerosService extends BaseService {
         // Manejar errores específicos de restricciones únicas
         if (error.code === '23505') {
           if (error.message.includes('viajeroz_identidad_key')) {
-            this.handleError(new Error(`⚠️ Cliente ya ingresado en el sistema con la identidad ${data.identidad}`))
+            this.handleError(
+              new Error(`⚠️ Cliente ya ingresado en el sistema con la identidad ${data.identidad}`),
+            )
           } else if (error.message.includes('viajeroz_email_key')) {
-            this.handleError(new Error(`⚠️ Cliente ya ingresado en el sistema con el email ${data.email}`))
+            this.handleError(
+              new Error(`⚠️ Cliente ya ingresado en el sistema con el email ${data.email}`),
+            )
           } else {
             this.handleError(new Error('⚠️ Cliente ya ingresado en el sistema con estos datos'))
           }
@@ -157,7 +161,10 @@ export class ViajerosService extends BaseService {
 
           // console.log('✅ Credenciales creadas exitosamente para:', data.email)
         } catch (authError) {
-          console.warn('⚠️ Error en proceso de creación de credenciales, pero viajero creado:', authError)
+          console.warn(
+            '⚠️ Error en proceso de creación de credenciales, pero viajero creado:',
+            authError,
+          )
           // No fallar si hay error en credenciales, el viajero ya se creó
           return {
             data: viajero,

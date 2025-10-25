@@ -1,8 +1,22 @@
 <template>
   <div
-    class="border border-gray-200 rounded-xl p-4 hover:shadow-md transition-all duration-200 bg-white"
+    class="border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition-all duration-200 bg-white relative"
   >
-    <div class="flex items-start justify-between gap-4">
+    <!-- Barra vertical de color con texto (estilo ticket) -->
+    <div
+      class="absolute left-0 top-0 bottom-0 w-6 flex items-center justify-center"
+      :class="getBorderColorClass()"
+    >
+      <span
+        v-if="true"
+        class="text-white text-xs font-bold tracking-wider whitespace-nowrap"
+        style="writing-mode: vertical-rl; transform: rotate(180deg)"
+      >
+        {{ segmento.es_primero ? 'INICIO' : segmento.es_ultimo ? 'FIN' : 'INTERMEDIO' }}
+      </span>
+    </div>
+
+    <div class="flex items-start justify-between gap-4 pl-8 pr-4 py-4">
       <!-- Icono y Contenido -->
       <div class="flex items-start gap-3 flex-1">
         <!-- Icono según tipo de segmento -->
@@ -18,7 +32,7 @@
         <!-- Información del segmento -->
         <div class="flex-1 min-w-0">
           <!-- Badge de tipo -->
-          <div class="flex items-center gap-2 mb-2">
+          <div class="flex items-center gap-2 mb-2 flex-wrap">
             <span
               class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
               :class="getTipoBadgeClass()"
@@ -31,7 +45,7 @@
                 segmento.segmento_transporte &&
                 !segmento.segmento_transporte.tiene_retorno
               "
-              class="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800"
+              class="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800"
             >
               Solo ida
             </span>
@@ -72,6 +86,13 @@
       <!-- Acciones -->
       <div class="flex flex-col gap-2 flex-shrink-0">
         <button
+          class="drag-handle p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-colors cursor-move"
+          title="Arrastrar para reordenar"
+          type="button"
+        >
+          <GripVertical class="w-4 h-4" />
+        </button>
+        <button
           @click="handleEditar"
           class="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
           title="Editar segmento"
@@ -93,7 +114,16 @@
 </template>
 
 <script setup lang="ts">
-import { Plane, Home, Compass, Calendar, Clock, Pencil, Trash2 } from 'lucide-vue-next'
+import {
+  Plane,
+  Home,
+  Compass,
+  Calendar,
+  Clock,
+  Pencil,
+  Trash2,
+  GripVertical,
+} from 'lucide-vue-next'
 import type { Segmento } from '@/services/supabase'
 
 const props = defineProps<{
@@ -104,6 +134,16 @@ const emit = defineEmits<{
   editar: []
   eliminar: []
 }>()
+
+const getBorderColorClass = () => {
+  if (props.segmento.es_primero) {
+    return 'bg-green-500' // Verde para el primer segmento
+  }
+  if (props.segmento.es_ultimo) {
+    return 'bg-red-500' // Rojo para el último segmento
+  }
+  return 'bg-orange-400' // Naranja para segmentos intermedios
+}
 
 const getIconBgClass = () => {
   switch (props.segmento.tipo) {
@@ -121,11 +161,11 @@ const getIconBgClass = () => {
 const getTipoBadgeClass = () => {
   switch (props.segmento.tipo) {
     case 'transporte':
-      return 'bg-blue-100 text-blue-800'
+      return 'bg-gray-100 text-gray-800'
     case 'hospedaje':
-      return 'bg-green-100 text-green-800'
+      return 'bg-gray-100 text-gray-800'
     case 'actividad':
-      return 'bg-purple-100 text-purple-800'
+      return 'bg-gray-100 text-gray-800'
     default:
       return 'bg-gray-100 text-gray-800'
   }

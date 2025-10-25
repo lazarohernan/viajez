@@ -57,11 +57,19 @@
             </div>
 
             <!-- Información del progreso -->
-            <div class="mt-3 flex items-center gap-4">
+            <div class="mt-3 flex items-center gap-4 flex-wrap">
               <div class="flex items-center gap-2">
                 <Calendar class="w-4 h-4 text-orange-600" />
                 <span class="text-sm text-gray-600">{{ formatDate(viaje.fecha_inicio) }}</span>
               </div>
+              <!-- Tiempo para que inicie (solo para viajes por iniciar) -->
+              <div v-if="viaje.estado === 'por_iniciar'" class="flex items-center gap-2">
+                <Clock class="w-4 h-4 text-amber-600" />
+                <span class="text-sm text-amber-700 font-medium">
+                  {{ calcularDiasParaIniciar(viaje.fecha_inicio) }}
+                </span>
+              </div>
+              <!-- Tiempo para que finalice -->
               <div class="flex items-center gap-2">
                 <Clock class="w-4 h-4 text-orange-600" />
                 <span class="text-sm text-gray-600">
@@ -380,10 +388,17 @@ const fetchViajesEnCurso = async () => {
 }
 
 // Funciones auxiliares
+// Parsear fecha en zona horaria local (evita problemas con UTC)
+const parseLocalDate = (dateString: string) => {
+  const [year, month, day] = dateString.split('T')[0].split('-').map(Number)
+  return new Date(year, month - 1, day)
+}
+
 const formatDate = (dateString: string | null | undefined) => {
   if (!dateString) return 'Sin fecha'
 
-  return new Date(dateString).toLocaleDateString('es-ES', {
+  const date = parseLocalDate(dateString)
+  return date.toLocaleDateString('es-ES', {
     day: 'numeric',
     month: 'short',
   })
@@ -393,7 +408,9 @@ const calcularDiasRestantes = (fechaFin: string | null | undefined, estado?: str
   if (!fechaFin) return 'Sin fecha'
 
   const hoy = new Date()
-  const fin = new Date(fechaFin)
+  hoy.setHours(0, 0, 0, 0)
+  const fin = parseLocalDate(fechaFin)
+  fin.setHours(0, 0, 0, 0)
   const diffTime = fin.getTime() - hoy.getTime()
 
   // Si está "en_curso" y es el mismo día, mostrar horas
@@ -407,6 +424,33 @@ const calcularDiasRestantes = (fechaFin: string | null | undefined, estado?: str
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
   const diasRestantes = Math.max(0, diffDays)
   return `${diasRestantes} ${diasRestantes === 1 ? 'día' : 'días'} restantes`
+}
+
+const calcularDiasParaIniciar = (fechaInicio: string | null | undefined) => {
+  if (!fechaInicio) return 'Sin fecha'
+
+  const hoy = new Date()
+  hoy.setHours(0, 0, 0, 0)
+  const inicio = parseLocalDate(fechaInicio)
+  inicio.setHours(0, 0, 0, 0)
+  const diffTime = inicio.getTime() - hoy.getTime()
+
+  // Si es el mismo día, mostrar horas
+  if (hoy.toDateString() === inicio.toDateString()) {
+    const diffHours = Math.ceil(diffTime / (1000 * 60 * 60))
+    const horasRestantes = Math.max(0, diffHours)
+    return `Inicia en ${horasRestantes} ${horasRestantes === 1 ? 'hora' : 'horas'}`
+  }
+
+  // De lo contrario, mostrar días
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  const diasRestantes = Math.max(0, diffDays)
+
+  if (diasRestantes === 0) {
+    return 'Inicia hoy'
+  }
+
+  return `Inicia en ${diasRestantes} ${diasRestantes === 1 ? 'día' : 'días'}`
 }
 
 const getEstadoClass = (estado?: string | null) => {
@@ -445,8 +489,8 @@ const procesarSegmentos = (viaje: ViajeData) => {
 
   // Ordenar segmentos por fecha de inicio
   const segmentosOrdenados = [...viaje.segmentos].sort((a, b) => {
-    const fechaA = new Date(a.fecha_inicio)
-    const fechaB = new Date(b.fecha_inicio)
+    const fechaA = parseLocalDate(a.fecha_inicio)
+    const fechaB = parseLocalDate(b.fecha_inicio)
     return fechaA.getTime() - fechaB.getTime()
   })
 
@@ -456,8 +500,8 @@ const procesarSegmentos = (viaje: ViajeData) => {
   // Buscar el segmento actual (en curso)
   for (let i = 0; i < segmentosOrdenados.length; i++) {
     const segmento = segmentosOrdenados[i]
-    const fechaInicio = new Date(segmento.fecha_inicio)
-    const fechaFin = segmento.fecha_fin ? new Date(segmento.fecha_fin) : null
+    const fechaInicio = parseLocalDate(segmento.fecha_inicio)
+    const fechaFin = segmento.fecha_fin ? parseLocalDate(segmento.fecha_fin) : null
 
     fechaInicio.setHours(0, 0, 0, 0)
     if (fechaFin) fechaFin.setHours(23, 59, 59, 999)
@@ -472,7 +516,7 @@ const procesarSegmentos = (viaje: ViajeData) => {
   // Si no hay segmento en curso, buscar el próximo
   if (indiceActual === -1) {
     indiceActual = segmentosOrdenados.findIndex((seg) => {
-      const fechaInicio = new Date(seg.fecha_inicio)
+      const fechaInicio = parseLocalDate(seg.fecha_inicio)
       fechaInicio.setHours(0, 0, 0, 0)
       return fechaInicio > hoy
     })
@@ -517,8 +561,8 @@ const procesarSegmentos = (viaje: ViajeData) => {
 }
 
 const calcularPorcentajeSegmento = (segmento: SegmentoData, hoy: Date) => {
-  const fechaInicio = new Date(segmento.fecha_inicio)
-  const fechaFin = segmento.fecha_fin ? new Date(segmento.fecha_fin) : null
+  const fechaInicio = parseLocalDate(segmento.fecha_inicio)
+  const fechaFin = segmento.fecha_fin ? parseLocalDate(segmento.fecha_fin) : null
 
   fechaInicio.setHours(0, 0, 0, 0)
   if (fechaFin) fechaFin.setHours(23, 59, 59, 999)
@@ -620,7 +664,8 @@ const irADetalle = () => {
 const formatDateFull = (dateString: string | null | undefined) => {
   if (!dateString) return 'Sin fecha'
 
-  return new Date(dateString).toLocaleDateString('es-ES', {
+  const date = parseLocalDate(dateString)
+  return date.toLocaleDateString('es-ES', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',

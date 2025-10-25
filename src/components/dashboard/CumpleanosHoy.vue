@@ -1,22 +1,13 @@
 <template>
   <div class="bg-white rounded-lg p-4 border border-gray-200">
-    <div class="flex items-center justify-between mb-4">
-      <div>
-        <div class="flex items-center gap-2 mb-1">
-          <div class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
-            <Cake class="w-4 h-4 text-orange-600" />
-          </div>
-          <h3 class="text-lg font-semibold text-gray-900">Cumpleaños</h3>
+    <div class="mb-4">
+      <div class="flex items-center gap-2 mb-1">
+        <div class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+          <Cake class="w-4 h-4 text-orange-600" />
         </div>
-        <p class="text-sm text-gray-600 ml-10">Clientes que celebran hoy</p>
+        <h3 class="text-lg font-semibold text-gray-900">Cumpleaños</h3>
       </div>
-      <button
-        type="button"
-        class="text-sm text-orange-600 hover:text-orange-700 font-medium"
-        @click="$emit('verTodos')"
-      >
-        Ver todos
-      </button>
+      <p class="text-sm text-gray-600 ml-10">Próximos cumpleaños</p>
     </div>
 
     <div v-if="loading" class="flex justify-center py-8">
@@ -31,55 +22,77 @@
     </div>
 
     <div v-else-if="cumpleanos.length === 0" class="text-center py-8">
-      <p class="text-gray-500 text-sm">No hay cumpleaños próximos en los próximos 30 días.</p>
+      <p class="text-gray-500 text-sm">No hay cumpleaños registrados.</p>
     </div>
 
-    <div v-else class="space-y-4">
+    <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
       <div
         v-for="cumple in cumpleanos"
         :key="cumple.id"
-        class="relative flex items-center justify-between p-3 rounded-lg transition-colors"
+        class="relative p-3 rounded-lg transition-all hover:shadow-md cursor-pointer"
         :class="getCardClasses(cumple.diasParaCumpleanos)"
+        @click="cumple.cliente.telefono ? abrirMensaje(cumple) : null"
       >
-        <button
-          v-if="cumple.cliente.telefono"
-          type="button"
-          class="absolute top-3 right-3 inline-flex items-center px-3 py-1 text-xs font-semibold"
-          :class="getWhatsappButtonClasses(cumple.diasParaCumpleanos)"
-          @click="abrirMensaje(cumple)"
+        <!-- Badge de días -->
+        <div
+          class="absolute top-2 right-2 px-2 py-0.5 rounded-full text-xs font-semibold"
+          :class="getProximidadBadgeClass(cumple.diasParaCumpleanos)"
         >
-          Enviar mensaje
-        </button>
+          {{ cumple.diasParaCumpleanos === 0 ? '¡Hoy!' : `${cumple.diasParaCumpleanos}d` }}
+        </div>
 
-        <div class="pr-28 flex-1">
-          <div class="flex items-center gap-3">
+        <!-- Contenido -->
+        <div class="flex flex-col gap-2">
+          <!-- Icono y nombre -->
+          <div class="flex items-start gap-2 pr-12">
             <div
-              class="w-8 h-8 rounded-lg flex items-center justify-center"
+              class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
               :class="getIconWrapperClass(cumple.diasParaCumpleanos)"
             >
-              <Cake class="w-4 h-4" :class="getIconClass(cumple.diasParaCumpleanos)" />
+              <Cake class="w-5 h-5" :class="getIconClass(cumple.diasParaCumpleanos)" />
             </div>
             <div class="flex-1 min-w-0">
-              <h4 class="font-medium text-gray-900 text-sm truncate">
-                {{ cumple.cliente.nombre }} {{ cumple.cliente.apellido }}
+              <h4 class="font-semibold text-gray-900 text-sm leading-tight truncate">
+                {{ cumple.cliente.nombre }}
               </h4>
-              <p class="text-xs text-gray-600">{{ calcularEdad(cumple.fechaNacimiento) }} años</p>
+              <p class="text-xs text-gray-600 truncate">{{ cumple.cliente.apellido }}</p>
             </div>
           </div>
 
-          <!-- Información del cumpleaños -->
-          <div class="mt-3 flex items-center gap-4">
-            <div class="flex items-center gap-2">
-              <Calendar class="w-4 h-4" :class="getMetaIconClass(cumple.diasParaCumpleanos)" />
-              <span class="text-sm text-gray-600">{{ formatDate(cumple.fechaNacimiento) }}</span>
+          <!-- Información -->
+          <div class="space-y-1 text-xs">
+            <div class="flex items-center gap-1.5 text-gray-600">
+              <Calendar class="w-3.5 h-3.5" />
+              <span>{{ formatDate(cumple.fechaNacimiento) }}</span>
             </div>
-            <div class="flex items-center gap-2">
-              <Clock class="w-4 h-4" :class="getMetaIconClass(cumple.diasParaCumpleanos)" />
-              <span class="text-sm" :class="getProximidadClass(cumple.diasParaCumpleanos)">
-                {{ getProximidadText(cumple.diasParaCumpleanos) }}
+            <div
+              class="flex items-center gap-1.5"
+              :class="getProximidadClass(cumple.diasParaCumpleanos)"
+            >
+              <Cake class="w-3.5 h-3.5" />
+              <span class="font-medium">
+                {{ cumple.diasParaCumpleanos === 0 ? '¡Hoy cumple!' : 'Cumplirá' }}
+                {{ calcularEdad(cumple.fechaNacimiento) + 1 }} años
               </span>
             </div>
           </div>
+
+          <!-- Botón WhatsApp (solo si tiene teléfono) -->
+          <button
+            v-if="cumple.cliente.telefono"
+            type="button"
+            class="mt-1 w-full flex items-center justify-center gap-1 px-2 py-1 text-xs font-medium rounded-md transition-colors"
+            :class="getWhatsappButtonClasses(cumple.diasParaCumpleanos)"
+            @click.stop="abrirMensaje(cumple)"
+            title="Enviar mensaje de WhatsApp"
+          >
+            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+              <path
+                d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"
+              />
+            </svg>
+            WhatsApp
+          </button>
         </div>
       </div>
     </div>
@@ -170,17 +183,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { Calendar, Clock, Cake } from 'lucide-vue-next'
+import { Calendar, Cake } from 'lucide-vue-next'
 import { supabase } from '@/services/supabase'
-
-type ViajeroCumpleanos = {
-  id: string
-  nombre: string
-  apellido: string
-  email: string
-  telefono?: string | null
-  fecha_nacimiento: string | null
-}
 
 // Interfaces
 interface Cliente {
@@ -218,76 +222,46 @@ defineEmits<{
   verDetalle: [cumpleanos: Cumpleanos]
 }>()
 
-// Conectado a Supabase
+// Conectado a Supabase - Optimizado con función RPC
 const fetchCumpleanos = async () => {
   loading.value = true
   error.value = null
 
   try {
-    const hoy = new Date()
-    const mesActual = hoy.getMonth() + 1 // 1-12
-    const diaActual = hoy.getDate()
-
-    // Obtener todos los viajeros con fecha de nacimiento
-    const { data, error: supabaseError } = await supabase
-      .from('viajeroz')
-      .select(
-        `
-        id,
-        nombre,
-        apellido,
-        email,
-        telefono,
-        fecha_nacimiento
-      `,
-      )
-      .not('fecha_nacimiento', 'is', null)
+    // Usar función que trae TODOS los cumpleaños ordenados por proximidad
+    const { data, error: supabaseError } = await supabase.rpc('get_todos_cumpleanos')
 
     if (supabaseError) throw supabaseError
 
-    // Filtrar y calcular días para cumpleaños del mes actual
-    const cumpleanosData = (data || []).reduce<Cumpleanos[]>(
-      (acc: Cumpleanos[], viajero: ViajeroCumpleanos) => {
-        if (!viajero.fecha_nacimiento) return acc
-
-        const fechaNac = new Date(viajero.fecha_nacimiento)
-        const mesNac = fechaNac.getMonth() + 1
-        const diaNac = fechaNac.getDate()
-
-        // Solo incluir cumpleaños del mes actual
-        if (mesNac !== mesActual) return acc
-
-        // Calcular días hasta el cumpleaños
-        const diasParaCumpleanos = diaNac - diaActual
-        if (diasParaCumpleanos < 0) {
-          // Ya pasó este mes
-          return acc
-        }
-
-        acc.push({
+    // Mapear datos de la función a la estructura del componente
+    const cumpleanosData = (data || []).map(
+      (viajero: {
+        id: string
+        nombre: string
+        apellido: string
+        email: string
+        telefono: string | null
+        fecha_nacimiento: string
+        dias_para_cumpleanos: number
+        mes: number
+        dia: number
+      }) => ({
+        id: viajero.id,
+        cliente: {
           id: viajero.id,
-          cliente: {
-            id: viajero.id,
-            nombre: viajero.nombre,
-            apellido: viajero.apellido,
-            email: viajero.email,
-            telefono: viajero.telefono || undefined,
-          },
-          fechaNacimiento: viajero.fecha_nacimiento,
-          diasParaCumpleanos,
-          mes: mesNac,
-          dia: diaNac,
-        })
-
-        return acc
-      },
-      [],
+          nombre: viajero.nombre,
+          apellido: viajero.apellido,
+          email: viajero.email,
+          telefono: viajero.telefono || undefined,
+        },
+        fechaNacimiento: viajero.fecha_nacimiento,
+        diasParaCumpleanos: viajero.dias_para_cumpleanos,
+        mes: viajero.mes,
+        dia: viajero.dia,
+      }),
     )
 
-    // Ordenar por días más cercanos primero
-    cumpleanos.value = cumpleanosData.sort(
-      (a: Cumpleanos, b: Cumpleanos) => a.diasParaCumpleanos - b.diasParaCumpleanos,
-    )
+    cumpleanos.value = cumpleanosData
   } catch (err) {
     error.value = 'Error al cargar los cumpleaños'
     console.error('Error fetching cumpleaños:', err)
@@ -344,27 +318,12 @@ const getIconClass = (dias: number) => {
   return 'text-green-700'
 }
 
-const getMetaIconClass = (dias: number) => {
-  if (dias <= 3) return 'text-red-500'
-  if (dias <= 7) return 'text-orange-500'
-  if (dias <= 15) return 'text-yellow-500'
-  return 'text-green-500'
-}
-
 const getProximidadClass = (dias: number) => {
+  if (dias === 0) return 'text-red-600 font-semibold'
   if (dias <= 3) return 'text-red-600 font-medium'
   if (dias <= 7) return 'text-orange-600 font-medium'
   if (dias <= 15) return 'text-yellow-600 font-medium'
   return 'text-green-600 font-medium'
-}
-
-const getProximidadText = (dias: number) => {
-  if (dias === 0) return '¡Hoy es su cumpleaños!'
-  if (dias === 1) return 'Mañana celebra'
-  if (dias <= 3) return `En ${dias} días`
-  if (dias <= 7) return 'Próxima semana'
-  if (dias <= 15) return `En ${dias} días`
-  return `En ${dias} días`
 }
 
 const formatPhoneHN = (telefono?: string) => {
@@ -400,18 +359,26 @@ const getWhatsappLink = (telefono?: string, mensaje?: string) => {
 
 const getWhatsappButtonClasses = (dias: number) => {
   if (dias <= 3) {
-    return 'bg-red-100 text-red-700 border border-red-200 hover:bg-red-200'
+    return 'bg-red-600 text-white hover:bg-red-700'
   }
 
   if (dias <= 7) {
-    return 'bg-orange-100 text-orange-700 border border-orange-200 hover:bg-orange-200'
+    return 'bg-orange-600 text-white hover:bg-orange-700'
   }
 
   if (dias <= 15) {
-    return 'bg-yellow-100 text-yellow-700 border border-yellow-200 hover:bg-yellow-200'
+    return 'bg-yellow-600 text-white hover:bg-yellow-700'
   }
 
-  return 'bg-green-100 text-green-700 border border-green-200 hover:bg-green-200'
+  return 'bg-green-600 text-white hover:bg-green-700'
+}
+
+const getProximidadBadgeClass = (dias: number) => {
+  if (dias === 0) return 'bg-red-600 text-white'
+  if (dias <= 3) return 'bg-red-100 text-red-800'
+  if (dias <= 7) return 'bg-orange-100 text-orange-800'
+  if (dias <= 15) return 'bg-yellow-100 text-yellow-800'
+  return 'bg-green-100 text-green-800'
 }
 
 const buildDefaultMessage = (cumple: Cumpleanos) => {

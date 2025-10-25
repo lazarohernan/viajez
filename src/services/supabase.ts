@@ -84,6 +84,8 @@ export interface Segmento {
   duracion?: string
   observaciones?: string
   orden: number
+  es_primero: boolean
+  es_ultimo: boolean
   cotizacion_id?: string
   viaje_id?: string
   created_at: string

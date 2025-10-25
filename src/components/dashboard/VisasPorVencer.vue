@@ -8,7 +8,7 @@
           </div>
           <h3 class="text-lg font-semibold text-gray-900">Visas por Vencer</h3>
         </div>
-        <p class="text-sm text-gray-600 ml-10">Permisos de viaje que expiran pronto</p>
+        <p class="text-sm text-gray-600 ml-10">Todas las visas registradas</p>
       </div>
       <button
         type="button"
@@ -34,7 +34,7 @@
     </div>
 
     <div v-else-if="visas.length === 0" class="text-center py-8">
-      <p class="text-gray-500 text-sm">No hay visas por vencer en los próximos 30 días.</p>
+      <p class="text-gray-500 text-sm">No hay visas registradas.</p>
     </div>
 
     <div v-else class="space-y-4">
@@ -202,18 +202,6 @@ import { ref, onMounted } from 'vue'
 import { Calendar, Clock, FileCheck } from 'lucide-vue-next'
 import { supabase } from '@/services/supabase'
 
-type ViajeroVisa = {
-  id: string
-  nombre: string
-  apellido: string
-  email: string
-  telefono?: string | null
-  pais_visa?: string | null
-  tipo_visa?: string | null
-  numero_visa: string | null
-  fecha_vencimiento_visa: string | null
-}
-
 // Interfaces
 interface Cliente {
   id: string
@@ -252,80 +240,51 @@ defineEmits<{
   verDetalle: [visa: VisaPorVencer]
 }>()
 
-// Conectado a Supabase
+// Conectado a Supabase - Optimizado con función RPC
 const fetchVisasPorVencer = async () => {
   loading.value = true
   error.value = null
 
   try {
-    const hoy = new Date()
-    const en90Dias = new Date()
-    en90Dias.setDate(hoy.getDate() + 90)
-
-    const { data, error: supabaseError } = await supabase
-      .from('viajeroz')
-      .select(
-        `
-        id,
-        nombre,
-        apellido,
-        email,
-        telefono,
-        pais_visa,
-        tipo_visa,
-        numero_visa,
-        fecha_vencimiento_visa
-      `,
-      )
-      .not('numero_visa', 'is', null)
-      .not('fecha_vencimiento_visa', 'is', null)
-      .gte('fecha_vencimiento_visa', hoy.toISOString().split('T')[0])
-      .lte('fecha_vencimiento_visa', en90Dias.toISOString().split('T')[0])
-      .order('fecha_vencimiento_visa', { ascending: true })
+    // Usar función que trae TODAS las visas activas
+    const { data, error: supabaseError } = await supabase.rpc('get_todas_visas')
 
     if (supabaseError) throw supabaseError
 
-    const visasData = (data || []).reduce<VisaPorVencer[]>(
-      (acc: VisaPorVencer[], viajero: ViajeroVisa) => {
-        if (!viajero.numero_visa || !viajero.fecha_vencimiento_visa) {
-          return acc
-        }
-
-        const fechaVencimiento = new Date(viajero.fecha_vencimiento_visa)
-        const diffTime = fechaVencimiento.getTime() - hoy.getTime()
-        const diasRestantes = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-
-        let estado: 'Activa' | 'Por Vencer' | 'Vencida' = 'Activa'
-        if (diasRestantes <= 0) estado = 'Vencida'
-        else if (diasRestantes <= 30) estado = 'Por Vencer'
-
-        acc.push({
+    // Mapear datos de la función a la estructura del componente
+    const visasData = (data || []).map(
+      (viajero: {
+        id: string
+        nombre: string
+        apellido: string
+        email: string
+        telefono: string | null
+        pais_visa: string
+        tipo_visa: string
+        numero_visa: string
+        fecha_vencimiento_visa: string
+        dias_restantes: number
+        estado: string
+      }) => ({
+        id: viajero.id,
+        cliente: {
           id: viajero.id,
-          cliente: {
-            id: viajero.id,
-            nombre: viajero.nombre,
-            apellido: viajero.apellido,
-            email: viajero.email,
-            telefono: viajero.telefono || undefined,
-          },
-          pais: viajero.pais_visa || 'No especificado',
-          tipo: viajero.tipo_visa || 'No especificado',
-          numero: viajero.numero_visa,
-          fechaEmision: '',
-          fechaVencimiento: viajero.fecha_vencimiento_visa,
-          diasRestantes,
-          estado,
-        })
-
-        return acc
-      },
-      [],
+          nombre: viajero.nombre,
+          apellido: viajero.apellido,
+          email: viajero.email,
+          telefono: viajero.telefono || undefined,
+        },
+        pais: viajero.pais_visa,
+        tipo: viajero.tipo_visa,
+        numero: viajero.numero_visa,
+        fechaEmision: '',
+        fechaVencimiento: viajero.fecha_vencimiento_visa,
+        diasRestantes: viajero.dias_restantes,
+        estado: viajero.estado as 'Activa' | 'Por Vencer' | 'Vencida',
+      }),
     )
 
-    const ordenadas = visasData.sort(
-      (a: VisaPorVencer, b: VisaPorVencer) => a.diasRestantes - b.diasRestantes,
-    )
-    visas.value = props.maxItems ? ordenadas.slice(0, props.maxItems) : ordenadas
+    visas.value = props.maxItems ? visasData.slice(0, props.maxItems) : visasData
   } catch (err) {
     error.value = 'Error al cargar las visas por vencer'
     console.error('Error fetching visas por vencer:', err)

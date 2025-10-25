@@ -26,6 +26,8 @@ export interface CreateSegmentoData {
   duracion?: string
   observaciones?: string
   orden: number
+  es_primero?: boolean
+  es_ultimo?: boolean
   cotizacion_id?: string
   viaje_id?: string
 
@@ -55,6 +57,21 @@ export class SegmentosService extends BaseService {
    */
   async create(data: CreateSegmentoData): Promise<ServiceResponse<SegmentoWithDetails>> {
     try {
+      // Si se marca como último, validar que todos los segmentos estén en orden
+      if (data.es_ultimo) {
+        await this.validarOrdenSegmentos(data.cotizacion_id, data.viaje_id, data.orden)
+      }
+
+      // Si se marca como primero o último, desmarcar otros segmentos
+      if (data.es_primero || data.es_ultimo) {
+        await this.actualizarMarcadoresSegmentos(
+          data.cotizacion_id,
+          data.viaje_id,
+          data.es_primero,
+          data.es_ultimo,
+        )
+      }
+
       // Crear segmento base
       const { data: segmento, error: segError } = await supabase
         .from('segmentos')
@@ -69,6 +86,8 @@ export class SegmentosService extends BaseService {
           duracion: data.duracion,
           observaciones: data.observaciones,
           orden: data.orden,
+          es_primero: data.es_primero || false,
+          es_ultimo: data.es_ultimo || false,
           cotizacion_id: data.cotizacion_id,
           viaje_id: data.viaje_id,
         })
@@ -168,6 +187,8 @@ export class SegmentosService extends BaseService {
           duracion,
           observaciones,
           orden,
+          es_primero,
+          es_ultimo,
           cotizacion_id,
           viaje_id,
           created_at,
@@ -261,6 +282,8 @@ export class SegmentosService extends BaseService {
           duracion,
           observaciones,
           orden,
+          es_primero,
+          es_ultimo,
           cotizacion_id,
           viaje_id,
           created_at,
@@ -345,6 +368,8 @@ export class SegmentosService extends BaseService {
           duracion,
           observaciones,
           orden,
+          es_primero,
+          es_ultimo,
           cotizacion_id,
           viaje_id,
           created_at,
@@ -428,7 +453,9 @@ export class SegmentosService extends BaseService {
       if (data.hora_fin !== undefined) updateData.hora_fin = data.hora_fin
       if (data.duracion) updateData.duracion = data.duracion
       if (data.observaciones !== undefined) updateData.observaciones = data.observaciones
-      if (data.orden) updateData.orden = data.orden
+      if (data.orden !== undefined) updateData.orden = data.orden
+      if (data.es_primero !== undefined) updateData.es_primero = data.es_primero
+      if (data.es_ultimo !== undefined) updateData.es_ultimo = data.es_ultimo
 
       updateData.updated_at = new Date().toISOString()
 
@@ -747,6 +774,89 @@ export class SegmentosService extends BaseService {
         data: null,
         error: error instanceof Error ? error.message : 'Error copiando segmento',
       }
+    }
+  }
+
+  /**
+   * Actualizar marcadores de primero/último segmento
+   * Desmarca otros segmentos cuando se marca uno nuevo
+   */
+  private async actualizarMarcadoresSegmentos(
+    cotizacionId?: string,
+    viajeId?: string,
+    esPrimero?: boolean,
+    esUltimo?: boolean,
+  ): Promise<void> {
+    try {
+      // Desmarcar otros segmentos primeros
+      if (esPrimero) {
+        const query = supabase
+          .from('segmentos')
+          .update({ es_primero: false })
+          .eq('es_primero', true)
+
+        if (cotizacionId) {
+          await query.eq('cotizacion_id', cotizacionId)
+        } else {
+          await query.eq('viaje_id', viajeId!)
+        }
+      }
+
+      // Desmarcar otros segmentos últimos
+      if (esUltimo) {
+        const query = supabase.from('segmentos').update({ es_ultimo: false }).eq('es_ultimo', true)
+
+        if (cotizacionId) {
+          await query.eq('cotizacion_id', cotizacionId)
+        } else {
+          await query.eq('viaje_id', viajeId!)
+        }
+      }
+    } catch (error) {
+      console.error('Error actualizando marcadores:', error)
+    }
+  }
+
+  /**
+   * Validar que todos los segmentos estén en orden cuando se marca el último
+   * Verifica que no haya segmentos fuera del rango 1 a orden_ultimo
+   */
+  private async validarOrdenSegmentos(
+    cotizacionId?: string,
+    viajeId?: string,
+    ordenUltimo?: number,
+  ): Promise<void> {
+    try {
+      if (!ordenUltimo) return
+
+      // Obtener todos los segmentos
+      const { data: segmentos, error } = await supabase
+        .from('segmentos')
+        .select('id, orden, nombre')
+        .eq(cotizacionId ? 'cotizacion_id' : 'viaje_id', cotizacionId || viajeId!)
+        .order('orden', { ascending: true })
+
+      if (error) throw error
+
+      // Verificar que no haya segmentos fuera de rango
+      const segmentosFueraDeRango = segmentos.filter((s) => s.orden < 1 || s.orden > ordenUltimo)
+
+      if (segmentosFueraDeRango.length > 0) {
+        const nombres = segmentosFueraDeRango
+          .map((s) => `"${s.nombre}" (orden: ${s.orden})`)
+          .join(', ')
+        console.warn(
+          `⚠️ AUDITORÍA: Se encontraron ${segmentosFueraDeRango.length} segmento(s) fuera de rango: ${nombres}`,
+        )
+      }
+
+      // Verificar que haya un segmento primero
+      const tienePrimero = segmentos.some((s) => s.orden === 1)
+      if (!tienePrimero) {
+        console.warn('⚠️ AUDITORÍA: No se encontró un segmento con orden 1 (primero)')
+      }
+    } catch (error) {
+      console.error('Error validando orden de segmentos:', error)
     }
   }
 }

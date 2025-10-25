@@ -48,9 +48,7 @@
       <!-- Información de Contacto -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
-            Email *
-          </label>
+          <label for="email" class="block text-sm font-medium text-gray-700 mb-2"> Email * </label>
           <input
             id="email"
             v-model="form.email"
@@ -474,7 +472,8 @@ const handleSubmit = async () => {
     // Validar formato de identidad hondureña (XXXX-XXXX-XXXXX)
     const identidadRegex = /^\d{4}-\d{4}-\d{5}$/
     if (!identidadRegex.test(form.identidad)) {
-      passwordError.value = 'La identidad debe tener el formato XXXX-XXXX-XXXXX (ej: 0801-1990-00001)'
+      passwordError.value =
+        'La identidad debe tener el formato XXXX-XXXX-XXXXX (ej: 0801-1990-00001)'
       isLoading.value = false
       return
     }

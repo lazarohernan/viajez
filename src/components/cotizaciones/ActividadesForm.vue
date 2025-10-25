@@ -86,17 +86,10 @@
           />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2"> Duración (en horas) </label>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Hora Final</label>
           <input
-            :value="formData.duracionHoras"
-            @input="
-              (event) =>
-                (formData.duracionHoras = parseFloat((event.target as HTMLInputElement).value) || 0)
-            "
-            type="number"
-            min="0"
-            step="0.5"
-            placeholder="Ej: 2.5"
+            v-model="formData.horaFinal"
+            type="time"
             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
             required
           />
@@ -158,6 +151,7 @@ interface ActividadFormData extends Record<string, unknown> {
   fechaEntrada: string
   fecha_inicio: string
   horaInicio: string
+  horaFinal: string
   horaEntrada: string
   duracion_horas: number
   duracion: string
@@ -181,7 +175,7 @@ const formData = ref({
   fechaInicial: '',
   fechaFinal: '',
   horaInicio: '',
-  duracionHoras: 0,
+  horaFinal: '',
   observaciones: '',
 })
 
@@ -192,43 +186,15 @@ watch(
   () => props.initialData,
   (newData) => {
     if (newData) {
-      // segmento_actividad puede venir como array o como objeto
-      const segmentoActividadRaw = newData.segmento_actividad as
-        | Record<string, unknown>
-        | Record<string, unknown>[]
-        | undefined
-
-      // console.log('🔄 ActividadesForm recibiendo initialData:', JSON.stringify(newData, null, 2))
-      // console.log('🎭 segmento_actividad RAW:', JSON.stringify(segmentoActividadRaw, null, 2))
-
-      // Si viene como array, tomar el primer elemento
-      let segmentoActividad: Record<string, unknown> | undefined = undefined
-      if (Array.isArray(segmentoActividadRaw) && segmentoActividadRaw.length > 0) {
-        segmentoActividad = segmentoActividadRaw[0]
-      } else if (segmentoActividadRaw && !Array.isArray(segmentoActividadRaw)) {
-        segmentoActividad = segmentoActividadRaw
-      }
-
-      // console.log('🎭 duracion_horas raw:', segmentoActividad?.duracion_horas)
-      // console.log('🎭 duracion_horas type:', typeof segmentoActividad?.duracion_horas)
-
-      const duracionHorasValue = segmentoActividad?.duracion_horas
-        ? Number(segmentoActividad.duracion_horas)
-        : 0
-
-      // console.log('🎭 duracionHorasValue convertido:', duracionHorasValue)
-
       formData.value = {
         nombre: (newData.nombre as string) || '',
         proveedor: (newData.proveedor as string) || '',
         fechaInicial: (newData.fecha_inicio as string) || '',
         fechaFinal: (newData.fecha_fin as string) || '',
         horaInicio: (newData.hora_inicio as string) || '',
-        duracionHoras: duracionHorasValue,
+        horaFinal: (newData.hora_fin as string) || '',
         observaciones: (newData.observaciones as string) || '',
       }
-      // console.log('✅ ActividadesForm actualizado con nuevos datos:', JSON.stringify(formData.value, null, 2))
-      // console.log('✅ duracionHoras final:', formData.value.duracionHoras)
     } else {
       // console.log('❌ ActividadesForm recibió initialData null/undefined')
     }
@@ -237,19 +203,40 @@ watch(
 )
 
 const duracionCalculada = computed(() => {
-  if (formData.value.fechaInicial && formData.value.fechaFinal) {
-    const inicio = new Date(formData.value.fechaInicial)
-    const fin = new Date(formData.value.fechaFinal)
+  if (
+    formData.value.fechaInicial &&
+    formData.value.fechaFinal &&
+    formData.value.horaInicio &&
+    formData.value.horaFinal
+  ) {
+    const inicio = new Date(`${formData.value.fechaInicial}T${formData.value.horaInicio}`)
+    const fin = new Date(`${formData.value.fechaFinal}T${formData.value.horaFinal}`)
     const diffTime = Math.abs(fin.getTime() - inicio.getTime())
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
 
-    if (diffDays === 0) return '0 días'
-    if (diffDays === 1) return '1 día'
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+    const diffHours = Math.floor((diffTime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
 
-    const totalHoras = formData.value.duracionHoras
-    return `${diffDays} días, ${totalHoras} horas`
+    if (diffDays === 0 && diffHours === 0) return '0 horas'
+    if (diffDays === 0) return `${diffHours} hora${diffHours !== 1 ? 's' : ''}`
+    if (diffHours === 0) return `${diffDays} día${diffDays !== 1 ? 's' : ''}`
+    return `${diffDays} día${diffDays !== 1 ? 's' : ''} y ${diffHours} hora${diffHours !== 1 ? 's' : ''}`
   }
   return ''
+})
+
+const duracionHorasCalculada = computed(() => {
+  if (
+    formData.value.fechaInicial &&
+    formData.value.fechaFinal &&
+    formData.value.horaInicio &&
+    formData.value.horaFinal
+  ) {
+    const inicio = new Date(`${formData.value.fechaInicial}T${formData.value.horaInicio}`)
+    const fin = new Date(`${formData.value.fechaFinal}T${formData.value.horaFinal}`)
+    const diffTime = Math.abs(fin.getTime() - inicio.getTime())
+    return Math.floor(diffTime / (1000 * 60 * 60))
+  }
+  return 0
 })
 
 const handleSubmit = () => {
@@ -257,8 +244,10 @@ const handleSubmit = () => {
     ...formData.value,
     fechaEntrada: formData.value.fechaInicial,
     fecha_inicio: formData.value.fechaInicial,
+    fecha_fin: formData.value.fechaFinal,
     horaEntrada: formData.value.horaInicio,
-    duracion_horas: formData.value.duracionHoras,
+    horaSalida: formData.value.horaFinal,
+    duracion_horas: duracionHorasCalculada.value,
     duracion: duracionCalculada.value,
     segmento: 'Actividades',
   } as ActividadFormData)

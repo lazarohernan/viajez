@@ -207,125 +207,156 @@
               </button>
             </div>
 
-            <!-- Lista de segmentos ordenados por fecha -->
-            <div v-else class="space-y-3">
-              <div
-                v-for="segmento in segmentosOrdenados"
-                :key="segmento.id"
-                class="border border-gray-200 rounded-lg p-4 hover:shadow-md hover:border-orange-200 transition-all"
-              >
-                <div class="flex items-start justify-between gap-4">
-                  <!-- Información del segmento -->
-                  <div class="flex items-start gap-3 flex-1">
-                    <!-- Icono según tipo -->
-                    <div
-                      class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                      :class="getSegmentoIconBg(segmento.tipo)"
+            <!-- Lista de segmentos ordenados - Drag & Drop habilitado -->
+            <draggable
+              v-else
+              v-model="segmentos"
+              item-key="id"
+              class="space-y-3"
+              handle=".drag-handle"
+              @end="onDragEndViaje"
+            >
+              <template #item="{ element: segmento }">
+                <div
+                  :key="segmento.id"
+                  class="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md hover:border-orange-200 transition-all relative"
+                >
+                  <!-- Barra vertical de color con texto (estilo ticket) -->
+                  <div
+                    class="absolute left-0 top-0 bottom-0 w-6 flex items-center justify-center"
+                    :class="getSegmentoBorderColor(segmento)"
+                  >
+                    <span
+                      v-if="true"
+                      class="text-white text-xs font-bold tracking-wider whitespace-nowrap"
+                      style="writing-mode: vertical-rl; transform: rotate(180deg)"
                     >
-                      <Plane
-                        v-if="segmento.tipo === 'transporte'"
-                        class="w-5 h-5 text-orange-600"
-                      />
-                      <Home
-                        v-else-if="segmento.tipo === 'hospedaje'"
-                        class="w-5 h-5 text-orange-600"
-                      />
-                      <Compass v-else class="w-5 h-5 text-orange-600" />
-                    </div>
-
-                    <!-- Detalles -->
-                    <div class="flex-1 min-w-0">
-                      <!-- Tipo y nombre -->
-                      <div class="flex items-center gap-2 mb-2">
-                        <span
-                          class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
-                          :class="getTipoBadgeClass(segmento.tipo)"
-                        >
-                          {{ segmento.tipo }}
-                        </span>
-                        <span
-                          v-if="
-                            segmento.tipo === 'transporte' &&
-                            segmento.segmento_transporte?.tiene_retorno === false
-                          "
-                          class="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800"
-                        >
-                          Solo ida
-                        </span>
-                      </div>
-
-                      <h4 class="font-semibold text-gray-900 mb-1">{{ segmento.nombre }}</h4>
-                      <p class="text-sm text-gray-600 mb-2">{{ segmento.proveedor }}</p>
-
-                      <!-- Fechas -->
-                      <div class="flex items-center gap-4 text-sm text-gray-500 mb-2">
-                        <div class="flex items-center gap-1">
-                          <Calendar class="w-4 h-4" />
-                          <span>{{ formatFechas(segmento) }}</span>
-                        </div>
-                        <div v-if="segmento.duracion" class="flex items-center gap-1">
-                          <Clock class="w-4 h-4" />
-                          <span>{{ segmento.duracion }}</span>
-                        </div>
-                      </div>
-
-                      <!-- Observaciones -->
-                      <p v-if="segmento.observaciones" class="text-sm text-gray-600 italic">
-                        {{ segmento.observaciones }}
-                      </p>
-
-                      <!-- Documentos adjuntos -->
-                      <div v-if="segmentoDocumentos[segmento.id]?.length > 0" class="mt-2">
-                        <p class="text-xs text-gray-500 mb-1">
-                          {{ segmentoDocumentos[segmento.id].length }} documento(s) adjunto(s)
-                        </p>
-                        <div class="flex flex-wrap gap-1">
-                          <span
-                            v-for="doc in segmentoDocumentos[segmento.id].slice(0, 3)"
-                            :key="doc.id"
-                            class="inline-flex items-center px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded"
-                          >
-                            <FileText class="w-3 h-3 mr-1" />
-                            {{ doc.nombre_archivo.split('.').pop()?.toUpperCase() }}
-                          </span>
-                          <span
-                            v-if="segmentoDocumentos[segmento.id].length > 3"
-                            class="inline-flex items-center px-2 py-1 text-xs bg-gray-50 text-gray-600 rounded"
-                          >
-                            +{{ segmentoDocumentos[segmento.id].length - 3 }} más
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+                      {{
+                        segmento.es_primero ? 'INICIO' : segmento.es_ultimo ? 'FIN' : 'INTERMEDIO'
+                      }}
+                    </span>
                   </div>
 
-                  <!-- Acciones -->
-                  <div class="flex flex-col gap-2 flex-shrink-0">
-                    <button
-                      @click="editarSegmento(segmento)"
-                      class="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
-                      title="Editar segmento"
-                    >
-                      <Pencil class="w-4 h-4" />
-                    </button>
-                    <button
-                      @click="gestionarDocumentos(segmento)"
-                      class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      title="Gestionar documentos"
-                    >
-                      <FileText class="w-4 h-4" />
-                    </button>
-                    <button
-                      @click="eliminarSegmento(segmento.id)"
-                      class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      title="Eliminar segmento"
-                    >
-                      <Trash2 class="w-4 h-4" />
-                    </button>
+                  <div class="flex items-start justify-between gap-4 pl-8 pr-4 py-4">
+                    <!-- Información del segmento -->
+                    <div class="flex items-start gap-3 flex-1">
+                      <!-- Icono según tipo -->
+                      <div
+                        class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                        :class="getSegmentoIconBg(segmento.tipo)"
+                      >
+                        <Plane
+                          v-if="segmento.tipo === 'transporte'"
+                          class="w-5 h-5 text-orange-600"
+                        />
+                        <Home
+                          v-else-if="segmento.tipo === 'hospedaje'"
+                          class="w-5 h-5 text-orange-600"
+                        />
+                        <Compass v-else class="w-5 h-5 text-orange-600" />
+                      </div>
+
+                      <!-- Detalles -->
+                      <div class="flex-1 min-w-0">
+                        <!-- Tipo y nombre -->
+                        <div class="flex items-center gap-2 mb-2 flex-wrap">
+                          <span
+                            class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
+                            :class="getTipoBadgeClass(segmento.tipo)"
+                          >
+                            {{ segmento.tipo }}
+                          </span>
+                          <span
+                            v-if="
+                              segmento.tipo === 'transporte' &&
+                              segmento.segmento_transporte?.tiene_retorno === false
+                            "
+                            class="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800"
+                          >
+                            Solo ida
+                          </span>
+                        </div>
+
+                        <h4 class="font-semibold text-gray-900 mb-1">{{ segmento.nombre }}</h4>
+                        <p class="text-sm text-gray-600 mb-2">{{ segmento.proveedor }}</p>
+
+                        <!-- Fechas -->
+                        <div class="flex items-center gap-4 text-sm text-gray-500 mb-2">
+                          <div class="flex items-center gap-1">
+                            <Calendar class="w-4 h-4" />
+                            <span>{{ formatFechas(segmento) }}</span>
+                          </div>
+                          <div v-if="segmento.duracion" class="flex items-center gap-1">
+                            <Clock class="w-4 h-4" />
+                            <span>{{ segmento.duracion }}</span>
+                          </div>
+                        </div>
+
+                        <!-- Observaciones -->
+                        <p v-if="segmento.observaciones" class="text-sm text-gray-600 italic">
+                          {{ segmento.observaciones }}
+                        </p>
+
+                        <!-- Documentos adjuntos -->
+                        <div v-if="segmentoDocumentos[segmento.id]?.length > 0" class="mt-2">
+                          <p class="text-xs text-gray-500 mb-1">
+                            {{ segmentoDocumentos[segmento.id].length }} documento(s) adjunto(s)
+                          </p>
+                          <div class="flex flex-wrap gap-1">
+                            <span
+                              v-for="doc in segmentoDocumentos[segmento.id].slice(0, 3)"
+                              :key="doc.id"
+                              class="inline-flex items-center px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded"
+                            >
+                              <FileText class="w-3 h-3 mr-1" />
+                              {{ doc.nombre_archivo.split('.').pop()?.toUpperCase() }}
+                            </span>
+                            <span
+                              v-if="segmentoDocumentos[segmento.id].length > 3"
+                              class="inline-flex items-center px-2 py-1 text-xs bg-gray-50 text-gray-600 rounded"
+                            >
+                              +{{ segmentoDocumentos[segmento.id].length - 3 }} más
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Acciones -->
+                    <div class="flex flex-col gap-2 flex-shrink-0">
+                      <button
+                        class="drag-handle p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-colors cursor-move"
+                        title="Arrastrar para reordenar"
+                        type="button"
+                      >
+                        <GripVertical class="w-4 h-4" />
+                      </button>
+                      <button
+                        @click="editarSegmento(segmento)"
+                        class="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                        title="Editar segmento"
+                      >
+                        <Pencil class="w-4 h-4" />
+                      </button>
+                      <button
+                        @click="gestionarDocumentos(segmento)"
+                        class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="Gestionar documentos"
+                      >
+                        <FileText class="w-4 h-4" />
+                      </button>
+                      <button
+                        @click="eliminarSegmento(segmento.id)"
+                        class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Eliminar segmento"
+                      >
+                        <Trash2 class="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
+              </template>
+            </draggable>
           </div>
         </div>
       </div>
@@ -507,8 +538,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import draggable from 'vuedraggable'
 import {
   ArrowLeft,
   Plus,
@@ -519,6 +551,7 @@ import {
   Compass,
   Calendar,
   Clock,
+  GripVertical,
   Pencil,
   FileText,
   Trash2,
@@ -659,20 +692,8 @@ const loadDocumentosSegmentos = async () => {
   }
 }
 
-// Computed para segmentos ordenados
-const segmentosOrdenados = computed(() => {
-  return [...segmentos.value].sort((a, b) => {
-    const fechaA = a.fecha_inicio || ''
-    const fechaB = b.fecha_inicio || ''
-    const horaA = a.hora_inicio || ''
-    const horaB = b.hora_inicio || ''
-
-    const comparacionFecha = fechaA.localeCompare(fechaB)
-    if (comparacionFecha !== 0) return comparacionFecha
-
-    return horaA.localeCompare(horaB)
-  })
-})
+// Los segmentos ahora se ordenan mediante drag & drop, no por fecha
+// segmentos ya contiene el orden correcto según el campo 'orden'
 
 // Funciones para segmentos
 const editarSegmento = (segmento: Segmento) => {
@@ -682,6 +703,45 @@ const editarSegmento = (segmento: Segmento) => {
   editingSegment.value = segmento
   selectedSegmentType.value = segmento.tipo
   showAddSegment.value = true
+}
+
+// Función para manejar el reordenamiento de segmentos en viajes
+const onDragEndViaje = async () => {
+  try {
+    const totalSegmentos = segmentos.value.length
+
+    // Actualizar marcadores de primero y último según la nueva posición
+    for (let index = 0; index < totalSegmentos; index++) {
+      const segmento = segmentos.value[index]
+      const nuevoOrden = index + 1
+      const esPrimero = nuevoOrden === 1
+      const esUltimo = nuevoOrden === totalSegmentos
+
+      // Actualizar el segmento si cambió su posición de primero/último
+      if (
+        segmento.orden !== nuevoOrden ||
+        segmento.es_primero !== esPrimero ||
+        segmento.es_ultimo !== esUltimo
+      ) {
+        await segmentosService.update(segmento.id, {
+          orden: nuevoOrden,
+          es_primero: esPrimero,
+          es_ultimo: esUltimo,
+        })
+
+        // Actualizar localmente
+        segmento.orden = nuevoOrden
+        segmento.es_primero = esPrimero
+        segmento.es_ultimo = esUltimo
+      }
+    }
+
+    console.log('✅ Segmentos del viaje reordenados y marcadores actualizados exitosamente')
+  } catch (error) {
+    console.error('Error en drag & drop:', error)
+    alert('Error al reordenar los segmentos')
+    await loadViaje()
+  }
 }
 
 const eliminarSegmento = async (segmentoId: string) => {
@@ -725,8 +785,8 @@ const handleSegmentSubmit = async (data: Record<string, unknown>) => {
         (data.fechaSalida as string) ||
         (data.fecha_fin as string) ||
         undefined,
-      hora_inicio: (data.horaSalida as string) || (data.horaInicio as string) || undefined,
-      hora_fin: (data.horaEntrada as string) || (data.hora_fin as string) || undefined,
+      hora_inicio: (data.horaEntrada as string) || (data.horaInicio as string) || undefined,
+      hora_fin: (data.horaSalida as string) || (data.hora_fin as string) || undefined,
       duracion: (data.duracion as string) || '',
       observaciones: (data.observaciones as string) || '',
       orden: editingSegment.value ? editingSegment.value.orden : segmentos.value.length + 1,
@@ -947,6 +1007,16 @@ const getEstadoLabel = (estado?: string) => {
   }
 }
 
+const getSegmentoBorderColor = (segmento: Segmento) => {
+  if (segmento.es_primero) {
+    return 'bg-green-500' // Verde para el primer segmento
+  }
+  if (segmento.es_ultimo) {
+    return 'bg-red-500' // Rojo para el último segmento
+  }
+  return 'bg-orange-400' // Naranja para segmentos intermedios
+}
+
 const getSegmentoIconBg = (tipo: string) => {
   switch (tipo) {
     case 'transporte':
@@ -963,11 +1033,11 @@ const getSegmentoIconBg = (tipo: string) => {
 const getTipoBadgeClass = (tipo: string) => {
   switch (tipo) {
     case 'transporte':
-      return 'bg-sky-100 text-sky-800'
+      return 'bg-gray-100 text-gray-800'
     case 'hospedaje':
-      return 'bg-teal-100 text-teal-800'
+      return 'bg-gray-100 text-gray-800'
     case 'actividad':
-      return 'bg-rose-100 text-rose-800'
+      return 'bg-gray-100 text-gray-800'
     default:
       return 'bg-gray-100 text-gray-800'
   }

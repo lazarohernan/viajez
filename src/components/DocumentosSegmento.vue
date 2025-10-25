@@ -29,8 +29,16 @@
       />
     </div>
 
+    <!-- Indicador de carga -->
+    <div v-if="loading" class="text-center py-4">
+      <div class="inline-flex items-center px-4 py-2 text-sm text-gray-600">
+        <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600 mr-2"></div>
+        Cargando documentos...
+      </div>
+    </div>
+
     <!-- Lista de documentos existentes -->
-    <div v-if="documentos.length > 0" class="space-y-3">
+    <div v-else-if="documentos.length > 0" class="space-y-3">
       <div class="grid gap-3">
         <div
           v-for="documento in documentos"
@@ -88,7 +96,7 @@
 
     <!-- Estado vacío -->
     <div
-      v-else-if="!showUpload"
+      v-else-if="!showUpload && !loading"
       class="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg"
     >
       <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -100,15 +108,21 @@
       </p>
     </div>
 
-    <!-- Mensajes de error -->
-    <div v-if="errorMessage" class="text-sm text-red-600 bg-red-50 p-3 rounded-lg">
+    <!-- Mensajes de error y éxito -->
+    <div
+      v-if="errorMessage"
+      :class="[
+        'text-sm p-3 rounded-lg transition-all duration-300',
+        errorMessage.includes('✅') ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50',
+      ]"
+    >
       {{ errorMessage }}
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, withDefaults } from 'vue'
 import { Upload, FileText, Image, File, Download, Trash2 } from 'lucide-vue-next'
 import FileUpload from '@/components/ui/FileUpload.vue'
 import { documentosService, type Documento } from '@/services/supabase'
@@ -117,7 +131,9 @@ interface Props {
   segmentoId: string
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  segmentoId: '',
+})
 
 const showUpload = ref(false)
 const documentos = ref<Documento[]>([])
@@ -140,7 +156,10 @@ watch(
 )
 
 const loadDocumentos = async () => {
-  if (!props.segmentoId) return
+  if (!props.segmentoId) {
+    console.warn('segmentoId no disponible para cargar documentos')
+    return
+  }
 
   try {
     loading.value = true
@@ -148,7 +167,12 @@ const loadDocumentos = async () => {
     documentos.value = await documentosService.getBySegmento(props.segmentoId)
   } catch (error) {
     console.error('Error al cargar documentos:', error)
-    errorMessage.value = 'Error al cargar los documentos'
+    errorMessage.value = error instanceof Error ? error.message : 'Error al cargar los documentos'
+
+    // Solo mostrar error si realmente había documentos antes o si es un error crítico
+    if (documentos.value.length > 0) {
+      documentos.value = []
+    }
   } finally {
     loading.value = false
   }
@@ -165,29 +189,45 @@ const onFilesUploaded = async (uploadedFiles: UploadedFile[]) => {
 
     // Subir cada archivo a Supabase
     for (const uploadedFile of uploadedFiles) {
-      if (uploadedFile.file) {
-        await documentosService.uploadFile(uploadedFile.file, props.segmentoId)
-      }
+      // La interfaz UploadedFile ya garantiza que file existe y no es undefined
+      await documentosService.uploadFile(uploadedFile.file, props.segmentoId)
     }
 
     // Recargar lista de documentos
     await loadDocumentos()
 
-    // Mostrar mensaje de éxito
+    // Mostrar mensaje de éxito temporalmente
+    errorMessage.value = `✅ ${uploadedFiles.length} archivo(s) subido(s) exitosamente`
+    setTimeout(() => {
+      errorMessage.value = ''
+    }, 3000)
+
+    // Ocultar área de subida después de subir
     showUpload.value = false
   } catch (error) {
     console.error('Error al subir archivos:', error)
-    errorMessage.value = 'Error al subir los archivos'
+    errorMessage.value = error instanceof Error ? error.message : 'Error al subir los archivos'
   }
 }
 
 const onFileRemoved = (file: { id: string; name: string } | UploadedFile) => {
-  // console.log('Archivo removido del componente de subida:', file)
+  // Aquí se podría implementar lógica adicional cuando se remueve un archivo
+  console.log('Archivo removido del componente de subida:', file)
 }
 
 const downloadFile = (documento: Documento) => {
   try {
+    if (!documento.ruta_storage) {
+      errorMessage.value = 'La ruta del archivo no está disponible'
+      return
+    }
+
     const url = documentosService.getPublicUrl(documento.ruta_storage)
+    if (!url) {
+      errorMessage.value = 'No se pudo obtener la URL del archivo'
+      return
+    }
+
     window.open(url, '_blank')
   } catch (error) {
     console.error('Error al descargar archivo:', error)
@@ -204,29 +244,52 @@ const deleteDocumento = async (id: string) => {
     errorMessage.value = ''
     await documentosService.delete(id)
     await loadDocumentos()
+
+    // Mostrar mensaje de éxito
+    errorMessage.value = '✅ Documento eliminado exitosamente'
+    setTimeout(() => {
+      errorMessage.value = ''
+    }, 3000)
   } catch (error) {
     console.error('Error al eliminar documento:', error)
-    errorMessage.value = 'Error al eliminar el documento'
+    errorMessage.value = error instanceof Error ? error.message : 'Error al eliminar el documento'
   }
 }
 
 const formatFileSize = (bytes: number): string => {
+  if (!bytes || bytes < 0 || !Number.isFinite(bytes)) return 'Tamaño desconocido'
+
   if (bytes === 0) return '0 Bytes'
+
   const k = 1024
   const sizes = ['Bytes', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+
+  // Asegurar que el índice esté dentro del rango válido
+  const validIndex = Math.min(Math.max(i, 0), sizes.length - 1)
+  return parseFloat((bytes / Math.pow(k, validIndex)).toFixed(2)) + ' ' + sizes[validIndex]
 }
 
 const formatDate = (dateString: string): string => {
+  if (!dateString || typeof dateString !== 'string') {
+    return 'Fecha no disponible'
+  }
+
   try {
     const date = new Date(dateString)
+
+    // Verificar si la fecha es válida
+    if (isNaN(date.getTime())) {
+      return 'Fecha inválida'
+    }
+
     return date.toLocaleDateString('es-ES', {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
     })
   } catch (error) {
+    console.error('Error al formatear fecha:', error)
     return 'Fecha inválida'
   }
 }
