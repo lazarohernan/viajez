@@ -90,9 +90,32 @@ export class CotizacionesService extends BaseService {
           viaje_id,
           created_at,
           updated_at,
-          segmento_transporte(*),
-          segmento_hospedaje(*),
-          segmento_actividad(*),
+          segmento_transporte (
+            id,
+            segmento_id,
+            tipo_transporte,
+            tiene_retorno,
+            es_tramo_escala,
+            origen,
+            destino,
+            codigo_reserva,
+            created_at,
+            updated_at
+          ),
+          segmento_hospedaje (
+            id,
+            segmento_id,
+            tipo_hospedaje,
+            created_at,
+            updated_at
+          ),
+          segmento_actividad (
+            id,
+            segmento_id,
+            duracion_horas,
+            created_at,
+            updated_at
+          ),
           documentos(*)
         `,
         )
@@ -101,9 +124,56 @@ export class CotizacionesService extends BaseService {
 
       if (segError) this.handleError(segError)
 
+      // Transformar la estructura de segmentos para que las relaciones sean objetos en lugar de arrays
+      // Usar JSON.parse/stringify para romper completamente la reactividad de Vue
+      const segmentosTransformados = (segmentos || []).map((segmento: Record<string, unknown>) => {
+        // Crear copia profunda para evitar problemas con Proxies de Vue
+        const segmentoCopia = JSON.parse(JSON.stringify(segmento))
+
+        // Extraer el primer elemento si es array
+        const segmentoTransporte =
+          Array.isArray(segmentoCopia.segmento_transporte) &&
+          segmentoCopia.segmento_transporte.length > 0
+            ? segmentoCopia.segmento_transporte[0]
+            : segmentoCopia.segmento_transporte || null
+
+        const segmentoHospedaje =
+          Array.isArray(segmentoCopia.segmento_hospedaje) &&
+          segmentoCopia.segmento_hospedaje.length > 0
+            ? segmentoCopia.segmento_hospedaje[0]
+            : segmentoCopia.segmento_hospedaje || null
+
+        const segmentoActividad =
+          Array.isArray(segmentoCopia.segmento_actividad) &&
+          segmentoCopia.segmento_actividad.length > 0
+            ? segmentoCopia.segmento_actividad[0]
+            : segmentoCopia.segmento_actividad || null
+
+        const transformado = {
+          ...segmentoCopia,
+          segmento_transporte: segmentoTransporte,
+          segmento_hospedaje: segmentoHospedaje,
+          segmento_actividad: segmentoActividad,
+        }
+
+        // Debug: Ver transformación
+        if (segmentoCopia.tipo === 'transporte') {
+          console.log('🔄 CotizacionesService - Transformando segmento:', {
+            nombre: segmentoCopia.nombre,
+            original_es_array: Array.isArray(segmento.segmento_transporte),
+            transformado_es_array: Array.isArray(transformado.segmento_transporte),
+            es_tramo_escala: transformado.segmento_transporte?.es_tramo_escala,
+            tiene_retorno: transformado.segmento_transporte?.tiene_retorno,
+            segmento_transporte_completo: transformado.segmento_transporte,
+          })
+        }
+
+        return transformado
+      })
+
       const cotizacionWithSegmentos: CotizacionWithSegmentos = {
         ...cotizacion,
-        segmentos: segmentos || [],
+        segmentos: segmentosTransformados,
       }
 
       return { data: cotizacionWithSegmentos, error: null }

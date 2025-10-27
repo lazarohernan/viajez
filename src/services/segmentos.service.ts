@@ -35,8 +35,10 @@ export interface CreateSegmentoData {
   transporte?: {
     tipo_transporte: 'aereo' | 'tren' | 'bus' | 'carro_privado' | 'auto_rentado' | 'uber' | 'otro'
     tiene_retorno?: boolean
+    es_tramo_escala?: boolean
     origen?: string
     destino?: string
+    codigo_reserva?: string
   }
 
   hospedaje?: {
@@ -198,8 +200,10 @@ export class SegmentosService extends BaseService {
             segmento_id,
             tipo_transporte,
             tiene_retorno,
+            es_tramo_escala,
             origen,
             destino,
+            codigo_reserva,
             created_at,
             updated_at
           ),
@@ -207,7 +211,6 @@ export class SegmentosService extends BaseService {
             id,
             segmento_id,
             tipo_hospedaje,
-            numero_habitaciones,
             created_at,
             updated_at
           ),
@@ -293,8 +296,10 @@ export class SegmentosService extends BaseService {
             segmento_id,
             tipo_transporte,
             tiene_retorno,
+            es_tramo_escala,
             origen,
             destino,
+            codigo_reserva,
             created_at,
             updated_at
           ),
@@ -302,7 +307,6 @@ export class SegmentosService extends BaseService {
             id,
             segmento_id,
             tipo_hospedaje,
-            numero_habitaciones,
             created_at,
             updated_at
           ),
@@ -331,13 +335,29 @@ export class SegmentosService extends BaseService {
       if (error) this.handleError(error)
 
       // Transformar cada segmento para que coincida con SegmentoWithDetails
-      const segmentosWithDetails = (data || []).map((segmento) => ({
-        ...segmento,
-        segmento_transporte: segmento.segmento_transporte?.[0] || null,
-        segmento_hospedaje: segmento.segmento_hospedaje?.[0] || null,
-        segmento_actividad: segmento.segmento_actividad?.[0] || null,
-        documentos: segmento.documentos || [],
-      }))
+      const segmentosWithDetails = (data || []).map((segmento) => {
+        const segmentoCopia = JSON.parse(JSON.stringify(segmento))
+
+        return {
+          ...segmentoCopia,
+          segmento_transporte:
+            Array.isArray(segmentoCopia.segmento_transporte) &&
+            segmentoCopia.segmento_transporte.length > 0
+              ? segmentoCopia.segmento_transporte[0]
+              : segmentoCopia.segmento_transporte || null,
+          segmento_hospedaje:
+            Array.isArray(segmentoCopia.segmento_hospedaje) &&
+            segmentoCopia.segmento_hospedaje.length > 0
+              ? segmentoCopia.segmento_hospedaje[0]
+              : segmentoCopia.segmento_hospedaje || null,
+          segmento_actividad:
+            Array.isArray(segmentoCopia.segmento_actividad) &&
+            segmentoCopia.segmento_actividad.length > 0
+              ? segmentoCopia.segmento_actividad[0]
+              : segmentoCopia.segmento_actividad || null,
+          documentos: segmentoCopia.documentos || [],
+        }
+      })
 
       return { data: segmentosWithDetails, error: null }
     } catch (error) {
@@ -379,8 +399,10 @@ export class SegmentosService extends BaseService {
             segmento_id,
             tipo_transporte,
             tiene_retorno,
+            es_tramo_escala,
             origen,
             destino,
+            codigo_reserva,
             created_at,
             updated_at
           ),
@@ -388,7 +410,6 @@ export class SegmentosService extends BaseService {
             id,
             segmento_id,
             tipo_hospedaje,
-            numero_habitaciones,
             created_at,
             updated_at
           ),
@@ -848,12 +869,6 @@ export class SegmentosService extends BaseService {
         console.warn(
           `⚠️ AUDITORÍA: Se encontraron ${segmentosFueraDeRango.length} segmento(s) fuera de rango: ${nombres}`,
         )
-      }
-
-      // Verificar que haya un segmento primero
-      const tienePrimero = segmentos.some((s) => s.orden === 1)
-      if (!tienePrimero) {
-        console.warn('⚠️ AUDITORÍA: No se encontró un segmento con orden 1 (primero)')
       }
     } catch (error) {
       console.error('Error validando orden de segmentos:', error)

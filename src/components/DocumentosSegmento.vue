@@ -215,14 +215,15 @@ const onFileRemoved = (file: { id: string; name: string } | UploadedFile) => {
   console.log('Archivo removido del componente de subida:', file)
 }
 
-const downloadFile = (documento: Documento) => {
+const downloadFile = async (documento: Documento) => {
   try {
     if (!documento.ruta_storage) {
       errorMessage.value = 'La ruta del archivo no está disponible'
       return
     }
 
-    const url = documentosService.getPublicUrl(documento.ruta_storage)
+    // Usar getSignedUrl para buckets privados
+    const url = await documentosService.getSignedUrl(documento.ruta_storage)
     if (!url) {
       errorMessage.value = 'No se pudo obtener la URL del archivo'
       return

@@ -59,11 +59,16 @@ export class HotelesService {
   static async create(nombre: string): Promise<{ data: Hotel | null; error: string | null }> {
     try {
       // Primero verificar si ya existe
-      const { data: existing } = await supabase
+      const { data: existing, error: checkError } = await supabase
         .from('hoteles')
         .select('id')
         .eq('nombre', nombre)
-        .single()
+        .maybeSingle()
+
+      if (checkError) {
+        console.error('❌ Error verificando hotel existente:', checkError)
+        return { data: null, error: checkError.message }
+      }
 
       if (existing) {
         return { data: null, error: 'El hotel ya existe' }

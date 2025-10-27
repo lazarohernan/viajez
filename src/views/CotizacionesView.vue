@@ -232,7 +232,8 @@ import {
   SegmentoCard,
 } from '@/components/cotizaciones'
 import { Plane, Home, Compass, Eye, Pencil, Trash2 } from 'lucide-vue-next'
-import { cotizacionesService, type Cotizacion, type Segmento } from '@/services/supabase'
+import type { Cotizacion, Segmento } from '@/services/supabase'
+import { cotizacionesService } from '@/services/cotizaciones.service'
 import {
   segmentosService,
   type CreateSegmentoData,
@@ -310,11 +311,17 @@ const handleFormSubmit = async (data: Record<string, unknown>) => {
 
     // Crear cotización si no existe
     if (!cotizacionActual.value) {
-      cotizacionActual.value = await cotizacionesService.create({
+      const result = await cotizacionesService.create({
         nombre: `Cotización ${new Date().toLocaleDateString('es-ES')}`,
         estado: 'borrador',
       })
-      // console.log('✅ Cotización creada:', cotizacionActual.value)
+
+      if (result.error || !result.data) {
+        throw new Error(result.error || 'Error al crear cotización')
+      }
+
+      cotizacionActual.value = result.data
+      console.log('✅ Cotización creada:', cotizacionActual.value)
     }
 
     // Determinar el tipo de segmento basado en selectedSegment
@@ -326,6 +333,21 @@ const handleFormSubmit = async (data: Record<string, unknown>) => {
     } else {
       tipoSegmento = 'actividad'
     }
+
+    // Calcular si es primer o último segmento
+    const esPrimerSegmento = !editandoSegmento.value && segmentosAgregados.value.length === 0
+    const esUltimoSegmento = !editandoSegmento.value && segmentosAgregados.value.length > 0
+    const nuevoOrden = editandoSegmento.value
+      ? editandoSegmento.value.orden
+      : segmentosAgregados.value.length + 1
+
+    console.log('🔍 Debug segmento cotización:', {
+      editandoSegmento: !!editandoSegmento.value,
+      segmentosLength: segmentosAgregados.value.length,
+      esPrimerSegmento,
+      esUltimoSegmento,
+      nuevoOrden,
+    })
 
     // Preparar datos del segmento
     const segmentoData = {
@@ -346,7 +368,9 @@ const handleFormSubmit = async (data: Record<string, unknown>) => {
       hora_fin: (data.horaSalida as string) || (data.hora_fin as string) || undefined,
       duracion: (data.duracion as string) || '',
       observaciones: (data.observaciones as string) || '',
-      orden: segmentosAgregados.value.length + 1,
+      orden: nuevoOrden,
+      es_primero: esPrimerSegmento,
+      es_ultimo: esPrimerSegmento || esUltimoSegmento,
       cotizacion_id: cotizacionActual.value.id,
     }
 
@@ -358,6 +382,7 @@ const handleFormSubmit = async (data: Record<string, unknown>) => {
     }
 
     if (tipoSegmento === 'transporte') {
+      // Crear segmento de transporte simple
       createData.transporte = {
         tipo_transporte: ((data.tipo as string) || 'otro') as
           | 'aereo'
@@ -367,8 +392,10 @@ const handleFormSubmit = async (data: Record<string, unknown>) => {
           | 'uber'
           | 'otro',
         tiene_retorno: data.tieneRetorno !== false,
+        es_tramo_escala: (data.esTramoEscala as boolean) || false,
         origen: (data.origen as string) || '',
         destino: (data.destino as string) || '',
+        codigo_reserva: (data.codigoReserva as string) || undefined,
       }
     } else if (tipoSegmento === 'hospedaje') {
       createData.hospedaje = {
@@ -402,12 +429,30 @@ const handleFormSubmit = async (data: Record<string, unknown>) => {
     } else {
       // Crear nuevo segmento
       // console.log('✨ Creando nuevo segmento')
+
+      console.log('📦 Datos a crear:', {
+        ...createData,
+        es_primero: createData.es_primero,
+        es_ultimo: createData.es_ultimo,
+        orden: createData.orden,
+      })
+
       const result = (await segmentosService.create(
         createData,
       )) as ServiceResponse<SegmentoWithDetails>
 
       if (result.error || !result.data) {
         throw new Error(result.error || 'Error al crear segmento')
+      }
+
+      // Si es un nuevo segmento que se convierte en último, actualizar el anterior
+      if (esUltimoSegmento && segmentosAgregados.value.length > 0) {
+        const segmentoAnterior = segmentosAgregados.value.find((s) => s.es_ultimo)
+        if (segmentoAnterior) {
+          await segmentosService.update(segmentoAnterior.id, {
+            es_ultimo: false,
+          })
+        }
       }
 
       segmentosAgregados.value.push(result.data as Segmento)
@@ -426,8 +471,11 @@ const handleFormSubmit = async (data: Record<string, unknown>) => {
 const loadSegmentos = async () => {
   if (cotizacionActual.value) {
     try {
-      const cotizacion = await cotizacionesService.getById(cotizacionActual.value.id)
-      segmentosAgregados.value = cotizacion.segmentos || []
+      const result = await cotizacionesService.getById(cotizacionActual.value.id)
+      if (result.error || !result.data) {
+        throw new Error(result.error || 'Error al cargar cotización')
+      }
+      segmentosAgregados.value = result.data.segmentos || []
     } catch (error) {
       console.error('Error al cargar segmentos:', error)
       alert('Error al cargar los segmentos')
@@ -575,12 +623,15 @@ const formatDate = (dateString: string) => {
 const editCotizacion = async (row: CotizacionRow) => {
   try {
     // Cargar la cotización completa con segmentos
-    const cotizacion = await cotizacionesService.getById(row.id)
-    cotizacionActual.value = cotizacion
-    segmentosAgregados.value = cotizacion.segmentos || []
+    const result = await cotizacionesService.getById(row.id)
+    if (result.error || !result.data) {
+      throw new Error(result.error || 'Error al cargar cotización')
+    }
+    cotizacionActual.value = result.data
+    segmentosAgregados.value = result.data.segmentos || []
 
-    // console.log('Cotización cargada para edición:', cotizacion)
-    alert(`Cotización "${cotizacion.nombre}" cargada para edición`)
+    // console.log('Cotización cargada para edición:', result.data)
+    alert(`Cotización "${result.data.nombre}" cargada para edición`)
   } catch (error) {
     console.error('Error al cargar cotización:', error)
     alert('Error al cargar la cotización para edición')
@@ -590,18 +641,21 @@ const editCotizacion = async (row: CotizacionRow) => {
 const verCotizacion = async (row: CotizacionRow) => {
   try {
     // Cargar la cotización completa con segmentos
-    const cotizacion = await cotizacionesService.getById(row.id)
+    const result = await cotizacionesService.getById(row.id)
+    if (result.error || !result.data) {
+      throw new Error(result.error || 'Error al cargar cotización')
+    }
 
     const segmentosInfo =
-      cotizacion.segmentos
+      result.data.segmentos
         ?.map((s, i) => `${i + 1}. ${s.tipo.toUpperCase()}: ${s.nombre}`)
         .join('\n') || 'Sin segmentos'
 
     alert(
-      `📋 Cotización: ${cotizacion.nombre}\n` +
-        `📅 Fecha: ${formatDate(cotizacion.created_at)}\n` +
-        `📊 Estado: ${cotizacion.estado}\n` +
-        `\n🎯 Segmentos (${cotizacion.segmentos?.length || 0}):\n${segmentosInfo}`,
+      `📋 Cotización: ${result.data.nombre}\n` +
+        `📅 Fecha: ${formatDate(result.data.created_at)}\n` +
+        `📊 Estado: ${result.data.estado}\n` +
+        `\n🎯 Segmentos (${result.data.segmentos?.length || 0}):\n${segmentosInfo}`,
     )
   } catch (error) {
     console.error('Error al ver cotización:', error)
@@ -641,10 +695,14 @@ const eliminarCotizacion = async (row: CotizacionRow) => {
 const recargarCotizaciones = async () => {
   try {
     tableLoading.value = true
-    const cotizaciones = await cotizacionesService.list()
+    const result = await cotizacionesService.list()
+
+    if (result.error) {
+      throw new Error(result.error)
+    }
 
     // Transformar cotizaciones a formato de tabla
-    allTableRows.value = cotizaciones.map((cot) => ({
+    allTableRows.value = (result.data || []).map((cot) => ({
       id: cot.id,
       nombre: cot.nombre,
       viajero_id: cot.viajero_id || '',

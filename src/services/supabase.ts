@@ -101,8 +101,10 @@ export interface SegmentoTransporte {
   segmento_id: string
   tipo_transporte: 'aereo' | 'tren' | 'bus' | 'carro_privado' | 'auto_rentado' | 'uber' | 'otro'
   tiene_retorno: boolean
+  es_tramo_escala?: boolean
   origen?: string
   destino?: string
+  codigo_reserva?: string
   created_at: string
   updated_at: string
 }
@@ -134,279 +136,22 @@ export interface Documento {
   updated_at: string
 }
 
-// Servicios para Cotizaciones
-export const cotizacionesService = {
-  // Crear una nueva cotización
-  async create(data: Omit<Cotizacion, 'id' | 'created_at' | 'updated_at'>): Promise<Cotizacion> {
-    const { data: cotizacion, error } = await supabase
-      .from('cotizaciones')
-      .insert(data)
-      .select()
-      .single()
-
-    if (error) throw error
-    return cotizacion
-  },
-
-  // Obtener cotización por ID con segmentos
-  async getById(id: string): Promise<Cotizacion & { segmentos: Segmento[] }> {
-    const { data: cotizacion, error: cotError } = await supabase
-      .from('cotizaciones')
-      .select('*')
-      .eq('id', id)
-      .single()
-
-    if (cotError) throw cotError
-
-    // Usar la función específica para obtener segmentos por cotización
-    const segmentos = await segmentosService.getByCotizacion(id)
-
-    return {
-      ...cotizacion,
-      segmentos: segmentos || [],
-    }
-  },
-
-  // Listar todas las cotizaciones
-  async list(): Promise<Cotizacion[]> {
-    const { data, error } = await supabase
-      .from('cotizaciones')
-      .select('*')
-      .order('created_at', { ascending: false })
-
-    if (error) throw error
-    return data || []
-  },
-
-  // Actualizar cotización
-  async update(id: string, data: Partial<Cotizacion>): Promise<Cotizacion> {
-    const { data: cotizacion, error } = await supabase
-      .from('cotizaciones')
-      .update(data)
-      .eq('id', id)
-      .select()
-      .single()
-
-    if (error) throw error
-    return cotizacion
-  },
-
-  // Eliminar cotización
-  async delete(id: string): Promise<void> {
-    const { error } = await supabase.from('cotizaciones').delete().eq('id', id)
-
-    if (error) throw error
-  },
-}
-
-// Servicios para Segmentos
-export const segmentosService = {
-  // Crear segmento básico
-  async create(
-    segmentoData: Omit<Segmento, 'id' | 'created_at' | 'updated_at'>,
-  ): Promise<Segmento> {
-    const { data: segmento, error: segError } = await supabase
-      .from('segmentos')
-      .insert(segmentoData)
-      .select()
-      .single()
-
-    if (segError) throw segError
-
-    return segmento
-  },
-
-  // Crear segmento de transporte completo
-  async createTransporte(
-    segmentoData: Omit<Segmento, 'id' | 'created_at' | 'updated_at'>,
-    transporteData: Omit<SegmentoTransporte, 'id' | 'segmento_id' | 'created_at' | 'updated_at'>,
-  ): Promise<Segmento> {
-    // Crear segmento base
-    const { data: segmento, error: segError } = await supabase
-      .from('segmentos')
-      .insert({
-        ...segmentoData,
-        tipo: 'transporte',
-      })
-      .select()
-      .single()
-
-    if (segError) throw segError
-
-    // Crear datos específicos de transporte
-    const { data: transporte, error: transError } = await supabase
-      .from('segmento_transporte')
-      .insert({
-        ...transporteData,
-        segmento_id: segmento.id,
-      })
-      .select()
-      .single()
-
-    if (transError) throw transError
-
-    return {
-      ...segmento,
-      segmento_transporte: transporte,
-    }
-  },
-
-  // Crear segmento de hospedaje completo
-  async createHospedaje(
-    segmentoData: Omit<Segmento, 'id' | 'created_at' | 'updated_at'>,
-    hospedajeData: Omit<SegmentoHospedaje, 'id' | 'segmento_id' | 'created_at' | 'updated_at'>,
-  ): Promise<Segmento> {
-    // Crear segmento base
-    const { data: segmento, error: segError } = await supabase
-      .from('segmentos')
-      .insert({
-        ...segmentoData,
-        tipo: 'hospedaje',
-      })
-      .select()
-      .single()
-
-    if (segError) throw segError
-
-    // Crear datos específicos de hospedaje
-    const { data: hospedaje, error: hospError } = await supabase
-      .from('segmento_hospedaje')
-      .insert({
-        ...hospedajeData,
-        segmento_id: segmento.id,
-      })
-      .select()
-      .single()
-
-    if (hospError) throw hospError
-
-    return {
-      ...segmento,
-      segmento_hospedaje: hospedaje,
-    }
-  },
-
-  // Crear segmento de actividad completo
-  async createActividad(
-    segmentoData: Omit<Segmento, 'id' | 'created_at' | 'updated_at'>,
-    actividadData: Omit<SegmentoActividad, 'id' | 'segmento_id' | 'created_at' | 'updated_at'>,
-  ): Promise<Segmento> {
-    // Crear segmento base
-    const { data: segmento, error: segError } = await supabase
-      .from('segmentos')
-      .insert({
-        ...segmentoData,
-        tipo: 'actividad',
-      })
-      .select()
-      .single()
-
-    if (segError) throw segError
-
-    // Crear datos específicos de actividad
-    const { data: actividad, error: actError } = await supabase
-      .from('segmento_actividad')
-      .insert({
-        ...actividadData,
-        segmento_id: segmento.id,
-      })
-      .select()
-      .single()
-
-    if (actError) throw actError
-
-    return {
-      ...segmento,
-      segmento_actividad: actividad,
-    }
-  },
-
-  // Obtener segmento por ID con datos específicos
-  async getById(id: string): Promise<Segmento> {
-    const { data, error } = await supabase
-      .from('segmentos')
-      .select(
-        `
-        *,
-        segmento_transporte (*),
-        segmento_hospedaje (*),
-        segmento_actividad (*)
-      `,
-      )
-      .eq('id', id)
-      .single()
-
-    if (error) throw error
-    return data
-  },
-
-  // Obtener segmentos por viaje
-  async getByViaje(viajeId: string): Promise<Segmento[]> {
-    const { data, error } = await supabase
-      .from('segmentos')
-      .select(
-        `
-        *,
-        segmento_transporte (*),
-        segmento_hospedaje (*),
-        segmento_actividad (*)
-      `,
-      )
-      .eq('viaje_id', viajeId)
-      .order('orden', { ascending: true })
-
-    if (error) throw error
-    return data || []
-  },
-
-  // Obtener segmentos por cotización
-  async getByCotizacion(cotizacionId: string): Promise<Segmento[]> {
-    const { data, error } = await supabase
-      .from('segmentos')
-      .select(
-        `
-        *,
-        segmento_transporte (*),
-        segmento_hospedaje (*),
-        segmento_actividad (*)
-      `,
-      )
-      .eq('cotizacion_id', cotizacionId)
-      .order('orden', { ascending: true })
-
-    if (error) throw error
-    return data || []
-  },
-
-  // Actualizar segmento
-  async update(id: string, data: Partial<Segmento>): Promise<Segmento> {
-    const { data: segmento, error } = await supabase
-      .from('segmentos')
-      .update(data)
-      .eq('id', id)
-      .select()
-      .single()
-
-    if (error) throw error
-    return segmento
-  },
-
-  // Eliminar segmento
-  async delete(id: string): Promise<void> {
-    const { error } = await supabase.from('segmentos').delete().eq('id', id)
-
-    if (error) throw error
-  },
-}
-
 // Servicios para Documentos
 export const documentosService = {
-  // Subir archivo a Supabase Storage
+  // Subir archivo a Supabase Storage organizado por cliente
   async uploadFile(file: File, segmentoId: string): Promise<Documento> {
+    // Obtener información del cliente a través del segmento
+    const clienteInfo = await this.getClienteInfoFromSegmento(segmentoId)
+
     // Generar nombre único para el archivo
     const fileExt = file.name.split('.').pop()
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
-    const filePath = `segmentos/${segmentoId}/${fileName}`
+
+    // Crear ruta organizada por cliente: clientes/{cliente_id}/segmentos/{segmento_id}/{archivo}
+    const clienteFolder = clienteInfo.clienteId
+      ? `clientes/${clienteInfo.clienteId}`
+      : 'clientes/sin-cliente'
+    const filePath = `${clienteFolder}/segmentos/${segmentoId}/${fileName}`
 
     // Subir archivo a Supabase Storage
     const { error: uploadError } = await supabase.storage.from('documentos').upload(filePath, file)
@@ -429,6 +174,146 @@ export const documentosService = {
     if (docError) throw docError
 
     return documento
+  },
+
+  // Obtener información del cliente desde un segmento
+  async getClienteInfoFromSegmento(
+    segmentoId: string,
+  ): Promise<{ clienteId: string | null; clienteNombre: string | null }> {
+    try {
+      console.log('🔍 Buscando cliente para segmento:', segmentoId)
+
+      // Obtener el segmento básico
+      const { data: segmento, error: segmentoError } = await supabase
+        .from('segmentos')
+        .select('cotizacion_id, viaje_id')
+        .eq('id', segmentoId)
+        .single()
+
+      if (segmentoError) {
+        console.warn('❌ Error obteniendo segmento:', segmentoError)
+        return { clienteId: null, clienteNombre: null }
+      }
+
+      console.log('📋 Segmento encontrado:', segmento)
+
+      // Si el segmento pertenece a una cotización
+      if (segmento.cotizacion_id) {
+        console.log('💰 Segmento pertenece a cotización:', segmento.cotizacion_id)
+
+        const { data: cotizacion, error: cotizacionError } = await supabase
+          .from('cotizaciones')
+          .select('viajero_id')
+          .eq('id', segmento.cotizacion_id)
+          .single()
+
+        if (!cotizacionError && cotizacion?.viajero_id) {
+          console.log('👤 Cotización encontrada, viajero_id:', cotizacion.viajero_id)
+
+          const { data: viajero, error: viajeroError } = await supabase
+            .from('viajeroz')
+            .select('id, nombre, apellido')
+            .eq('id', cotizacion.viajero_id)
+            .single()
+
+          if (!viajeroError && viajero) {
+            console.log('✅ Cliente encontrado:', viajero)
+            return {
+              clienteId: viajero.id,
+              clienteNombre: `${viajero.nombre} ${viajero.apellido}`,
+            }
+          } else {
+            console.warn('❌ Error obteniendo viajero:', viajeroError)
+          }
+        } else {
+          console.warn('❌ Error obteniendo cotización:', cotizacionError)
+        }
+      }
+
+      // Si el segmento pertenece a un viaje
+      if (segmento.viaje_id) {
+        console.log('✈️ Segmento pertenece a viaje:', segmento.viaje_id)
+
+        const { data: viaje, error: viajeError } = await supabase
+          .from('viajes')
+          .select('cotizacion_id')
+          .eq('id', segmento.viaje_id)
+          .single()
+
+        if (!viajeError && viaje?.cotizacion_id) {
+          console.log('🔗 Viaje encontrado, cotizacion_id:', viaje.cotizacion_id)
+
+          const { data: cotizacion, error: cotizacionError } = await supabase
+            .from('cotizaciones')
+            .select('viajero_id')
+            .eq('id', viaje.cotizacion_id)
+            .single()
+
+          if (!cotizacionError && cotizacion?.viajero_id) {
+            console.log('👤 Cotización del viaje encontrada, viajero_id:', cotizacion.viajero_id)
+
+            const { data: viajero, error: viajeroError } = await supabase
+              .from('viajeroz')
+              .select('id, nombre, apellido')
+              .eq('id', cotizacion.viajero_id)
+              .single()
+
+            if (!viajeroError && viajero) {
+              console.log('✅ Cliente encontrado desde viaje:', viajero)
+              return {
+                clienteId: viajero.id,
+                clienteNombre: `${viajero.nombre} ${viajero.apellido}`,
+              }
+            } else {
+              console.warn('❌ Error obteniendo viajero desde viaje:', viajeroError)
+            }
+          } else {
+            console.warn('❌ Error obteniendo cotización desde viaje:', cotizacionError)
+          }
+        } else {
+          console.warn('❌ Error obteniendo viaje:', viajeError)
+        }
+
+        // Si el viaje no tiene cotización, buscar directamente en viaje_viajeroz
+        if (!viajeError && viaje && !viaje.cotizacion_id) {
+          console.log('🔍 Viaje sin cotización, buscando en viaje_viajeroz')
+
+          const { data: viajeViajero, error: viajeViajeroError } = await supabase
+            .from('viaje_viajeroz')
+            .select('viajero_id')
+            .eq('viaje_id', segmento.viaje_id)
+            .single()
+
+          if (!viajeViajeroError && viajeViajero?.viajero_id) {
+            console.log('👤 Viajero encontrado en viaje_viajeroz:', viajeViajero.viajero_id)
+
+            const { data: viajero, error: viajeroError } = await supabase
+              .from('viajeroz')
+              .select('id, nombre, apellido')
+              .eq('id', viajeViajero.viajero_id)
+              .single()
+
+            if (!viajeroError && viajero) {
+              console.log('✅ Cliente encontrado desde viaje_viajeroz:', viajero)
+              return {
+                clienteId: viajero.id,
+                clienteNombre: `${viajero.nombre} ${viajero.apellido}`,
+              }
+            } else {
+              console.warn('❌ Error obteniendo viajero desde viaje_viajeroz:', viajeroError)
+            }
+          } else {
+            console.warn('❌ Error obteniendo viaje_viajeroz:', viajeViajeroError)
+          }
+        }
+      }
+
+      console.log('⚠️ No se encontró cliente para el segmento')
+      return { clienteId: null, clienteNombre: null }
+    } catch (error) {
+      console.warn('Error obteniendo información del cliente:', error)
+      return { clienteId: null, clienteNombre: null }
+    }
   },
 
   // Obtener documentos de un segmento
@@ -465,10 +350,19 @@ export const documentosService = {
     if (deleteError) throw deleteError
   },
 
-  // Obtener URL pública de un documento
+  // Obtener URL firmada temporal para un documento (bucket privado)
+  async getSignedUrl(rutaStorage: string, expiresIn: number = 3600): Promise<string> {
+    const { data, error } = await supabase.storage
+      .from('documentos')
+      .createSignedUrl(rutaStorage, expiresIn)
+
+    if (error) throw error
+    return data.signedUrl
+  },
+
+  // Obtener URL pública de un documento (fallback para buckets públicos)
   getPublicUrl(rutaStorage: string): string {
     const { data } = supabase.storage.from('documentos').getPublicUrl(rutaStorage)
-
     return data.publicUrl
   },
 }
@@ -495,12 +389,18 @@ export const viajesService = {
     if (cotError) throw cotError
 
     // Obtener segmentos de la cotización
-    const segmentos = await segmentosService.getByCotizacion(cotizacionId)
+    const { data: segmentos, error: segmentosError } = await supabase
+      .from('segmentos')
+      .select('*')
+      .eq('cotizacion_id', cotizacionId)
+      .order('orden', { ascending: true })
+
+    if (segmentosError) throw segmentosError
 
     // Determinar fechas del viaje basado en los segmentos
-    const fechasSegmentos = segmentos
-      .map((s) => s.fecha_inicio)
-      .filter((f) => f)
+    const fechasSegmentos = (segmentos || [])
+      .map((s: Segmento) => s.fecha_inicio)
+      .filter((f: string) => f)
       .sort()
 
     const fechaInicio = fechasSegmentos[0] || new Date().toISOString().split('T')[0]
@@ -526,7 +426,7 @@ export const viajesService = {
     if (viajeError) throw viajeError
 
     // Copiar los segmentos al viaje
-    for (const segmento of segmentos) {
+    for (const segmento of segmentos || []) {
       // Crear segmento para el viaje (cambiar cotizacion_id por viaje_id)
       const segmentoViajeData = {
         tipo: segmento.tipo,
@@ -539,6 +439,8 @@ export const viajesService = {
         duracion: segmento.duracion,
         observaciones: segmento.observaciones,
         orden: segmento.orden,
+        es_primero: segmento.es_primero,
+        es_ultimo: segmento.es_ultimo,
         viaje_id: viaje.id,
       }
 
@@ -575,8 +477,14 @@ export const viajesService = {
 
     if (viajeError) throw viajeError
 
-    // Usar la función específica para obtener segmentos por viaje
-    const segmentos = await segmentosService.getByViaje(id)
+    // Obtener segmentos del viaje
+    const { data: segmentos, error: segmentosError } = await supabase
+      .from('segmentos')
+      .select('*')
+      .eq('viaje_id', id)
+      .order('orden', { ascending: true })
+
+    if (segmentosError) throw segmentosError
 
     return {
       ...viaje,
@@ -615,9 +523,16 @@ export const viajesService = {
     if (error) throw error
   },
 
-  // Obtener segmentos por viaje (alias para segmentosService.getByViaje)
+  // Obtener segmentos por viaje
   async getByViaje(viajeId: string): Promise<Segmento[]> {
-    return segmentosService.getByViaje(viajeId)
+    const { data, error } = await supabase
+      .from('segmentos')
+      .select('*')
+      .eq('viaje_id', viajeId)
+      .order('orden', { ascending: true })
+
+    if (error) throw error
+    return data || []
   },
 }
 

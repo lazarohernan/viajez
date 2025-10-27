@@ -172,7 +172,7 @@
                 >
                 <button
                   @click="showImportCotizacion = true"
-                  class="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                  class="inline-flex items-center px-3 py-1.5 bg-white text-orange-600 text-sm rounded-lg border-2 border-orange-600 hover:bg-orange-50 transition-colors"
                 >
                   <FileText class="w-4 h-4 mr-1.5" />
                   Importar Cotización
@@ -560,7 +560,6 @@ import Modal from '@/components/ui/Modal.vue'
 import { TransporteForm, HospedajeForm, ActividadesForm } from '@/components/cotizaciones'
 import DocumentosSegmento from '@/components/DocumentosSegmento.vue'
 import {
-  viajesService,
   documentosService,
   supabase,
   type Viaje,
@@ -568,6 +567,7 @@ import {
   type Viajeroz,
   type Documento,
 } from '@/services/supabase'
+import { viajesService } from '@/services/viajes.service'
 import {
   segmentosService,
   type CreateSegmentoData,
@@ -628,12 +628,15 @@ const loadViaje = async () => {
     // console.log('🔄 Cargando viaje con ID:', viajeId.value)
 
     // Cargar viaje con segmentos
-    const viajeData = await viajesService.getById(viajeId.value)
-    // console.log('📦 Datos del viaje obtenidos:', viajeData)
-    // console.log('📋 Segmentos encontrados:', viajeData.segmentos?.length || 0)
+    const result = await viajesService.getById(viajeId.value)
+    if (result.error || !result.data) {
+      throw new Error(result.error || 'Error al cargar viaje')
+    }
+    // console.log('📦 Datos del viaje obtenidos:', result.data)
+    // console.log('📋 Segmentos encontrados:', result.data.segmentos?.length || 0)
 
-    viaje.value = viajeData
-    segmentos.value = viajeData.segmentos
+    viaje.value = result.data
+    segmentos.value = result.data.segmentos || []
 
     // Cargar viajeros asignados
     await loadViajeros()
@@ -770,6 +773,21 @@ const handleSegmentSubmit = async (data: Record<string, unknown>) => {
   try {
     // console.log('💾 Guardando segmento:', { tipo: selectedSegmentType.value, editando: !!editingSegment.value, data })
 
+    // Calcular si es primer o último segmento
+    const esPrimerSegmento = !editingSegment.value && segmentos.value.length === 0
+    const esUltimoSegmento = !editingSegment.value && segmentos.value.length > 0
+    const nuevoOrden = editingSegment.value
+      ? editingSegment.value.orden
+      : segmentos.value.length + 1
+
+    console.log('🔍 Debug segmento:', {
+      editingSegment: !!editingSegment.value,
+      segmentosLength: segmentos.value.length,
+      esPrimerSegmento,
+      esUltimoSegmento,
+      nuevoOrden,
+    })
+
     // Preparar datos del segmento base
     const segmentoData = {
       tipo: selectedSegmentType.value,
@@ -789,7 +807,9 @@ const handleSegmentSubmit = async (data: Record<string, unknown>) => {
       hora_fin: (data.horaSalida as string) || (data.hora_fin as string) || undefined,
       duracion: (data.duracion as string) || '',
       observaciones: (data.observaciones as string) || '',
-      orden: editingSegment.value ? editingSegment.value.orden : segmentos.value.length + 1,
+      orden: nuevoOrden,
+      es_primero: esPrimerSegmento,
+      es_ultimo: esPrimerSegmento || esUltimoSegmento,
       viaje_id: viajeId.value,
     }
 
@@ -852,6 +872,7 @@ const handleSegmentSubmit = async (data: Record<string, unknown>) => {
 
       // Agregar datos específicos según el tipo
       if (selectedSegmentType.value === 'transporte') {
+        // Crear segmento de transporte simple
         createData.transporte = {
           tipo_transporte: ((data.tipo as string) || 'otro') as
             | 'aereo'
@@ -861,8 +882,10 @@ const handleSegmentSubmit = async (data: Record<string, unknown>) => {
             | 'uber'
             | 'otro',
           tiene_retorno: data.tieneRetorno !== false,
+          es_tramo_escala: (data.esTramoEscala as boolean) || false,
           origen: (data.origen as string) || '',
           destino: (data.destino as string) || '',
+          codigo_reserva: (data.codigoReserva as string) || undefined,
         }
       } else if (selectedSegmentType.value === 'hospedaje') {
         createData.hospedaje = {
@@ -880,12 +903,29 @@ const handleSegmentSubmit = async (data: Record<string, unknown>) => {
 
       // console.log('📦 Datos a crear:', createData)
 
+      console.log('📦 Datos a crear:', {
+        ...createData,
+        es_primero: createData.es_primero,
+        es_ultimo: createData.es_ultimo,
+        orden: createData.orden,
+      })
+
       const result = (await segmentosService.create(
         createData,
       )) as ServiceResponse<SegmentoWithDetails>
 
       if (result.error) {
         throw new Error(result.error)
+      }
+
+      // Si es un nuevo segmento que se convierte en último, actualizar el anterior
+      if (esUltimoSegmento && segmentos.value.length > 0) {
+        const segmentoAnterior = segmentos.value.find((s) => s.es_ultimo)
+        if (segmentoAnterior) {
+          await segmentosService.update(segmentoAnterior.id, {
+            es_ultimo: false,
+          })
+        }
       }
 
       // console.log('✅ Segmento creado:', result.data)

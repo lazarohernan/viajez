@@ -39,11 +39,54 @@
             >
               {{ segmento.tipo }}
             </span>
+            <!-- Badge de tipo de vuelo (solo para aéreo) -->
             <span
               v-if="
                 segmento.tipo === 'transporte' &&
                 segmento.segmento_transporte &&
-                !segmento.segmento_transporte.tiene_retorno
+                segmento.segmento_transporte.tipo_transporte === 'aereo'
+              "
+              class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
+              :class="
+                segmento.segmento_transporte.es_tramo_escala
+                  ? 'bg-yellow-100 text-yellow-800'
+                  : 'bg-green-100 text-green-800'
+              "
+            >
+              <span class="flex items-center gap-1">
+                <svg
+                  v-if="segmento.segmento_transporte.es_tramo_escala"
+                  class="w-3 h-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M13 10V3L4 14h7v7l9-11h-7z"
+                  />
+                </svg>
+                <svg v-else class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+                {{
+                  segmento.segmento_transporte.es_tramo_escala ? 'Tramo de Escala' : 'Vuelo Directo'
+                }}
+              </span>
+            </span>
+            <span
+              v-if="
+                segmento.tipo === 'transporte' &&
+                segmento.segmento_transporte &&
+                !segmento.segmento_transporte.tiene_retorno &&
+                !segmento.segmento_transporte.es_tramo_escala
               "
               class="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800"
             >
