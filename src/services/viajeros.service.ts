@@ -54,13 +54,14 @@ export class ViajerosService extends BaseService {
         }
       }
 
-      // Validar formato de identidad hondureña (XXXX-XXXX-XXXXX)
+      // Validar formato de identidad hondureña (DNI: XXXX-XXXX-XXXXX o RTN: XXXX-XXXX-XXXXXX)
       if (data.identidad) {
-        const identidadRegex = /^\d{4}-\d{4}-\d{5}$/
+        const identidadRegex = /^(\d{4}-\d{4}-\d{5}|\d{4}-\d{4}-\d{6})$/
         if (!identidadRegex.test(data.identidad)) {
           return {
             data: null,
-            error: 'La identidad debe tener el formato XXXX-XXXX-XXXXX',
+            error:
+              'La identidad debe tener el formato DNI (XXXX-XXXX-XXXXX) o RTN (XXXX-XXXX-XXXXXX)',
           }
         }
       }

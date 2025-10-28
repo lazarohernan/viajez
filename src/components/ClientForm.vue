@@ -68,8 +68,9 @@
             v-model="form.telefono"
             type="tel"
             required
+            @input="formatTelefono"
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-            placeholder="+504 1234-5678"
+            placeholder="Teléfono"
           />
         </div>
       </div>
@@ -77,7 +78,7 @@
       <!-- Identidad -->
       <div>
         <label for="identidad" class="block text-sm font-medium text-gray-700 mb-2">
-          Identidad *
+          Identidad (DNI/RTN) *
         </label>
         <input
           id="identidad"
@@ -86,8 +87,8 @@
           required
           @input="formatIdentidad"
           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-          placeholder="Ej: 0801-1990-00001"
-          maxlength="15"
+          placeholder="DNI/RTN"
+          maxlength="17"
         />
       </div>
 
@@ -396,7 +397,7 @@ const copyToClipboard = async () => {
   }
 }
 
-// Formatear identidad hondureña (XXXX-XXXX-XXXXX)
+// Formatear identidad hondureña (DNI: XXXX-XXXX-XXXXX o RTN: XXXX-XXXX-XXXXXX)
 const formatIdentidad = (event: Event) => {
   const target = event.target as HTMLInputElement
   let value = target.value
@@ -404,22 +405,37 @@ const formatIdentidad = (event: Event) => {
   // Remover todos los caracteres que no sean números
   value = value.replace(/\D/g, '')
 
-  // Limitar a 13 dígitos (sin contar guiones)
-  if (value.length > 13) {
-    value = value.substring(0, 13)
+  // Limitar a 14 dígitos máximo (RTN)
+  if (value.length > 14) {
+    value = value.substring(0, 14)
   }
 
-  // Aplicar formato XXXX-XXXX-XXXXX
+  // Aplicar formato según la cantidad de dígitos
   if (value.length > 0) {
-    if (value.length <= 4) {
-      // Primer grupo: XXXX
-      value = value
-    } else if (value.length <= 8) {
-      // Segundo grupo: XXXX-XXXX
-      value = value.substring(0, 4) + '-' + value.substring(4)
+    if (value.length <= 13) {
+      // Formato DNI: XXXX-XXXX-XXXXX
+      if (value.length <= 4) {
+        // Primer grupo: XXXX
+        value = value
+      } else if (value.length <= 8) {
+        // Segundo grupo: XXXX-XXXX
+        value = value.substring(0, 4) + '-' + value.substring(4)
+      } else {
+        // Tercer grupo: XXXX-XXXX-XXXXX
+        value = value.substring(0, 4) + '-' + value.substring(4, 8) + '-' + value.substring(8)
+      }
     } else {
-      // Tercer grupo: XXXX-XXXX-XXXXX
-      value = value.substring(0, 4) + '-' + value.substring(4, 8) + '-' + value.substring(8)
+      // Formato RTN: XXXX-XXXX-XXXXXX (14 dígitos con dos guiones)
+      if (value.length <= 4) {
+        // Primer grupo: XXXX
+        value = value
+      } else if (value.length <= 8) {
+        // Segundo grupo: XXXX-XXXX
+        value = value.substring(0, 4) + '-' + value.substring(4)
+      } else {
+        // Tercer grupo: XXXX-XXXX-XXXXXX
+        value = value.substring(0, 4) + '-' + value.substring(4, 8) + '-' + value.substring(8)
+      }
     }
   }
 
@@ -427,6 +443,54 @@ const formatIdentidad = (event: Event) => {
   form.identidad = value
 
   // Ajustar la posición del cursor si es necesario
+}
+
+// Formatear teléfono hondureño (+504 XXXX-XXXX)
+const formatTelefono = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  let value = target.value
+
+  // Remover todos los caracteres que no sean números o +
+  value = value.replace(/[^\d+]/g, '')
+
+  // Si no empieza con +504, agregarlo automáticamente
+  if (!value.startsWith('+504')) {
+    // Si empieza con 504, agregar el +
+    if (value.startsWith('504')) {
+      value = '+' + value
+    } else if (value.startsWith('+') && !value.startsWith('+504')) {
+      // Si empieza con + pero no es +504, reemplazar
+      value = '+504' + value.substring(1)
+    } else if (!value.startsWith('+')) {
+      // Si no empieza con +, agregar +504
+      value = '+504' + value
+    }
+  }
+
+  // Limitar a +504 + 8 dígitos máximo
+  if (value.length > 12) {
+    // +504 + 8 dígitos
+    value = value.substring(0, 12)
+  }
+
+  // Aplicar formato +504 XXXX-XXXX
+  if (value.length > 4) {
+    // Después de +504
+    const numero = value.substring(4) // Solo los dígitos después de +504
+
+    if (numero.length > 0) {
+      if (numero.length <= 4) {
+        // Primer grupo: XXXX
+        value = '+504 ' + numero
+      } else {
+        // Segundo grupo: XXXX-XXXX
+        value = '+504 ' + numero.substring(0, 4) + '-' + numero.substring(4)
+      }
+    }
+  }
+
+  // Actualizar el valor del formulario
+  form.telefono = value
   // Esto es opcional pero mejora la UX
   setTimeout(() => {
     target.value = value
@@ -463,17 +527,25 @@ const handleSubmit = async () => {
       return
     }
 
+    // Validar formato de teléfono hondureño (+504 XXXX-XXXX)
+    const telefonoRegex = /^\+504 \d{4}-\d{4}$/
+    if (!telefonoRegex.test(form.telefono)) {
+      passwordError.value = 'El teléfono debe tener el formato +504 XXXX-XXXX (ej: +504 9992-2008)'
+      isLoading.value = false
+      return
+    }
+
     if (!form.identidad?.trim()) {
       passwordError.value = 'La identidad es requerida'
       isLoading.value = false
       return
     }
 
-    // Validar formato de identidad hondureña (XXXX-XXXX-XXXXX)
-    const identidadRegex = /^\d{4}-\d{4}-\d{5}$/
+    // Validar formato de identidad hondureña (DNI: XXXX-XXXX-XXXXX o RTN: XXXX-XXXX-XXXXXX)
+    const identidadRegex = /^(\d{4}-\d{4}-\d{5}|\d{4}-\d{4}-\d{6})$/
     if (!identidadRegex.test(form.identidad)) {
       passwordError.value =
-        'La identidad debe tener el formato XXXX-XXXX-XXXXX (ej: 0801-1990-00001)'
+        'La identidad debe tener el formato DNI (XXXX-XXXX-XXXXX) o RTN (XXXX-XXXX-XXXXXX)'
       isLoading.value = false
       return
     }

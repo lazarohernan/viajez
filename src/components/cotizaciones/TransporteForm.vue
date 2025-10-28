@@ -313,156 +313,133 @@
         </div>
       </div>
 
-      <!-- Campos de Origen y Destino (solo visible después de seleccionar tipo) -->
+      <!-- Origen (solo visible después de seleccionar tipo) -->
       <div v-if="formData.tipo" class="space-y-4">
-        <!-- Grid para origen y destino -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- Origen -->
-          <div class="relative" data-field="origen">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Origen</label>
+        <!-- Origen -->
+        <div class="relative" data-field="origen">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Origen</label>
 
-            <!-- Dropdown para transporte aéreo -->
-            <div v-if="formData.tipo === 'aereo'">
-              <button
-                type="button"
-                @click="toggleDropdownOrigen"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white text-left flex items-center justify-between"
-                :class="{ 'border-orange-500': dropdownOrigenOpen }"
-                autocomplete="off"
-                data-form-type="other"
+          <!-- Dropdown para transporte aéreo -->
+          <div v-if="formData.tipo === 'aereo'">
+            <button
+              type="button"
+              @click="toggleDropdownOrigen"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white text-left flex items-center justify-between"
+              :class="{ 'border-orange-500': dropdownOrigenOpen }"
+              autocomplete="off"
+              data-form-type="other"
+            >
+              <span :class="{ 'text-gray-500': !origenSeleccionado }">
+                {{ origenSeleccionado || '' }}
+              </span>
+              <svg
+                class="w-5 h-5 text-gray-400 transition-transform"
+                :class="{ 'rotate-180': dropdownOrigenOpen }"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                <span :class="{ 'text-gray-500': !origenSeleccionado }">
-                  {{ origenSeleccionado || '' }}
-                </span>
-                <svg
-                  class="w-5 h-5 text-gray-400 transition-transform"
-                  :class="{ 'rotate-180': dropdownOrigenOpen }"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 9l-7 7-7-7"
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+
+            <!-- Dropdown con búsqueda -->
+            <div
+              v-if="dropdownOrigenOpen"
+              class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-hidden"
+            >
+              <!-- Campo de búsqueda dentro del dropdown -->
+              <div class="p-2 border-b border-gray-200">
+                <div class="relative">
+                  <input
+                    v-model="busquedaOrigen"
+                    type="text"
+                    placeholder=""
+                    class="w-full px-3 py-2 pl-8 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                    @input="filtrarAeropuertosOrigen"
+                    ref="searchInputOrigen"
+                    autocomplete="off"
+                    autocapitalize="off"
+                    autocorrect="off"
+                    spellcheck="false"
+                    data-lpignore="true"
+                    data-form-type="other"
+                    name="search-origen"
+                    readonly
+                    onfocus="this.removeAttribute('readonly');"
                   />
-                </svg>
-              </button>
-
-              <!-- Dropdown con búsqueda -->
-              <div
-                v-if="dropdownOrigenOpen"
-                class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-hidden"
-              >
-                <!-- Campo de búsqueda dentro del dropdown -->
-                <div class="p-2 border-b border-gray-200">
-                  <div class="relative">
-                    <input
-                      v-model="busquedaOrigen"
-                      type="text"
-                      placeholder=""
-                      class="w-full px-3 py-2 pl-8 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
-                      @input="filtrarAeropuertosOrigen"
-                      ref="searchInputOrigen"
-                      autocomplete="off"
-                      autocapitalize="off"
-                      autocorrect="off"
-                      spellcheck="false"
-                      data-lpignore="true"
-                      data-form-type="other"
-                      name="search-origen"
-                      readonly
-                      onfocus="this.removeAttribute('readonly');"
+                  <svg
+                    class="w-4 h-4 text-gray-400 absolute left-2 top-2.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                     />
-                    <svg
-                      class="w-4 h-4 text-gray-400 absolute left-2 top-2.5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                      />
-                    </svg>
-                  </div>
-                </div>
-
-                <!-- Lista de aeropuertos filtrados -->
-                <div class="max-h-48 overflow-y-auto">
-                  <!-- Opción para aeropuertos personalizados -->
-                  <button
-                    type="button"
-                    @click="seleccionarAeropuertoOrigenPersonalizado"
-                    class="w-full px-3 py-2 text-left hover:bg-orange-50 focus:bg-orange-50 focus:outline-none text-sm border-b border-gray-100"
-                  >
-                    <span class="text-orange-600 font-medium">
-                      +
-                      {{
-                        formData.tipo === 'aereo'
-                          ? 'Otro aeropuerto (especificar)'
-                          : 'Otro lugar (especificar)'
-                      }}
-                    </span>
-                  </button>
-
-                  <!-- Aeropuertos filtrados -->
-                  <button
-                    v-for="aeropuerto in aeropuertosOrigenFiltrados"
-                    :key="aeropuerto.codigo"
-                    type="button"
-                    @click="seleccionarAeropuertoOrigen(aeropuerto)"
-                    class="w-full px-3 py-2 text-left hover:bg-orange-50 focus:bg-orange-50 focus:outline-none text-sm"
-                  >
-                    <div class="flex items-center justify-between">
-                      <div class="flex flex-col">
-                        <span class="font-medium">{{ aeropuerto.ciudad }}</span>
-                        <span class="text-gray-500 text-xs">{{ aeropuerto.nombre }}</span>
-                      </div>
-                      <span class="text-gray-500 text-xs bg-gray-100 px-2 py-1 rounded">{{
-                        aeropuerto.codigo
-                      }}</span>
-                    </div>
-                  </button>
-
-                  <!-- Mensaje cuando no hay resultados -->
-                  <div
-                    v-if="aeropuertosOrigenFiltrados.length === 0 && busquedaOrigen"
-                    class="px-3 py-2 text-sm text-gray-500 text-center"
-                  >
-                    No se encontraron aeropuertos
-                  </div>
+                  </svg>
                 </div>
               </div>
 
-              <!-- Campo adicional para ubicación personalizada -->
-              <div v-if="origenSeleccionado === 'personalizado'" class="mt-2">
-                <input
-                  v-model="origenPersonalizado"
-                  type="text"
-                  placeholder=""
-                  class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                  :class="errores.origen ? 'border-red-500' : 'border-gray-300'"
-                  required
-                  @input="limpiarErrores"
-                  autocomplete="off"
-                  autocapitalize="off"
-                  autocorrect="off"
-                  spellcheck="false"
-                  data-lpignore="true"
-                  data-form-type="other"
-                  name="origen-personalizado"
-                />
+              <!-- Lista de aeropuertos filtrados -->
+              <div class="max-h-48 overflow-y-auto">
+                <!-- Opción para aeropuertos personalizados -->
+                <button
+                  type="button"
+                  @click="seleccionarAeropuertoOrigenPersonalizado"
+                  class="w-full px-3 py-2 text-left hover:bg-orange-50 focus:bg-orange-50 focus:outline-none text-sm border-b border-gray-100"
+                >
+                  <span class="text-orange-600 font-medium">
+                    +
+                    {{
+                      formData.tipo === 'aereo'
+                        ? 'Otro aeropuerto (especificar)'
+                        : 'Otro lugar (especificar)'
+                    }}
+                  </span>
+                </button>
+
+                <!-- Aeropuertos filtrados -->
+                <button
+                  v-for="aeropuerto in aeropuertosOrigenFiltrados"
+                  :key="aeropuerto.codigo"
+                  type="button"
+                  @click="seleccionarAeropuertoOrigen(aeropuerto)"
+                  class="w-full px-3 py-2 text-left hover:bg-orange-50 focus:bg-orange-50 focus:outline-none text-sm"
+                >
+                  <div class="flex items-center justify-between">
+                    <div class="flex flex-col">
+                      <span class="font-medium">{{ aeropuerto.ciudad }}</span>
+                      <span class="text-gray-500 text-xs">{{ aeropuerto.nombre }}</span>
+                    </div>
+                    <span class="text-gray-500 text-xs bg-gray-100 px-2 py-1 rounded">{{
+                      aeropuerto.codigo
+                    }}</span>
+                  </div>
+                </button>
+
+                <!-- Mensaje cuando no hay resultados -->
+                <div
+                  v-if="aeropuertosOrigenFiltrados.length === 0 && busquedaOrigen"
+                  class="px-3 py-2 text-sm text-gray-500 text-center"
+                >
+                  No se encontraron aeropuertos
+                </div>
               </div>
             </div>
 
-            <!-- Input simple para otros tipos de transporte -->
-            <div v-else>
+            <!-- Campo adicional para ubicación personalizada -->
+            <div v-if="origenSeleccionado === 'personalizado'" class="mt-2">
               <input
-                v-model="formData.origen"
+                v-model="origenPersonalizado"
                 type="text"
                 placeholder=""
                 class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
@@ -470,172 +447,223 @@
                 required
                 @input="limpiarErrores"
                 autocomplete="off"
-                name="origen-transporte"
+                autocapitalize="off"
+                autocorrect="off"
+                spellcheck="false"
+                data-lpignore="true"
+                data-form-type="other"
+                name="origen-personalizado"
               />
             </div>
+          </div>
 
-            <!-- Mensaje de error -->
-            <div
-              v-if="mostrarErrores && errores.origen"
-              class="mt-1 text-sm text-red-600 flex items-center gap-1"
-            >
-              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+          <!-- Input simple para otros tipos de transporte -->
+          <div v-else>
+            <input
+              v-model="formData.origen"
+              type="text"
+              placeholder=""
+              class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+              :class="errores.origen ? 'border-red-500' : 'border-gray-300'"
+              required
+              @input="limpiarErrores"
+              autocomplete="off"
+              name="origen-transporte"
+            />
+          </div>
+
+          <!-- Mensaje de error -->
+          <div
+            v-if="mostrarErrores && errores.origen"
+            class="mt-1 text-sm text-red-600 flex items-center gap-1"
+          >
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                fill-rule="evenodd"
+                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                clip-rule="evenodd"
+              />
+            </svg>
+            {{ errores.origen }}
+          </div>
+        </div>
+
+        <!-- Fecha y Hora de Salida -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Fecha de Salida -->
+          <div class="relative" data-field="fechaInicial">
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Fecha de Salida/Vuelo *
+            </label>
+            <input
+              id="fechaInicial"
+              v-model="formData.fechaInicial"
+              type="date"
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              :class="{ 'border-red-500': errores.fechaInicial }"
+            />
+            <div v-if="errores.fechaInicial" class="mt-1 text-sm text-red-600 flex items-center">
+              <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
                 <path
                   fill-rule="evenodd"
                   d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
                   clip-rule="evenodd"
                 />
               </svg>
-              {{ errores.origen }}
+              {{ errores.fechaInicial }}
             </div>
           </div>
 
-          <!-- Destino -->
-          <div class="relative" data-field="destino">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Destino</label>
+          <!-- Hora de Salida -->
+          <div class="relative" data-field="horaSalida">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Hora de Salida *</label>
+            <input
+              id="horaSalida"
+              v-model="formData.horaSalida"
+              type="time"
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              :class="{ 'border-red-500': errores.horaSalida }"
+            />
+            <div v-if="errores.horaSalida" class="mt-1 text-sm text-red-600 flex items-center">
+              <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  fill-rule="evenodd"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+              {{ errores.horaSalida }}
+            </div>
+          </div>
+        </div>
 
-            <!-- Dropdown para transporte aéreo -->
-            <div v-if="formData.tipo === 'aereo'">
-              <button
-                type="button"
-                @click="toggleDropdownDestino"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white text-left flex items-center justify-between"
-                :class="{ 'border-orange-500': dropdownDestinoOpen }"
-                autocomplete="off"
-                data-form-type="other"
+        <!-- Destino -->
+        <div class="relative" data-field="destino">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Destino</label>
+
+          <!-- Dropdown para transporte aéreo -->
+          <div v-if="formData.tipo === 'aereo'">
+            <button
+              type="button"
+              @click="toggleDropdownDestino"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white text-left flex items-center justify-between"
+              :class="{ 'border-orange-500': dropdownDestinoOpen }"
+              autocomplete="off"
+              data-form-type="other"
+            >
+              <span :class="{ 'text-gray-500': !destinoSeleccionado }">
+                {{ destinoSeleccionado || '' }}
+              </span>
+              <svg
+                class="w-5 h-5 text-gray-400 transition-transform"
+                :class="{ 'rotate-180': dropdownDestinoOpen }"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                <span :class="{ 'text-gray-500': !destinoSeleccionado }">
-                  {{ destinoSeleccionado || '' }}
-                </span>
-                <svg
-                  class="w-5 h-5 text-gray-400 transition-transform"
-                  :class="{ 'rotate-180': dropdownDestinoOpen }"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 9l-7 7-7-7"
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+
+            <!-- Dropdown con búsqueda -->
+            <div
+              v-if="dropdownDestinoOpen"
+              class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-hidden"
+            >
+              <!-- Campo de búsqueda dentro del dropdown -->
+              <div class="p-2 border-b border-gray-200">
+                <div class="relative">
+                  <input
+                    v-model="busquedaDestino"
+                    type="text"
+                    placeholder=""
+                    class="w-full px-3 py-2 pl-8 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                    @input="filtrarAeropuertosDestino"
+                    ref="searchInputDestino"
+                    autocomplete="off"
+                    autocapitalize="off"
+                    autocorrect="off"
+                    spellcheck="false"
+                    data-lpignore="true"
+                    data-form-type="other"
+                    name="search-destino"
+                    readonly
+                    onfocus="this.removeAttribute('readonly');"
                   />
-                </svg>
-              </button>
-
-              <!-- Dropdown con búsqueda -->
-              <div
-                v-if="dropdownDestinoOpen"
-                class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-hidden"
-              >
-                <!-- Campo de búsqueda dentro del dropdown -->
-                <div class="p-2 border-b border-gray-200">
-                  <div class="relative">
-                    <input
-                      v-model="busquedaDestino"
-                      type="text"
-                      placeholder=""
-                      class="w-full px-3 py-2 pl-8 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
-                      @input="filtrarAeropuertosDestino"
-                      ref="searchInputDestino"
-                      autocomplete="off"
-                      autocapitalize="off"
-                      autocorrect="off"
-                      spellcheck="false"
-                      data-lpignore="true"
-                      data-form-type="other"
-                      name="search-destino"
-                      readonly
-                      onfocus="this.removeAttribute('readonly');"
+                  <svg
+                    class="w-4 h-4 text-gray-400 absolute left-2 top-2.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                     />
-                    <svg
-                      class="w-4 h-4 text-gray-400 absolute left-2 top-2.5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                      />
-                    </svg>
-                  </div>
-                </div>
-
-                <!-- Lista de aeropuertos filtrados -->
-                <div class="max-h-48 overflow-y-auto">
-                  <!-- Opción para aeropuertos personalizados -->
-                  <button
-                    type="button"
-                    @click="seleccionarAeropuertoDestinoPersonalizado"
-                    class="w-full px-3 py-2 text-left hover:bg-orange-50 focus:bg-orange-50 focus:outline-none text-sm border-b border-gray-100"
-                  >
-                    <span class="text-orange-600 font-medium">
-                      +
-                      {{
-                        formData.tipo === 'aereo'
-                          ? 'Otro aeropuerto (especificar)'
-                          : 'Otro lugar (especificar)'
-                      }}
-                    </span>
-                  </button>
-
-                  <!-- Aeropuertos filtrados -->
-                  <button
-                    v-for="aeropuerto in aeropuertosDestinoFiltrados"
-                    :key="aeropuerto.codigo"
-                    type="button"
-                    @click="seleccionarAeropuertoDestino(aeropuerto)"
-                    class="w-full px-3 py-2 text-left hover:bg-orange-50 focus:bg-orange-50 focus:outline-none text-sm"
-                  >
-                    <div class="flex items-center justify-between">
-                      <div class="flex flex-col">
-                        <span class="font-medium">{{ aeropuerto.ciudad }}</span>
-                        <span class="text-gray-500 text-xs">{{ aeropuerto.nombre }}</span>
-                      </div>
-                      <span class="text-gray-500 text-xs bg-gray-100 px-2 py-1 rounded">{{
-                        aeropuerto.codigo
-                      }}</span>
-                    </div>
-                  </button>
-
-                  <!-- Mensaje cuando no hay resultados -->
-                  <div
-                    v-if="aeropuertosDestinoFiltrados.length === 0 && busquedaDestino"
-                    class="px-3 py-2 text-sm text-gray-500 text-center"
-                  >
-                    No se encontraron aeropuertos
-                  </div>
+                  </svg>
                 </div>
               </div>
 
-              <!-- Campo adicional para ubicación personalizada -->
-              <div v-if="destinoSeleccionado === 'personalizado'" class="mt-2">
-                <input
-                  v-model="destinoPersonalizado"
-                  type="text"
-                  placeholder=""
-                  class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                  :class="errores.destino ? 'border-red-500' : 'border-gray-300'"
-                  required
-                  @input="limpiarErrores"
-                  autocomplete="off"
-                  autocapitalize="off"
-                  autocorrect="off"
-                  spellcheck="false"
-                  data-lpignore="true"
-                  data-form-type="other"
-                  name="destino-personalizado"
-                />
+              <!-- Lista de aeropuertos filtrados -->
+              <div class="max-h-48 overflow-y-auto">
+                <!-- Opción para aeropuertos personalizados -->
+                <button
+                  type="button"
+                  @click="seleccionarAeropuertoDestinoPersonalizado"
+                  class="w-full px-3 py-2 text-left hover:bg-orange-50 focus:bg-orange-50 focus:outline-none text-sm border-b border-gray-100"
+                >
+                  <span class="text-orange-600 font-medium">
+                    +
+                    {{
+                      formData.tipo === 'aereo'
+                        ? 'Otro aeropuerto (especificar)'
+                        : 'Otro lugar (especificar)'
+                    }}
+                  </span>
+                </button>
+
+                <!-- Aeropuertos filtrados -->
+                <button
+                  v-for="aeropuerto in aeropuertosDestinoFiltrados"
+                  :key="aeropuerto.codigo"
+                  type="button"
+                  @click="seleccionarAeropuertoDestino(aeropuerto)"
+                  class="w-full px-3 py-2 text-left hover:bg-orange-50 focus:bg-orange-50 focus:outline-none text-sm"
+                >
+                  <div class="flex items-center justify-between">
+                    <div class="flex flex-col">
+                      <span class="font-medium">{{ aeropuerto.ciudad }}</span>
+                      <span class="text-gray-500 text-xs">{{ aeropuerto.nombre }}</span>
+                    </div>
+                    <span class="text-gray-500 text-xs bg-gray-100 px-2 py-1 rounded">{{
+                      aeropuerto.codigo
+                    }}</span>
+                  </div>
+                </button>
+
+                <!-- Mensaje cuando no hay resultados -->
+                <div
+                  v-if="aeropuertosDestinoFiltrados.length === 0 && busquedaDestino"
+                  class="px-3 py-2 text-sm text-gray-500 text-center"
+                >
+                  No se encontraron aeropuertos
+                </div>
               </div>
             </div>
 
-            <!-- Input simple para otros tipos de transporte -->
-            <div v-else>
+            <!-- Campo adicional para ubicación personalizada -->
+            <div v-if="destinoSeleccionado === 'personalizado'" class="mt-2">
               <input
-                v-model="formData.destino"
+                v-model="destinoPersonalizado"
                 type="text"
                 placeholder=""
                 class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
@@ -643,23 +671,97 @@
                 required
                 @input="limpiarErrores"
                 autocomplete="off"
-                name="destino-transporte"
+                autocapitalize="off"
+                autocorrect="off"
+                spellcheck="false"
+                data-lpignore="true"
+                data-form-type="other"
+                name="destino-personalizado"
               />
             </div>
+          </div>
 
-            <!-- Mensaje de error -->
-            <div
-              v-if="mostrarErrores && errores.destino"
-              class="mt-1 text-sm text-red-600 flex items-center gap-1"
-            >
-              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+          <!-- Input simple para otros tipos de transporte -->
+          <div v-else>
+            <input
+              v-model="formData.destino"
+              type="text"
+              placeholder=""
+              class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+              :class="errores.destino ? 'border-red-500' : 'border-gray-300'"
+              required
+              @input="limpiarErrores"
+              autocomplete="off"
+              name="destino-transporte"
+            />
+          </div>
+
+          <!-- Mensaje de error -->
+          <div
+            v-if="mostrarErrores && errores.destino"
+            class="mt-1 text-sm text-red-600 flex items-center gap-1"
+          >
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                fill-rule="evenodd"
+                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                clip-rule="evenodd"
+              />
+            </svg>
+            {{ errores.destino }}
+          </div>
+        </div>
+
+        <!-- Fecha y Hora de Llegada -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Fecha de Llegada -->
+          <div class="relative" data-field="fechaFinal">
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              <span v-if="formData.tipo === 'aereo' && formData.tieneRetorno">
+                Fecha de Regreso *
+              </span>
+              <span v-else>Fecha de Llegada *</span>
+            </label>
+            <input
+              id="fechaFinal"
+              v-model="formData.fechaFinal"
+              type="date"
+              :required="formData.tipo === 'aereo' && !formData.esTramoEscala"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              :class="{ 'border-red-500': errores.fechaFinal }"
+            />
+            <div v-if="errores.fechaFinal" class="mt-1 text-sm text-red-600 flex items-center">
+              <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
                 <path
                   fill-rule="evenodd"
                   d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
                   clip-rule="evenodd"
                 />
               </svg>
-              {{ errores.destino }}
+              {{ errores.fechaFinal }}
+            </div>
+          </div>
+
+          <!-- Hora de Llegada -->
+          <div class="relative" data-field="horaEntrada">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Hora de Llegada *</label>
+            <input
+              id="horaEntrada"
+              v-model="formData.horaEntrada"
+              type="time"
+              :required="formData.tipo === 'aereo' && !formData.esTramoEscala"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              :class="{ 'border-red-500': errores.horaEntrada }"
+            />
+            <div v-if="errores.horaEntrada" class="mt-1 text-sm text-red-600 flex items-center">
+              <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  fill-rule="evenodd"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+              {{ errores.horaEntrada }}
             </div>
           </div>
         </div>
@@ -709,137 +811,6 @@
         <label for="tieneRetornoAereo" class="text-sm font-medium text-gray-900 cursor-pointer">
           ¿Es vuelo de ida y vuelta?
         </label>
-      </div>
-
-      <!-- Fechas -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div data-field="fechaInicial">
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            {{ formData.tipo === 'aereo' ? 'Fecha del Vuelo *' : 'Fecha de Salida *' }}
-          </label>
-          <input
-            v-model="formData.fechaInicial"
-            type="date"
-            class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-            :class="errores.fechaInicial ? 'border-red-500' : 'border-gray-300'"
-            required
-            @change="limpiarErrores"
-          />
-          <!-- Mensaje de error -->
-          <div
-            v-if="mostrarErrores && errores.fechaInicial"
-            class="mt-1 text-sm text-red-600 flex items-center gap-1"
-          >
-            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fill-rule="evenodd"
-                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                clip-rule="evenodd"
-              />
-            </svg>
-            {{ errores.fechaInicial }}
-          </div>
-        </div>
-        <div
-          v-if="
-            (formData.tipo !== 'aereo' && formData.tieneRetorno) ||
-            (formData.tipo === 'aereo' && formData.esTramoEscala) ||
-            (formData.tipo === 'aereo' && formData.tieneRetorno)
-          "
-          data-field="fechaFinal"
-        >
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            {{
-              formData.tipo === 'aereo' && formData.esTramoEscala
-                ? 'Fecha de Llegada *'
-                : formData.tipo === 'aereo' && formData.tieneRetorno
-                  ? 'Fecha de Regreso *'
-                  : formData.tipo === 'aereo'
-                    ? 'Fecha de Llegada *'
-                    : 'Fecha de Regreso *'
-            }}
-          </label>
-          <input
-            v-model="formData.fechaFinal"
-            type="date"
-            class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-            :class="errores.fechaFinal ? 'border-red-500' : 'border-gray-300'"
-            :required="
-              (formData.tipo !== 'aereo' && formData.tieneRetorno) ||
-              (formData.tipo === 'aereo' && formData.esTramoEscala) ||
-              (formData.tipo === 'aereo' && formData.tieneRetorno)
-            "
-            @change="limpiarErrores"
-          />
-          <!-- Mensaje de error -->
-          <div
-            v-if="mostrarErrores && errores.fechaFinal"
-            class="mt-1 text-sm text-red-600 flex items-center gap-1"
-          >
-            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fill-rule="evenodd"
-                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                clip-rule="evenodd"
-              />
-            </svg>
-            {{ errores.fechaFinal }}
-          </div>
-        </div>
-      </div>
-
-      <!-- Hora Salida/Entrada -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div data-field="horaSalida">
-          <label class="block text-sm font-medium text-gray-700 mb-2">Hora de Salida *</label>
-          <input
-            v-model="formData.horaSalida"
-            type="time"
-            class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-            :class="errores.horaSalida ? 'border-red-500' : 'border-gray-300'"
-            required
-            @change="limpiarErrores"
-          />
-          <!-- Mensaje de error -->
-          <div
-            v-if="mostrarErrores && errores.horaSalida"
-            class="mt-1 text-sm text-red-600 flex items-center gap-1"
-          >
-            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fill-rule="evenodd"
-                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                clip-rule="evenodd"
-              />
-            </svg>
-            {{ errores.horaSalida }}
-          </div>
-        </div>
-        <div v-if="formData.tipo === 'aereo' || formData.tieneRetorno" data-field="horaEntrada">
-          <label class="block text-sm font-medium text-gray-700 mb-2">Hora de Llegada *</label>
-          <input
-            v-model="formData.horaEntrada"
-            type="time"
-            class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-            :class="errores.horaEntrada ? 'border-red-500' : 'border-gray-300'"
-            :required="formData.tipo === 'aereo' || formData.tieneRetorno"
-            @change="limpiarErrores"
-          />
-          <!-- Mensaje de error -->
-          <div
-            v-if="mostrarErrores && errores.horaEntrada"
-            class="mt-1 text-sm text-red-600 flex items-center gap-1"
-          >
-            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fill-rule="evenodd"
-                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                clip-rule="evenodd"
-              />
-            </svg>
-            {{ errores.horaEntrada }}
-          </div>
-        </div>
       </div>
 
       <!-- Duración del Segmento -->
@@ -1312,13 +1283,14 @@ const validarFormulario = (): boolean => {
   }
 
   // Validar que la fecha de llegada no sea anterior a la de salida (vuelos sin retorno)
-  if (formData.value.fechaInicial && !formData.value.tieneRetorno && formData.value.fechaFinal) {
-    const fechaSalida = new Date(formData.value.fechaInicial)
-    const fechaLlegada = new Date(formData.value.fechaFinal)
-    if (fechaLlegada < fechaSalida) {
-      errores.value.fechaFinal = 'La fecha de llegada no puede ser anterior a la fecha de salida'
-    }
-  }
+  // COMENTADO: Se removió esta validación para permitir fechas de mismo día
+  // if (formData.value.fechaInicial && !formData.value.tieneRetorno && formData.value.fechaFinal) {
+  //   const fechaSalida = new Date(formData.value.fechaInicial)
+  //   const fechaLlegada = new Date(formData.value.fechaFinal)
+  //   if (fechaLlegada < fechaSalida) {
+  //     errores.value.fechaFinal = 'La fecha de llegada no puede ser anterior a la fecha de salida'
+  //   }
+  // }
 
   // Validar horas
   if (!formData.value.horaSalida) {
