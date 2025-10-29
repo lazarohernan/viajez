@@ -182,7 +182,9 @@
           </template>
           <template #cell:segmentos="{ row }">
             <div class="flex items-center gap-2">
-              <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-orange-100 text-orange-800 text-sm font-semibold">
+              <span
+                class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-orange-100 text-orange-800 text-sm font-semibold"
+              >
                 {{ row.segmentos }}
               </span>
               <span class="text-sm text-gray-600">
@@ -209,7 +211,9 @@
         <template #header>
           <div class="flex items-center justify-between w-full gap-3">
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div
+                class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0"
+              >
                 <FileText class="w-5 h-5 text-orange-600" />
               </div>
               <div>
@@ -275,7 +279,9 @@
               </div>
               <div>
                 <span class="text-xs text-gray-600">Email</span>
-                <p class="text-sm font-medium text-gray-900">{{ cotizacionSeleccionada.viajero.email }}</p>
+                <p class="text-sm font-medium text-gray-900">
+                  {{ cotizacionSeleccionada.viajero.email }}
+                </p>
               </div>
             </div>
           </div>
@@ -311,7 +317,10 @@
           <!-- Lista de Segmentos -->
           <div>
             <h4 class="text-sm font-semibold text-gray-900 mb-4">Segmentos del Viaje</h4>
-            <div v-if="cotizacionSeleccionada.segmentos && cotizacionSeleccionada.segmentos.length > 0" class="space-y-3">
+            <div
+              v-if="cotizacionSeleccionada.segmentos && cotizacionSeleccionada.segmentos.length > 0"
+              class="space-y-3"
+            >
               <div
                 v-for="(segmento, index) in cotizacionSeleccionada.segmentos"
                 :key="segmento.id"
@@ -355,7 +364,9 @@
                         <Calendar class="w-3 h-3" />
                         <span>
                           {{ formatDate(segmento.fecha_inicio) }}
-                          <span v-if="segmento.fecha_fin"> - {{ formatDate(segmento.fecha_fin) }}</span>
+                          <span v-if="segmento.fecha_fin">
+                            - {{ formatDate(segmento.fecha_fin) }}</span
+                          >
                         </span>
                       </div>
                       <div
@@ -424,7 +435,18 @@ import {
   ActividadesForm,
   SegmentoCard,
 } from '@/components/cotizaciones'
-import { Plane, Home, Compass, Eye, Pencil, Trash2, Calendar, Clock, User, MapPin, FileText } from 'lucide-vue-next'
+import {
+  Plane,
+  Home,
+  Compass,
+  Eye,
+  Pencil,
+  Trash2,
+  Calendar,
+  User,
+  MapPin,
+  FileText,
+} from 'lucide-vue-next'
 import type { Cotizacion, Segmento } from '@/services/supabase'
 import { cotizacionesService, type CotizacionWithSegmentos } from '@/services/cotizaciones.service'
 import {
@@ -676,7 +698,15 @@ const eliminarSegmento = async (id: string) => {
   if (confirm('¿Estás seguro de eliminar este segmento?')) {
     try {
       await segmentosService.delete(id)
-      segmentosAgregados.value = segmentosAgregados.value.filter((s) => s.id !== id)
+
+      // Recalcular marcadores después de eliminar
+      if (cotizacionActual.value) {
+        await segmentosService.recalcularMarcadoresCotizacion(cotizacionActual.value.id)
+      }
+
+      // Recargar segmentos para reflejar los cambios
+      await loadSegmentos()
+
       alert('Segmento eliminado correctamente')
     } catch (error) {
       console.error('Error al eliminar segmento:', error)
@@ -688,33 +718,17 @@ const eliminarSegmento = async (id: string) => {
 // Función para manejar el reordenamiento de segmentos
 const onDragEnd = async () => {
   try {
-    const totalSegmentos = segmentosAgregados.value.length
+    if (!cotizacionActual.value) return
 
-    // Actualizar marcadores de primero y último según la nueva posición
-    for (let index = 0; index < totalSegmentos; index++) {
-      const segmento = segmentosAgregados.value[index]
-      const nuevoOrden = index + 1
-      const esPrimero = nuevoOrden === 1
-      const esUltimo = nuevoOrden === totalSegmentos
+    // Usar la función de recalcular marcadores que garantiza consistencia
+    const result = await segmentosService.recalcularMarcadoresCotizacion(cotizacionActual.value.id)
 
-      // Actualizar el segmento si cambió su posición de primero/último
-      if (
-        segmento.orden !== nuevoOrden ||
-        segmento.es_primero !== esPrimero ||
-        segmento.es_ultimo !== esUltimo
-      ) {
-        await segmentosService.update(segmento.id, {
-          orden: nuevoOrden,
-          es_primero: esPrimero,
-          es_ultimo: esUltimo,
-        })
-
-        // Actualizar localmente
-        segmento.orden = nuevoOrden
-        segmento.es_primero = esPrimero
-        segmento.es_ultimo = esUltimo
-      }
+    if (result.error) {
+      throw new Error(result.error)
     }
+
+    // Recargar los datos para reflejar los cambios
+    await loadSegmentos()
   } catch (error) {
     console.error('Error en drag & drop:', error)
     alert('Error al reordenar los segmentos')
@@ -883,7 +897,7 @@ const eliminarCotizacion = async (row: CotizacionRow) => {
 }
 
 // Función auxiliar para calcular la duración del viaje en días
-const calcularDuracionViaje = (segmentos: any[]): string => {
+const calcularDuracionViaje = (segmentos: Segmento[]): string => {
   if (!segmentos || segmentos.length === 0) {
     return 'Sin fecha'
   }
@@ -903,8 +917,8 @@ const calcularDuracionViaje = (segmentos: any[]): string => {
     return 'Sin fecha'
   }
 
-  const fechaInicio = new Date(fechasInicio[0])
-  const fechaFin = fechasFin.length > 0 ? new Date(fechasFin[fechasFin.length - 1]) : fechaInicio
+  const fechaInicio = new Date(fechasInicio[0]!)
+  const fechaFin = fechasFin.length > 0 ? new Date(fechasFin[fechasFin.length - 1]!) : fechaInicio
 
   // Calcular diferencia en días
   const diffTime = Math.abs(fechaFin.getTime() - fechaInicio.getTime())
@@ -918,7 +932,7 @@ const calcularDuracionViaje = (segmentos: any[]): string => {
 }
 
 // Función auxiliar para obtener el destino desde los segmentos
-const obtenerDestinoDesdeSegmentos = (segmentos: any[]): string => {
+const obtenerDestinoDesdeSegmentos = (segmentos: Segmento[]): string => {
   if (!segmentos || segmentos.length === 0) {
     return 'Sin destino'
   }
@@ -929,10 +943,12 @@ const obtenerDestinoDesdeSegmentos = (segmentos: any[]): string => {
     .sort((a, b) => (b.orden || 0) - (a.orden || 0))
 
   if (segmentosTransporte.length > 0) {
-    const destino = segmentosTransporte[0].segmento_transporte.destino
-    // Extraer solo el nombre de la ciudad si tiene formato "Ciudad (COD)"
-    const match = destino.match(/^(.+?)\s*\(/)
-    return match ? match[1].trim() : destino
+    const destino = segmentosTransporte[0].segmento_transporte?.destino
+    if (destino) {
+      // Extraer solo el nombre de la ciudad si tiene formato "Ciudad (COD)"
+      const match = destino.match(/^(.+?)\s*\(/)
+      return match ? match[1].trim() : destino
+    }
   }
 
   // Si no hay segmentos de transporte, usar el nombre del último segmento
@@ -953,14 +969,14 @@ const recargarCotizaciones = async () => {
     // Transformar cotizaciones a formato de tabla
     allTableRows.value = (result.data || []).map((cot) => {
       // Obtener información del cliente/viajero
-      const viajero = cot.viajero as any
+      const viajero = cot.viajero as { nombre?: string; apellido?: string; email?: string } | null
       const nombreCliente = viajero
         ? `${viajero.nombre || ''} ${viajero.apellido || ''}`.trim() || 'Sin nombre'
         : 'Sin cliente asignado'
       const emailCliente = viajero?.email || 'Sin email'
 
       // Obtener información de los segmentos
-      const segmentos = (cot.segmentos || []) as any[]
+      const segmentos = (cot.segmentos || []) as Segmento[]
       const destino = obtenerDestinoDesdeSegmentos(segmentos)
       const duracion = calcularDuracionViaje(segmentos)
       const cantidadSegmentos = segmentos.length

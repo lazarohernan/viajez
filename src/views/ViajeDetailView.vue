@@ -726,33 +726,15 @@ const editarSegmento = (segmento: Segmento) => {
 // Función para manejar el reordenamiento de segmentos en viajes
 const onDragEndViaje = async () => {
   try {
-    const totalSegmentos = segmentos.value.length
+    // Usar la función de recalcular marcadores que garantiza consistencia
+    const result = await segmentosService.recalcularMarcadoresViaje(viajeId.value)
 
-    // Actualizar marcadores de primero y último según la nueva posición
-    for (let index = 0; index < totalSegmentos; index++) {
-      const segmento = segmentos.value[index]
-      const nuevoOrden = index + 1
-      const esPrimero = nuevoOrden === 1
-      const esUltimo = nuevoOrden === totalSegmentos
-
-      // Actualizar el segmento si cambió su posición de primero/último
-      if (
-        segmento.orden !== nuevoOrden ||
-        segmento.es_primero !== esPrimero ||
-        segmento.es_ultimo !== esUltimo
-      ) {
-        await segmentosService.update(segmento.id, {
-          orden: nuevoOrden,
-          es_primero: esPrimero,
-          es_ultimo: esUltimo,
-        })
-
-        // Actualizar localmente
-        segmento.orden = nuevoOrden
-        segmento.es_primero = esPrimero
-        segmento.es_ultimo = esUltimo
-      }
+    if (result.error) {
+      throw new Error(result.error)
     }
+
+    // Recargar los datos para reflejar los cambios
+    await loadViaje()
   } catch (error) {
     console.error('Error en drag & drop:', error)
     alert('Error al reordenar los segmentos')
@@ -769,6 +751,10 @@ const eliminarSegmento = async (segmentoId: string) => {
 
   try {
     await segmentosService.delete(segmentoId)
+
+    // Recalcular marcadores después de eliminar
+    await segmentosService.recalcularMarcadoresViaje(viajeId.value)
+
     await loadViaje()
     alert('Segmento eliminado del viaje correctamente')
   } catch (error) {
@@ -794,8 +780,18 @@ const handleSegmentSubmit = async (data: Record<string, unknown>) => {
     // - Si no hay segmentos, el nuevo es el primero Y el último
     // - Si ya hay segmentos, el nuevo es solo el último (no el primero)
     // - Al editar, mantener los valores actuales
-    const esPrimerSegmento = !editingSegment.value && totalSegmentos === 0
-    const esUltimoSegmento = !editingSegment.value // Siempre el nuevo segmento es el último
+    let esPrimerSegmento: boolean
+    let esUltimoSegmento: boolean
+
+    if (editingSegment.value) {
+      // Al editar, mantener los valores actuales
+      esPrimerSegmento = editingSegment.value.es_primero || false
+      esUltimoSegmento = editingSegment.value.es_ultimo || false
+    } else {
+      // Al crear nuevo segmento
+      esPrimerSegmento = totalSegmentos === 0
+      esUltimoSegmento = true // El nuevo segmento siempre es el último
+    }
 
     // Preparar datos del segmento base
     const segmentoData = {
@@ -828,6 +824,7 @@ const handleSegmentSubmit = async (data: Record<string, unknown>) => {
 
       const updateData: Partial<CreateSegmentoData> = {
         ...segmentoData,
+        tipo: selectedSegmentType.value, // Asegurar que se incluya el tipo
       }
 
       // Agregar datos específicos según el tipo
@@ -993,6 +990,9 @@ const importarCotizacion = async () => {
     }
 
     // console.log('✅ Segmentos copiados:', segmentosCopiados)
+
+    // Recalcular marcadores de primero/último para todos los segmentos del viaje
+    await segmentosService.recalcularMarcadoresViaje(viajeId.value)
 
     // Recargar viaje
     await loadViaje()

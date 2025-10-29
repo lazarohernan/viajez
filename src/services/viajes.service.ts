@@ -263,6 +263,7 @@ export class ViajesService extends BaseService {
         `,
         )
         .eq('id', id)
+        .order('orden', { foreignTable: 'segmentos', ascending: true })
         .single()
 
       if (viajeError) this.handleError(viajeError)

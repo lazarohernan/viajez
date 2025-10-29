@@ -484,8 +484,18 @@ export class SegmentosService extends BaseService {
     data: Partial<CreateSegmentoData>,
   ): Promise<ServiceResponse<SegmentoWithDetails>> {
     try {
+      // Obtener el segmento actual para verificar si cambia el tipo
+      const { data: segmentoActual, error: getError } = await supabase
+        .from('segmentos')
+        .select('tipo')
+        .eq('id', id)
+        .single()
+
+      if (getError) this.handleError(getError)
+
       const updateData: Record<string, unknown> = {}
 
+      if (data.tipo) updateData.tipo = data.tipo
       if (data.nombre) updateData.nombre = data.nombre
       if (data.proveedor) updateData.proveedor = data.proveedor
       if (data.fecha_inicio) updateData.fecha_inicio = this.formatDate(data.fecha_inicio)
@@ -501,6 +511,18 @@ export class SegmentosService extends BaseService {
 
       updateData.updated_at = new Date().toISOString()
 
+      // Si el tipo cambió, eliminar datos del tipo anterior
+      if (data.tipo && segmentoActual && data.tipo !== segmentoActual.tipo) {
+        // Eliminar datos del tipo anterior
+        if (segmentoActual.tipo === 'transporte') {
+          await supabase.from('segmento_transporte').delete().eq('segmento_id', id)
+        } else if (segmentoActual.tipo === 'hospedaje') {
+          await supabase.from('segmento_hospedaje').delete().eq('segmento_id', id)
+        } else if (segmentoActual.tipo === 'actividad') {
+          await supabase.from('segmento_actividad').delete().eq('segmento_id', id)
+        }
+      }
+
       const { data: segmento, error: segError } = await supabase
         .from('segmentos')
         .update(updateData)
@@ -511,7 +533,10 @@ export class SegmentosService extends BaseService {
       if (segError) this.handleError(segError)
 
       // Actualizar datos específicos si se proporcionaron
-      if (data.transporte && segmento.tipo === 'transporte') {
+      // Usar el tipo actualizado (data.tipo si existe, sino el tipo actual del segmento)
+      const tipoFinal = data.tipo || segmento.tipo
+
+      if (data.transporte && tipoFinal === 'transporte') {
         // Verificar si existe registro en segmento_transporte
         const { data: existingTransporte, error: checkError } = await supabase
           .from('segmento_transporte')
@@ -536,7 +561,7 @@ export class SegmentosService extends BaseService {
         }
       }
 
-      if (data.hospedaje && segmento.tipo === 'hospedaje') {
+      if (data.hospedaje && tipoFinal === 'hospedaje') {
         // Verificar si existe registro en segmento_hospedaje
         const { data: existingHospedaje, error: checkError } = await supabase
           .from('segmento_hospedaje')
@@ -561,7 +586,7 @@ export class SegmentosService extends BaseService {
         }
       }
 
-      if (data.actividad && segmento.tipo === 'actividad') {
+      if (data.actividad && tipoFinal === 'actividad') {
         // Verificar si existe registro en segmento_actividad
         const { data: existingActividad, error: checkError } = await supabase
           .from('segmento_actividad')
@@ -789,6 +814,8 @@ export class SegmentosService extends BaseService {
         duracion: originalSegmento.duracion,
         observaciones: originalSegmento.observaciones,
         orden: originalSegmento.orden,
+        es_primero: originalSegmento.es_primero,
+        es_ultimo: originalSegmento.es_ultimo,
         viaje_id: viajeId,
       }
 
@@ -1028,6 +1055,92 @@ export class SegmentosService extends BaseService {
       }
     } catch (error) {
       console.error('Error marcando segmento anterior con escala:', error)
+    }
+  }
+
+  /**
+   * Recalcular marcadores de primero/último para todos los segmentos de un viaje
+   * Útil después de importar segmentos desde una cotización
+   */
+  async recalcularMarcadoresViaje(viajeId: string): Promise<ServiceResponse<boolean>> {
+    try {
+      // Obtener todos los segmentos del viaje ordenados
+      const { data: segmentos, error } = await supabase
+        .from('segmentos')
+        .select('id, orden')
+        .eq('viaje_id', viajeId)
+        .order('orden', { ascending: true })
+
+      if (error) throw error
+      if (!segmentos || segmentos.length === 0) {
+        return { data: true, error: null }
+      }
+
+      // Actualizar cada segmento según su posición
+      for (let i = 0; i < segmentos.length; i++) {
+        const segmento = segmentos[i]
+        const esPrimero = i === 0
+        const esUltimo = i === segmentos.length - 1
+
+        await supabase
+          .from('segmentos')
+          .update({
+            orden: i + 1, // Asegurar que el orden sea consecutivo
+            es_primero: esPrimero,
+            es_ultimo: esUltimo,
+          })
+          .eq('id', segmento.id)
+      }
+
+      return { data: true, error: null }
+    } catch (error) {
+      return {
+        data: false,
+        error: error instanceof Error ? error.message : 'Error recalculando marcadores',
+      }
+    }
+  }
+
+  /**
+   * Recalcular marcadores de primero/último para todos los segmentos de una cotización
+   * Útil después de reordenar o eliminar segmentos
+   */
+  async recalcularMarcadoresCotizacion(cotizacionId: string): Promise<ServiceResponse<boolean>> {
+    try {
+      // Obtener todos los segmentos de la cotización ordenados
+      const { data: segmentos, error } = await supabase
+        .from('segmentos')
+        .select('id, orden')
+        .eq('cotizacion_id', cotizacionId)
+        .order('orden', { ascending: true })
+
+      if (error) throw error
+      if (!segmentos || segmentos.length === 0) {
+        return { data: true, error: null }
+      }
+
+      // Actualizar cada segmento según su posición
+      for (let i = 0; i < segmentos.length; i++) {
+        const segmento = segmentos[i]
+        const esPrimero = i === 0
+        const esUltimo = i === segmentos.length - 1
+
+        await supabase
+          .from('segmentos')
+          .update({
+            orden: i + 1, // Asegurar que el orden sea consecutivo
+            es_primero: esPrimero,
+            es_ultimo: esUltimo,
+          })
+          .eq('id', segmento.id)
+      }
+
+      return { data: true, error: null }
+    } catch (error) {
+      return {
+        data: false,
+        error: error instanceof Error ? error.message : 'Error recalculando marcadores',
+      }
     }
   }
 
