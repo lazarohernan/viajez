@@ -158,6 +158,14 @@
             <GripVertical class="w-4 h-4" />
           </button>
           <button
+            @click="handleVerDetalles"
+            class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            title="Ver detalles"
+            type="button"
+          >
+            <Eye class="w-4 h-4" />
+          </button>
+          <button
             @click="handleEditar"
             class="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
             title="Editar segmento"
@@ -176,12 +184,21 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal de detalles -->
+    <SegmentoDetailModal
+      v-model="showDetailModal"
+      :segmento="segmento"
+      @close="showDetailModal = false"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { Plane, Calendar, Clock, Pencil, Trash2, GripVertical } from 'lucide-vue-next'
+import { ref } from 'vue'
+import { Plane, Calendar, Clock, Pencil, Trash2, GripVertical, Eye } from 'lucide-vue-next'
 import type { Segmento } from '@/services/supabase'
+import SegmentoDetailModal from '@/components/SegmentoDetailModal.vue'
 
 const props = defineProps<{
   segmento: Segmento
@@ -190,7 +207,10 @@ const props = defineProps<{
 const emit = defineEmits<{
   editar: []
   eliminar: []
+  verDetalles: []
 }>()
+
+const showDetailModal = ref(false)
 
 const getBorderColorClass = () => {
   if (props.segmento.es_primero) {
@@ -303,6 +323,10 @@ const formatearTiempoEscala = (minutos: number): string => {
 // Funciones para manejar eventos
 const handleEditar = () => {
   emit('editar')
+}
+
+const handleVerDetalles = () => {
+  showDetailModal.value = true
 }
 
 const handleEliminar = () => {

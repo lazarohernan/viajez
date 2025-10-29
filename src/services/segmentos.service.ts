@@ -833,10 +833,7 @@ export class SegmentosService extends BaseService {
     try {
       // Desmarcar otros segmentos primeros
       if (esPrimero) {
-        let query = supabase
-          .from('segmentos')
-          .update({ es_primero: false })
-          .eq('es_primero', true)
+        let query = supabase.from('segmentos').update({ es_primero: false }).eq('es_primero', true)
 
         if (cotizacionId) {
           query = query.eq('cotizacion_id', cotizacionId)
