@@ -156,16 +156,6 @@ export class CotizacionesService extends BaseService {
           segmento_actividad: segmentoActividad,
         }
 
-        // Debug: Ver transformación
-        if (segmentoCopia.tipo === 'transporte') {
-          console.log('🔄 CotizacionesService - Transformando segmento:', {
-            nombre: segmentoCopia.nombre,
-            original_es_array: Array.isArray(segmento.segmento_transporte),
-            transformado_es_array: Array.isArray(transformado.segmento_transporte),
-            segmento_transporte_completo: transformado.segmento_transporte,
-          })
-        }
-
         return transformado
       })
 
@@ -196,7 +186,16 @@ export class CotizacionesService extends BaseService {
         `
           *,
           viajero:viajeroz(id, nombre, apellido, email),
-          segmentos(count)
+          segmentos (
+            id,
+            tipo,
+            fecha_inicio,
+            fecha_fin,
+            orden,
+            segmento_transporte (
+              destino
+            )
+          )
         `,
         { count: 'exact' },
       )
@@ -216,15 +215,30 @@ export class CotizacionesService extends BaseService {
 
       if (error) this.handleError(error)
 
-      // Transformar datos para incluir conteo de segmentos
-      const cotizacionesWithCount = (data || []).map((cot) => ({
-        ...cot,
-        segmentos: [], // Los segmentos se cargan bajo demanda
-        segmentos_count: cot.segmentos?.[0]?.count || 0,
-      }))
+      // Transformar datos para incluir segmentos con estructura correcta
+      const cotizacionesWithSegmentos = (data || []).map((cot) => {
+        // Transformar segmentos para que las relaciones sean objetos en lugar de arrays
+        const segmentosTransformados = (cot.segmentos || []).map((seg: Record<string, unknown>) => {
+          const segmentoCopia = JSON.parse(JSON.stringify(seg))
+          const segmentoTransporte = Array.isArray(segmentoCopia.segmento_transporte) &&
+            segmentoCopia.segmento_transporte.length > 0
+            ? segmentoCopia.segmento_transporte[0]
+            : segmentoCopia.segmento_transporte || null
+
+          return {
+            ...segmentoCopia,
+            segmento_transporte: segmentoTransporte,
+          }
+        })
+
+        return {
+          ...cot,
+          segmentos: segmentosTransformados,
+        }
+      })
 
       return {
-        data: cotizacionesWithCount,
+        data: cotizacionesWithSegmentos,
         count: count || 0,
         error: null,
       }

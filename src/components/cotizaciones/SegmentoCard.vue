@@ -1,6 +1,6 @@
 <template>
   <div
-    class="border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-all duration-200 bg-white relative shadow-sm"
+    class="border border-gray-200 rounded-xl overflow-hidden hover:border-orange-300 transition-all duration-200 bg-white relative"
   >
     <!-- Barra lateral de color con texto (estilo ticket) -->
     <div

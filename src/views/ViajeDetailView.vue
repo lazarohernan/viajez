@@ -31,7 +31,7 @@
     <!-- Estadísticas rápidas -->
     <div class="max-w-[1600px] mx-auto px-6 py-6">
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+        <div class="bg-white rounded-xl border border-gray-200 p-4">
           <div class="flex items-center justify-between">
             <div>
               <p class="text-xs font-medium uppercase tracking-wide text-gray-500">Segmentos</p>
@@ -42,18 +42,18 @@
             </div>
           </div>
         </div>
-        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+        <div class="bg-white rounded-xl border border-gray-200 p-4">
           <div class="flex items-center justify-between">
             <div>
               <p class="text-xs font-medium uppercase tracking-wide text-gray-500">Viajeros</p>
               <p class="text-2xl font-semibold text-gray-900 mt-1">{{ viajeros.length }}</p>
             </div>
-            <div class="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
-              <User class="w-6 h-6 text-blue-600" />
+            <div class="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center">
+              <User class="w-6 h-6 text-orange-600" />
             </div>
           </div>
         </div>
-        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+        <div class="bg-white rounded-xl border border-gray-200 p-4">
           <div class="flex items-center justify-between">
             <div>
               <p class="text-xs font-medium uppercase tracking-wide text-gray-500">Progreso</p>
@@ -61,9 +61,9 @@
                 {{ viaje?.progreso_porcentaje || 0 }}%
               </p>
             </div>
-            <div class="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
+            <div class="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center">
               <svg
-                class="w-6 h-6 text-green-600"
+                class="w-6 h-6 text-orange-600"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -78,14 +78,14 @@
             </div>
           </div>
         </div>
-        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+        <div class="bg-white rounded-xl border border-gray-200 p-4">
           <div class="flex items-center justify-between">
             <div>
               <p class="text-xs font-medium uppercase tracking-wide text-gray-500">Duración</p>
               <p class="text-2xl font-semibold text-gray-900 mt-1">{{ calcularDuracion() }}</p>
             </div>
-            <div class="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center">
-              <Calendar class="w-6 h-6 text-purple-600" />
+            <div class="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center">
+              <Calendar class="w-6 h-6 text-orange-600" />
             </div>
           </div>
         </div>
@@ -251,9 +251,9 @@
                         />
                         <Home
                           v-else-if="segmento.tipo === 'hospedaje'"
-                          class="w-5 h-5 text-orange-600"
+                          class="w-5 h-5 text-amber-600"
                         />
-                        <Compass v-else class="w-5 h-5 text-orange-600" />
+                        <Compass v-else class="w-5 h-5 text-yellow-600" />
                       </div>
 
                       <!-- Detalles -->
@@ -408,11 +408,11 @@
               :class="[
                 'p-4 border-2 rounded-lg text-center transition-all',
                 selectedSegmentType === 'hospedaje'
-                  ? 'border-orange-500 bg-orange-50'
+                  ? 'border-amber-500 bg-amber-50'
                   : 'border-gray-200 hover:border-gray-300',
               ]"
             >
-              <Home class="w-6 h-6 mx-auto mb-2 text-orange-600" />
+              <Home class="w-6 h-6 mx-auto mb-2 text-amber-600" />
               <span class="text-sm font-medium">Hospedaje</span>
             </button>
             <button
@@ -421,11 +421,11 @@
               :class="[
                 'p-4 border-2 rounded-lg text-center transition-all',
                 selectedSegmentType === 'actividad'
-                  ? 'border-orange-500 bg-orange-50'
+                  ? 'border-yellow-500 bg-yellow-50'
                   : 'border-gray-200 hover:border-gray-300',
               ]"
             >
-              <Compass class="w-6 h-6 mx-auto mb-2 text-orange-600" />
+              <Compass class="w-6 h-6 mx-auto mb-2 text-yellow-600" />
               <span class="text-sm font-medium">Actividad</span>
             </button>
           </div>
@@ -441,9 +441,9 @@
               <Plane v-if="editingSegment.tipo === 'transporte'" class="w-5 h-5 text-orange-600" />
               <Home
                 v-else-if="editingSegment.tipo === 'hospedaje'"
-                class="w-5 h-5 text-orange-600"
+                class="w-5 h-5 text-amber-600"
               />
-              <Compass v-else class="w-5 h-5 text-orange-600" />
+              <Compass v-else class="w-5 h-5 text-yellow-600" />
             </div>
             <div>
               <h4 class="font-semibold text-gray-900">
@@ -498,9 +498,9 @@
       <div class="space-y-6">
         <div class="text-center">
           <div
-            class="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4"
+            class="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center mx-auto mb-4"
           >
-            <FileText class="w-8 h-8 text-blue-600" />
+            <FileText class="w-8 h-8 text-orange-600" />
           </div>
           <h3 class="text-lg font-semibold text-gray-900 mb-2">
             Importar Segmentos desde Cotización
@@ -753,8 +753,6 @@ const onDragEndViaje = async () => {
         segmento.es_ultimo = esUltimo
       }
     }
-
-    console.log('✅ Segmentos del viaje reordenados y marcadores actualizados exitosamente')
   } catch (error) {
     console.error('Error en drag & drop:', error)
     alert('Error al reordenar los segmentos')
@@ -798,14 +796,6 @@ const handleSegmentSubmit = async (data: Record<string, unknown>) => {
     // - Al editar, mantener los valores actuales
     const esPrimerSegmento = !editingSegment.value && totalSegmentos === 0
     const esUltimoSegmento = !editingSegment.value // Siempre el nuevo segmento es el último
-
-    console.log('🔍 Debug segmento:', {
-      editingSegment: !!editingSegment.value,
-      totalSegmentos,
-      esPrimerSegmento,
-      esUltimoSegmento,
-      nuevoOrden,
-    })
 
     // Preparar datos del segmento base
     const segmentoData = {
@@ -916,15 +906,6 @@ const handleSegmentSubmit = async (data: Record<string, unknown>) => {
           duracion_horas: (data.duracion_horas as number) ?? undefined,
         }
       }
-
-      // console.log('📦 Datos a crear:', createData)
-
-      console.log('📦 Datos a crear:', {
-        ...createData,
-        es_primero: createData.es_primero,
-        es_ultimo: createData.es_ultimo,
-        orden: createData.orden,
-      })
 
       const result = (await segmentosService.create(
         createData,
@@ -1067,11 +1048,11 @@ const getSegmentoBorderColor = (segmento: Segmento) => {
 const getSegmentoIconBg = (tipo: string) => {
   switch (tipo) {
     case 'transporte':
-      return 'bg-sky-50'
+      return 'bg-orange-50'
     case 'hospedaje':
-      return 'bg-teal-50'
+      return 'bg-amber-50'
     case 'actividad':
-      return 'bg-rose-50'
+      return 'bg-yellow-50'
     default:
       return 'bg-gray-50'
   }
@@ -1090,10 +1071,21 @@ const getTipoBadgeClass = (tipo: string) => {
   }
 }
 
+// Parsear fecha como fecha local (evita problemas con zonas horarias)
+const parseLocalDate = (dateString: string) => {
+  const dateMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (dateMatch) {
+    const [, year, month, day] = dateMatch.map(Number)
+    return new Date(year, month - 1, day)
+  }
+  const date = new Date(dateString)
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate())
+}
+
 const formatDate = (dateString?: string) => {
   if (!dateString) return ''
   try {
-    const date = new Date(dateString)
+    const date = parseLocalDate(dateString)
     return date.toLocaleDateString('es-ES', {
       day: 'numeric',
       month: 'short',
@@ -1117,14 +1109,12 @@ const calcularDuracion = () => {
   }
 
   try {
-    const inicio = new Date(viaje.value.fecha_inicio)
-    const fin = new Date(viaje.value.fecha_fin)
+    const inicio = parseLocalDate(viaje.value.fecha_inicio)
+    const fin = parseLocalDate(viaje.value.fecha_fin)
     const diffTime = Math.abs(fin.getTime() - inicio.getTime())
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    const diffHours = Math.ceil(diffTime / (1000 * 60 * 60))
 
-    if (diffDays === 0) return '1 día'
-    if (diffDays === 1) return '1 día'
-    return `${diffDays} días`
+    return `${diffHours} ${diffHours === 1 ? 'hora' : 'horas'}`
   } catch (error) {
     return 'N/A'
   }

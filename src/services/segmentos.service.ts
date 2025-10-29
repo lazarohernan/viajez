@@ -78,8 +78,6 @@ export class SegmentosService extends BaseService {
 
         // Actualizar el segmento anterior para marcar que tiene escala
         await this.marcarSegmentoAnteriorConEscala(segmentosExistentes, tiempoEscala || 0)
-
-        console.log(`🛫 Escala detectada: ${tiempoEscala} minutos`)
       }
 
       // Si se marca como último, validar que todos los segmentos estén en orden

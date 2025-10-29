@@ -15,7 +15,7 @@
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <!-- Segmento Transporte -->
         <div
-          class="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md hover:border-orange-300 transition-all duration-200 cursor-pointer group"
+          class="bg-white rounded-lg border border-gray-200 p-4 hover:border-orange-300 transition-all duration-200 cursor-pointer group"
           @click="selectSegment('transporte')"
         >
           <div class="flex items-center gap-3">
@@ -32,14 +32,14 @@
 
         <!-- Segmento Hospedaje -->
         <div
-          class="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md hover:border-orange-300 transition-all duration-200 cursor-pointer group"
+          class="bg-white rounded-lg border border-gray-200 p-4 hover:border-amber-300 transition-all duration-200 cursor-pointer group"
           @click="selectSegment('hospedaje')"
         >
           <div class="flex items-center gap-3">
             <div
-              class="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center group-hover:bg-orange-100 transition-colors"
+              class="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center group-hover:bg-amber-100 transition-colors"
             >
-              <Home class="w-5 h-5 text-orange-600" />
+              <Home class="w-5 h-5 text-amber-600" />
             </div>
             <div>
               <h3 class="font-semibold text-gray-900">Hospedaje</h3>
@@ -49,14 +49,14 @@
 
         <!-- Segmento Actividades -->
         <div
-          class="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md hover:border-orange-300 transition-all duration-200 cursor-pointer group"
+          class="bg-white rounded-lg border border-gray-200 p-4 hover:border-yellow-300 transition-all duration-200 cursor-pointer group"
           @click="selectSegment('actividades')"
         >
           <div class="flex items-center gap-3">
             <div
-              class="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center group-hover:bg-orange-100 transition-colors"
+              class="w-10 h-10 bg-yellow-50 rounded-lg flex items-center justify-center group-hover:bg-yellow-100 transition-colors"
             >
-              <Compass class="w-5 h-5 text-orange-600" />
+              <Compass class="w-5 h-5 text-yellow-600" />
             </div>
             <div>
               <h3 class="font-semibold text-gray-900">Actividades</h3>
@@ -68,7 +68,7 @@
       <!-- Lista de Segmentos Agregados -->
       <div
         v-if="segmentosAgregados.length > 0"
-        class="bg-white rounded-xl border border-gray-200 shadow-sm p-6"
+        class="bg-white rounded-xl border border-gray-200 p-6"
       >
         <div class="flex items-center justify-between mb-4">
           <div>
@@ -123,7 +123,7 @@
       </div>
 
       <!-- Tabla de cotizaciones -->
-      <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <DataTable
           :columns="tableColumns"
           :rows="tableRows"
@@ -144,7 +144,7 @@
             <div class="flex items-center justify-center gap-2">
               <button
                 @click="verCotizacion(row)"
-                class="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200"
+                class="p-2 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors duration-200"
                 title="Ver cotización"
                 type="button"
               >
@@ -168,6 +168,10 @@
               </button>
             </div>
           </template>
+          <template #cell:nombre="{ row }">
+            <div class="font-semibold text-gray-900">{{ row.nombre }}</div>
+            <div class="text-xs text-gray-500 mt-1">ID: {{ row.id.substring(0, 8) }}...</div>
+          </template>
           <template #cell:cliente="{ row }">
             <div class="font-medium text-gray-900">{{ row.cliente }}</div>
             <div class="text-xs text-gray-500">{{ row.email }}</div>
@@ -176,12 +180,22 @@
             <div class="font-medium text-gray-900">{{ row.destino }}</div>
             <div class="text-xs text-gray-500">{{ row.duracion }}</div>
           </template>
+          <template #cell:segmentos="{ row }">
+            <div class="flex items-center gap-2">
+              <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-orange-100 text-orange-800 text-sm font-semibold">
+                {{ row.segmentos }}
+              </span>
+              <span class="text-sm text-gray-600">
+                {{ row.segmentos === 1 ? 'segmento' : 'segmentos' }}
+              </span>
+            </div>
+          </template>
           <template #cell:segmento="{ row }">
             <span
               class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
-              :class="getSegmentoClass(row.segmento)"
+              :class="getEstadoClass(row.estado)"
             >
-              {{ row.segmento }}
+              {{ getEstadoDisplayName(row.estado) }}
             </span>
           </template>
           <template #cell:fecha="{ row }">
@@ -189,6 +203,185 @@
           </template>
         </DataTable>
       </div>
+
+      <!-- Modal para ver detalles de cotización -->
+      <Modal v-model="showDetailModal" max-width="3xl" @close="closeDetailModal">
+        <template #header>
+          <div class="flex items-center justify-between w-full gap-3">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <FileText class="w-5 h-5 text-orange-600" />
+              </div>
+              <div>
+                <h3 class="text-lg font-semibold text-gray-900">
+                  {{ cotizacionSeleccionada?.nombre || 'Detalle de Cotización' }}
+                </h3>
+                <p class="text-sm text-gray-600">Información completa de la cotización</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              @click="closeDetailModal"
+              class="ml-auto text-gray-500 hover:text-gray-700 text-2xl font-light leading-none"
+              title="Cerrar"
+            >
+              ✕
+            </button>
+          </div>
+        </template>
+
+        <div v-if="cotizacionSeleccionada" class="space-y-6">
+          <!-- Información General -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Estado -->
+            <div class="bg-gray-50 rounded-lg p-4">
+              <div class="flex items-center gap-2 mb-2">
+                <FileText class="w-4 h-4 text-orange-600" />
+                <span class="text-xs font-medium text-gray-600">Estado</span>
+              </div>
+              <span
+                class="inline-flex px-3 py-1 text-sm font-semibold rounded-full"
+                :class="getEstadoClass(cotizacionSeleccionada.estado)"
+              >
+                {{ getEstadoDisplayName(cotizacionSeleccionada.estado) }}
+              </span>
+            </div>
+
+            <!-- Fecha de Creación -->
+            <div class="bg-gray-50 rounded-lg p-4">
+              <div class="flex items-center gap-2 mb-2">
+                <Calendar class="w-4 h-4 text-orange-600" />
+                <span class="text-xs font-medium text-gray-600">Fecha de Creación</span>
+              </div>
+              <p class="text-sm font-semibold text-gray-900">
+                {{ formatDate(cotizacionSeleccionada.created_at) }}
+              </p>
+            </div>
+          </div>
+
+          <!-- Información del Cliente -->
+          <div v-if="cotizacionSeleccionada.viajero" class="bg-blue-50 rounded-lg p-4">
+            <h4 class="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <User class="w-4 h-4 text-orange-600" />
+              Información del Cliente
+            </h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <span class="text-xs text-gray-600">Nombre Completo</span>
+                <p class="text-sm font-medium text-gray-900">
+                  {{ cotizacionSeleccionada.viajero.nombre }}
+                  {{ cotizacionSeleccionada.viajero.apellido }}
+                </p>
+              </div>
+              <div>
+                <span class="text-xs text-gray-600">Email</span>
+                <p class="text-sm font-medium text-gray-900">{{ cotizacionSeleccionada.viajero.email }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Resumen del Viaje -->
+          <div class="bg-orange-50 rounded-lg p-4">
+            <h4 class="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <MapPin class="w-4 h-4 text-orange-600" />
+              Resumen del Viaje
+            </h4>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <span class="text-xs text-gray-600">Destino</span>
+                <p class="text-sm font-semibold text-gray-900">
+                  {{ obtenerDestinoDesdeSegmentos(cotizacionSeleccionada.segmentos || []) }}
+                </p>
+              </div>
+              <div>
+                <span class="text-xs text-gray-600">Duración</span>
+                <p class="text-sm font-semibold text-gray-900">
+                  {{ calcularDuracionViaje(cotizacionSeleccionada.segmentos || []) }}
+                </p>
+              </div>
+              <div>
+                <span class="text-xs text-gray-600">Total de Segmentos</span>
+                <p class="text-sm font-semibold text-gray-900">
+                  {{ cotizacionSeleccionada.segmentos?.length || 0 }} segmentos
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Lista de Segmentos -->
+          <div>
+            <h4 class="text-sm font-semibold text-gray-900 mb-4">Segmentos del Viaje</h4>
+            <div v-if="cotizacionSeleccionada.segmentos && cotizacionSeleccionada.segmentos.length > 0" class="space-y-3">
+              <div
+                v-for="(segmento, index) in cotizacionSeleccionada.segmentos"
+                :key="segmento.id"
+                class="border border-gray-200 rounded-lg p-4 bg-white hover:border-orange-300 transition-colors"
+              >
+                <div class="flex items-start gap-3">
+                  <div
+                    class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-semibold"
+                    :class="
+                      segmento.tipo === 'transporte'
+                        ? 'bg-orange-100 text-orange-800'
+                        : segmento.tipo === 'hospedaje'
+                          ? 'bg-amber-100 text-amber-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                    "
+                  >
+                    {{ index + 1 }}
+                  </div>
+                  <div class="flex-1">
+                    <div class="flex items-center gap-2 mb-2">
+                      <span
+                        class="inline-flex px-2 py-1 text-xs font-semibold rounded-md"
+                        :class="
+                          segmento.tipo === 'transporte'
+                            ? 'bg-orange-100 text-orange-800'
+                            : segmento.tipo === 'hospedaje'
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-yellow-100 text-yellow-800'
+                        "
+                      >
+                        {{ segmento.tipo.toUpperCase() }}
+                      </span>
+                      <span class="text-sm font-semibold text-gray-900">{{ segmento.nombre }}</span>
+                    </div>
+                    <div class="space-y-1 text-sm text-gray-600">
+                      <div v-if="segmento.proveedor" class="flex items-center gap-2">
+                        <span class="font-medium">Proveedor:</span>
+                        <span>{{ segmento.proveedor }}</span>
+                      </div>
+                      <div v-if="segmento.fecha_inicio" class="flex items-center gap-2">
+                        <Calendar class="w-3 h-3" />
+                        <span>
+                          {{ formatDate(segmento.fecha_inicio) }}
+                          <span v-if="segmento.fecha_fin"> - {{ formatDate(segmento.fecha_fin) }}</span>
+                        </span>
+                      </div>
+                      <div
+                        v-if="segmento.tipo === 'transporte' && segmento.segmento_transporte"
+                        class="flex items-center gap-2"
+                      >
+                        <MapPin class="w-3 h-3" />
+                        <span>
+                          {{ segmento.segmento_transporte.origen || 'N/A' }} →
+                          {{ segmento.segmento_transporte.destino || 'N/A' }}
+                        </span>
+                      </div>
+                      <div v-if="segmento.observaciones" class="text-xs italic text-gray-500 mt-2">
+                        {{ segmento.observaciones }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div v-else class="text-center py-8 text-gray-500">
+              <p>No hay segmentos agregados a esta cotización</p>
+            </div>
+          </div>
+        </div>
+      </Modal>
 
       <!-- Modal para nueva cotización -->
       <Modal v-model="showForm" :max-width="'2xl'" title="" @close="closeForm">
@@ -231,9 +424,9 @@ import {
   ActividadesForm,
   SegmentoCard,
 } from '@/components/cotizaciones'
-import { Plane, Home, Compass, Eye, Pencil, Trash2 } from 'lucide-vue-next'
+import { Plane, Home, Compass, Eye, Pencil, Trash2, Calendar, Clock, User, MapPin, FileText } from 'lucide-vue-next'
 import type { Cotizacion, Segmento } from '@/services/supabase'
-import { cotizacionesService } from '@/services/cotizaciones.service'
+import { cotizacionesService, type CotizacionWithSegmentos } from '@/services/cotizaciones.service'
 import {
   segmentosService,
   type CreateSegmentoData,
@@ -245,6 +438,8 @@ import type { ServiceResponse } from '@/services/base.service'
 // Interfaces de formularios definidas en componentes individuales
 
 const showForm = ref(false)
+const showDetailModal = ref(false)
+const cotizacionSeleccionada = ref<CotizacionWithSegmentos | null>(null)
 const selectedSegment = ref<string>('')
 const search = ref('')
 const tableLoading = ref(false)
@@ -254,10 +449,12 @@ const editandoSegmento = ref<Segmento | null>(null)
 
 // Columnas de la tabla de cotizaciones
 const tableColumns: DataTableColumn[] = [
-  { key: 'cliente', label: 'Cliente', width: '25%' },
-  { key: 'destino', label: 'Destino', width: '25%' },
-  { key: 'segmento', label: 'Segmento', width: '15%' },
-  { key: 'fecha', label: 'Fecha', width: '15%' },
+  { key: 'nombre', label: 'Cotización', width: '20%' },
+  { key: 'cliente', label: 'Cliente', width: '20%' },
+  { key: 'destino', label: 'Destino', width: '20%' },
+  { key: 'segmentos', label: 'Segmentos', width: '15%' },
+  { key: 'segmento', label: 'Estado', width: '15%' },
+  { key: 'fecha', label: 'Fecha', width: '10%' },
 ]
 
 // Definir tipo para las filas de cotización
@@ -269,6 +466,7 @@ interface CotizacionRow {
   email: string
   destino: string
   duracion: string
+  segmentos: number
   segmento: string
   fecha: string
   presupuesto: number
@@ -284,9 +482,12 @@ const tableRows = computed(() => {
   const term = search.value.toLowerCase()
   return allTableRows.value.filter(
     (row) =>
+      String(row.nombre).toLowerCase().includes(term) ||
       String(row.cliente).toLowerCase().includes(term) ||
+      String(row.email).toLowerCase().includes(term) ||
       String(row.destino).toLowerCase().includes(term) ||
-      String(row.segmento).toLowerCase().includes(term),
+      String(row.duracion).toLowerCase().includes(term) ||
+      String(getEstadoDisplayName(row.estado)).toLowerCase().includes(term),
   )
 })
 
@@ -321,7 +522,6 @@ const handleFormSubmit = async (data: Record<string, unknown>) => {
       }
 
       cotizacionActual.value = result.data
-      console.log('✅ Cotización creada:', cotizacionActual.value)
     }
 
     // Determinar el tipo de segmento basado en selectedSegment
@@ -344,14 +544,6 @@ const handleFormSubmit = async (data: Record<string, unknown>) => {
     // - Al editar, mantener los valores actuales
     const esPrimerSegmento = !editandoSegmento.value && totalSegmentos === 0
     const esUltimoSegmento = !editandoSegmento.value // Siempre el nuevo segmento es el último
-
-    console.log('🔍 Debug segmento cotización:', {
-      editandoSegmento: !!editandoSegmento.value,
-      totalSegmentos,
-      esPrimerSegmento,
-      esUltimoSegmento,
-      nuevoOrden,
-    })
 
     // Preparar datos del segmento
     const segmentoData = {
@@ -430,15 +622,6 @@ const handleFormSubmit = async (data: Record<string, unknown>) => {
       alert('Segmento actualizado correctamente')
     } else {
       // Crear nuevo segmento
-      // console.log('✨ Creando nuevo segmento')
-
-      console.log('📦 Datos a crear:', {
-        ...createData,
-        es_primero: createData.es_primero,
-        es_ultimo: createData.es_ultimo,
-        orden: createData.orden,
-      })
-
       const result = (await segmentosService.create(
         createData,
       )) as ServiceResponse<SegmentoWithDetails>
@@ -532,8 +715,6 @@ const onDragEnd = async () => {
         segmento.es_ultimo = esUltimo
       }
     }
-
-    console.log('✅ Segmentos reordenados y marcadores actualizados exitosamente')
   } catch (error) {
     console.error('Error en drag & drop:', error)
     alert('Error al reordenar los segmentos')
@@ -592,16 +773,33 @@ const guardarCotizacionCompleta = async () => {
 }
 
 // Funciones auxiliares para la tabla
-const getSegmentoClass = (segmento: string) => {
-  switch (segmento) {
-    case 'Transporte':
+const getEstadoClass = (estado: string) => {
+  switch (estado) {
+    case 'borrador':
+      return 'bg-gray-100 text-gray-800'
+    case 'enviada':
       return 'bg-blue-100 text-blue-800'
-    case 'Hospedaje':
+    case 'aprobada':
       return 'bg-green-100 text-green-800'
-    case 'Actividades':
-      return 'bg-purple-100 text-purple-800'
+    case 'rechazada':
+      return 'bg-red-100 text-red-800'
     default:
       return 'bg-gray-100 text-gray-700'
+  }
+}
+
+const getEstadoDisplayName = (estado: string) => {
+  switch (estado) {
+    case 'borrador':
+      return 'Borrador'
+    case 'enviada':
+      return 'Enviada'
+    case 'aprobada':
+      return 'Aprobada'
+    case 'rechazada':
+      return 'Rechazada'
+    default:
+      return estado || 'Borrador'
   }
 }
 
@@ -623,8 +821,12 @@ const editCotizacion = async (row: CotizacionRow) => {
     cotizacionActual.value = result.data
     segmentosAgregados.value = result.data.segmentos || []
 
-    // console.log('Cotización cargada para edición:', result.data)
-    alert(`Cotización "${result.data.nombre}" cargada para edición`)
+    // Abrir el formulario para editar (agregar un segmento mostrará el formulario)
+    // Si no hay segmentos, abrir modal para agregar el primero
+    if (!result.data.segmentos || result.data.segmentos.length === 0) {
+      selectedSegment.value = 'transporte'
+      showForm.value = true
+    }
   } catch (error) {
     console.error('Error al cargar cotización:', error)
     alert('Error al cargar la cotización para edición')
@@ -639,21 +841,17 @@ const verCotizacion = async (row: CotizacionRow) => {
       throw new Error(result.error || 'Error al cargar cotización')
     }
 
-    const segmentosInfo =
-      result.data.segmentos
-        ?.map((s, i) => `${i + 1}. ${s.tipo.toUpperCase()}: ${s.nombre}`)
-        .join('\n') || 'Sin segmentos'
-
-    alert(
-      `📋 Cotización: ${result.data.nombre}\n` +
-        `📅 Fecha: ${formatDate(result.data.created_at)}\n` +
-        `📊 Estado: ${result.data.estado}\n` +
-        `\n🎯 Segmentos (${result.data.segmentos?.length || 0}):\n${segmentosInfo}`,
-    )
+    cotizacionSeleccionada.value = result.data
+    showDetailModal.value = true
   } catch (error) {
     console.error('Error al ver cotización:', error)
     alert('Error al cargar los detalles de la cotización')
   }
+}
+
+const closeDetailModal = () => {
+  showDetailModal.value = false
+  cotizacionSeleccionada.value = null
 }
 
 const eliminarCotizacion = async (row: CotizacionRow) => {
@@ -684,6 +882,64 @@ const eliminarCotizacion = async (row: CotizacionRow) => {
   }
 }
 
+// Función auxiliar para calcular la duración del viaje en días
+const calcularDuracionViaje = (segmentos: any[]): string => {
+  if (!segmentos || segmentos.length === 0) {
+    return 'Sin fecha'
+  }
+
+  // Obtener todas las fechas de inicio y fin
+  const fechasInicio = segmentos
+    .map((s) => s.fecha_inicio)
+    .filter((f) => f)
+    .sort()
+
+  const fechasFin = segmentos
+    .map((s) => s.fecha_fin)
+    .filter((f) => f)
+    .sort()
+
+  if (fechasInicio.length === 0) {
+    return 'Sin fecha'
+  }
+
+  const fechaInicio = new Date(fechasInicio[0])
+  const fechaFin = fechasFin.length > 0 ? new Date(fechasFin[fechasFin.length - 1]) : fechaInicio
+
+  // Calcular diferencia en días
+  const diffTime = Math.abs(fechaFin.getTime() - fechaInicio.getTime())
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1 // +1 para incluir ambos días
+
+  if (diffDays === 1) {
+    return '1 día'
+  }
+
+  return `${diffDays} días`
+}
+
+// Función auxiliar para obtener el destino desde los segmentos
+const obtenerDestinoDesdeSegmentos = (segmentos: any[]): string => {
+  if (!segmentos || segmentos.length === 0) {
+    return 'Sin destino'
+  }
+
+  // Buscar el último segmento de transporte con destino
+  const segmentosTransporte = segmentos
+    .filter((s) => s.tipo === 'transporte' && s.segmento_transporte?.destino)
+    .sort((a, b) => (b.orden || 0) - (a.orden || 0))
+
+  if (segmentosTransporte.length > 0) {
+    const destino = segmentosTransporte[0].segmento_transporte.destino
+    // Extraer solo el nombre de la ciudad si tiene formato "Ciudad (COD)"
+    const match = destino.match(/^(.+?)\s*\(/)
+    return match ? match[1].trim() : destino
+  }
+
+  // Si no hay segmentos de transporte, usar el nombre del último segmento
+  const ultimoSegmento = segmentos.sort((a, b) => (b.orden || 0) - (a.orden || 0))[0]
+  return ultimoSegmento?.nombre || 'Sin destino'
+}
+
 // Función para recargar cotizaciones desde Supabase
 const recargarCotizaciones = async () => {
   try {
@@ -695,19 +951,35 @@ const recargarCotizaciones = async () => {
     }
 
     // Transformar cotizaciones a formato de tabla
-    allTableRows.value = (result.data || []).map((cot) => ({
-      id: cot.id,
-      nombre: cot.nombre,
-      viajero_id: cot.viajero_id || '',
-      cliente: 'Cliente', // TODO: Obtener del viajero
-      email: 'email@example.com', // TODO: Obtener del viajero
-      destino: 'Destino', // TODO: Calcular desde segmentos
-      duracion: '0 días', // TODO: Calcular desde segmentos
-      segmento: cot.estado || 'borrador',
-      fecha: cot.created_at,
-      presupuesto: 0, // TODO: Calcular desde segmentos
-      estado: cot.estado,
-    }))
+    allTableRows.value = (result.data || []).map((cot) => {
+      // Obtener información del cliente/viajero
+      const viajero = cot.viajero as any
+      const nombreCliente = viajero
+        ? `${viajero.nombre || ''} ${viajero.apellido || ''}`.trim() || 'Sin nombre'
+        : 'Sin cliente asignado'
+      const emailCliente = viajero?.email || 'Sin email'
+
+      // Obtener información de los segmentos
+      const segmentos = (cot.segmentos || []) as any[]
+      const destino = obtenerDestinoDesdeSegmentos(segmentos)
+      const duracion = calcularDuracionViaje(segmentos)
+      const cantidadSegmentos = segmentos.length
+
+      return {
+        id: cot.id,
+        nombre: cot.nombre,
+        viajero_id: cot.viajero_id || '',
+        cliente: nombreCliente,
+        email: emailCliente,
+        destino: destino,
+        duracion: duracion,
+        segmentos: cantidadSegmentos,
+        segmento: cot.estado || 'borrador', // Se usa para mostrar el estado
+        fecha: cot.created_at,
+        presupuesto: 0, // No hay campo de precio en los segmentos actualmente
+        estado: cot.estado,
+      }
+    })
   } catch (error) {
     console.error('Error al cargar cotizaciones:', error)
     alert('Error al cargar las cotizaciones desde la base de datos')

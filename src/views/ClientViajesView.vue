@@ -401,8 +401,8 @@ const determinarEstadoSegmento = (segmento: Segmento): 'activo' | 'inactivo' | '
 const calcularDuracionSegmento = (segmento: Segmento): string => {
   if (!segmento.fecha_inicio) return 'Sin fecha'
 
-  const inicio = new Date(segmento.fecha_inicio)
-  const fin = segmento.fecha_fin ? new Date(segmento.fecha_fin) : inicio
+  const inicio = parseLocalDate(segmento.fecha_inicio)
+  const fin = segmento.fecha_fin ? parseLocalDate(segmento.fecha_fin) : inicio
 
   const diffTime = Math.abs(fin.getTime() - inicio.getTime())
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
@@ -495,8 +495,20 @@ const cargarViajes = async () => {
 }
 
 // Funciones auxiliares
+// Parsear fecha como fecha local (evita problemas con zonas horarias)
+const parseLocalDate = (dateString: string) => {
+  const dateMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (dateMatch) {
+    const [, year, month, day] = dateMatch.map(Number)
+    return new Date(year, month - 1, day)
+  }
+  const date = new Date(dateString)
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate())
+}
+
 const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('es-ES', {
+  const date = parseLocalDate(dateString)
+  return date.toLocaleDateString('es-ES', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -508,11 +520,16 @@ const formatDateRange = (inicio: string, fin: string) => {
 }
 
 const calcularDuracion = (inicio: string, fin: string) => {
-  const inicioDate = new Date(inicio)
-  const finDate = new Date(fin)
+  const inicioDate = parseLocalDate(inicio)
+  const finDate = parseLocalDate(fin)
   const diffTime = Math.abs(finDate.getTime() - inicioDate.getTime())
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-  return `${diffDays} días`
+  const diffHours = Math.ceil(diffTime / (1000 * 60 * 60))
+
+  if (diffHours < 24) {
+    return `${diffHours} ${diffHours === 1 ? 'hora' : 'horas'}`
+  }
+
+  return `${diffHours} horas`
 }
 
 const getSegmentoClass = (estado: string) => {

@@ -181,8 +181,6 @@ export const documentosService = {
     segmentoId: string,
   ): Promise<{ clienteId: string | null; clienteNombre: string | null }> {
     try {
-      console.log('🔍 Buscando cliente para segmento:', segmentoId)
-
       // Obtener el segmento básico
       const { data: segmento, error: segmentoError } = await supabase
         .from('segmentos')
@@ -195,12 +193,8 @@ export const documentosService = {
         return { clienteId: null, clienteNombre: null }
       }
 
-      console.log('📋 Segmento encontrado:', segmento)
-
       // Si el segmento pertenece a una cotización
       if (segmento.cotizacion_id) {
-        console.log('💰 Segmento pertenece a cotización:', segmento.cotizacion_id)
-
         const { data: cotizacion, error: cotizacionError } = await supabase
           .from('cotizaciones')
           .select('viajero_id')
@@ -208,8 +202,6 @@ export const documentosService = {
           .single()
 
         if (!cotizacionError && cotizacion?.viajero_id) {
-          console.log('👤 Cotización encontrada, viajero_id:', cotizacion.viajero_id)
-
           const { data: viajero, error: viajeroError } = await supabase
             .from('viajeroz')
             .select('id, nombre, apellido')
@@ -217,7 +209,6 @@ export const documentosService = {
             .single()
 
           if (!viajeroError && viajero) {
-            console.log('✅ Cliente encontrado:', viajero)
             return {
               clienteId: viajero.id,
               clienteNombre: `${viajero.nombre} ${viajero.apellido}`,
@@ -232,8 +223,6 @@ export const documentosService = {
 
       // Si el segmento pertenece a un viaje
       if (segmento.viaje_id) {
-        console.log('✈️ Segmento pertenece a viaje:', segmento.viaje_id)
-
         const { data: viaje, error: viajeError } = await supabase
           .from('viajes')
           .select('cotizacion_id')
@@ -241,8 +230,6 @@ export const documentosService = {
           .single()
 
         if (!viajeError && viaje?.cotizacion_id) {
-          console.log('🔗 Viaje encontrado, cotizacion_id:', viaje.cotizacion_id)
-
           const { data: cotizacion, error: cotizacionError } = await supabase
             .from('cotizaciones')
             .select('viajero_id')
@@ -250,8 +237,6 @@ export const documentosService = {
             .single()
 
           if (!cotizacionError && cotizacion?.viajero_id) {
-            console.log('👤 Cotización del viaje encontrada, viajero_id:', cotizacion.viajero_id)
-
             const { data: viajero, error: viajeroError } = await supabase
               .from('viajeroz')
               .select('id, nombre, apellido')
@@ -259,7 +244,6 @@ export const documentosService = {
               .single()
 
             if (!viajeroError && viajero) {
-              console.log('✅ Cliente encontrado desde viaje:', viajero)
               return {
                 clienteId: viajero.id,
                 clienteNombre: `${viajero.nombre} ${viajero.apellido}`,
@@ -276,8 +260,6 @@ export const documentosService = {
 
         // Si el viaje no tiene cotización, buscar directamente en viaje_viajeroz
         if (!viajeError && viaje && !viaje.cotizacion_id) {
-          console.log('🔍 Viaje sin cotización, buscando en viaje_viajeroz')
-
           const { data: viajeViajero, error: viajeViajeroError } = await supabase
             .from('viaje_viajeroz')
             .select('viajero_id')
@@ -285,8 +267,6 @@ export const documentosService = {
             .single()
 
           if (!viajeViajeroError && viajeViajero?.viajero_id) {
-            console.log('👤 Viajero encontrado en viaje_viajeroz:', viajeViajero.viajero_id)
-
             const { data: viajero, error: viajeroError } = await supabase
               .from('viajeroz')
               .select('id, nombre, apellido')
@@ -294,7 +274,6 @@ export const documentosService = {
               .single()
 
             if (!viajeroError && viajero) {
-              console.log('✅ Cliente encontrado desde viaje_viajeroz:', viajero)
               return {
                 clienteId: viajero.id,
                 clienteNombre: `${viajero.nombre} ${viajero.apellido}`,
@@ -308,7 +287,6 @@ export const documentosService = {
         }
       }
 
-      console.log('⚠️ No se encontró cliente para el segmento')
       return { clienteId: null, clienteNombre: null }
     } catch (error) {
       console.warn('Error obteniendo información del cliente:', error)

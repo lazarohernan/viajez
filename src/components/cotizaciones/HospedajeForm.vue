@@ -499,7 +499,6 @@ const handleSubmit = async () => {
     if (proveedorFinal) {
       const { error } = await HotelesService.create(proveedorFinal)
       if (!error) {
-        console.log('✅ Hotel guardado exitosamente:', proveedorFinal)
         // Recargar la lista de hoteles
         await cargarHoteles()
       } else {

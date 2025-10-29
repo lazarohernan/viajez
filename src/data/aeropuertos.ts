@@ -318,7 +318,6 @@ export const aeropuertosService = {
     }))
     */
 
-    console.log('Búsqueda en API externa no implementada aún:', query)
     return []
   },
 }

@@ -85,7 +85,6 @@ export class HotelesService {
         return { data: null, error: error.message }
       }
 
-      console.log('✅ Hotel creado exitosamente:', data)
       return { data, error: null }
     } catch (err) {
       console.error('❌ Error en create hotel:', err)
