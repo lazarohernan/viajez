@@ -391,8 +391,6 @@ const handleFormSubmit = async (data: Record<string, unknown>) => {
           | 'carro_privado'
           | 'uber'
           | 'otro',
-        tiene_retorno: data.tieneRetorno !== false,
-        es_tramo_escala: (data.esTramoEscala as boolean) || false,
         origen: (data.origen as string) || '',
         destino: (data.destino as string) || '',
         codigo_reserva: (data.codigoReserva as string) || undefined,

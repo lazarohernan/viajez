@@ -94,11 +94,11 @@ export class CotizacionesService extends BaseService {
             id,
             segmento_id,
             tipo_transporte,
-            tiene_retorno,
-            es_tramo_escala,
             origen,
             destino,
             codigo_reserva,
+            tiempo_escala_minutos,
+            es_parte_escala,
             created_at,
             updated_at
           ),
@@ -162,8 +162,6 @@ export class CotizacionesService extends BaseService {
             nombre: segmentoCopia.nombre,
             original_es_array: Array.isArray(segmento.segmento_transporte),
             transformado_es_array: Array.isArray(transformado.segmento_transporte),
-            es_tramo_escala: transformado.segmento_transporte?.es_tramo_escala,
-            tiene_retorno: transformado.segmento_transporte?.tiene_retorno,
             segmento_transporte_completo: transformado.segmento_transporte,
           })
         }

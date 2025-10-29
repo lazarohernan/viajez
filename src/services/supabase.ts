@@ -100,11 +100,11 @@ export interface SegmentoTransporte {
   id: string
   segmento_id: string
   tipo_transporte: 'aereo' | 'tren' | 'bus' | 'carro_privado' | 'auto_rentado' | 'uber' | 'otro'
-  tiene_retorno: boolean
-  es_tramo_escala?: boolean
   origen?: string
   destino?: string
   codigo_reserva?: string
+  tiempo_escala_minutos?: number
+  es_parte_escala?: boolean
   created_at: string
   updated_at: string
 }

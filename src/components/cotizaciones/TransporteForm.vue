@@ -235,84 +235,6 @@
         </div>
       </div>
 
-      <!-- Tipo de vuelo (solo para aéreo) -->
-      <div v-if="formData.tipo === 'aereo'" data-field="tipoVuelo">
-        <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Vuelo</label>
-        <div class="grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            @click="seleccionarVueloDirecto"
-            class="px-4 py-3 border-2 rounded-lg transition-all"
-            :class="
-              !formData.esTramoEscala
-                ? 'border-orange-500 bg-orange-50 text-orange-700'
-                : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
-            "
-          >
-            <div class="flex flex-col items-center gap-1">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              <span class="text-sm font-medium">Vuelo Directo</span>
-              <span class="text-xs text-gray-500">Sin escalas</span>
-            </div>
-          </button>
-          <button
-            type="button"
-            @click="seleccionarTramoEscala"
-            class="px-4 py-3 border-2 rounded-lg transition-all"
-            :class="
-              formData.esTramoEscala
-                ? 'border-orange-500 bg-orange-50 text-orange-700'
-                : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
-            "
-          >
-            <div class="flex flex-col items-center gap-1">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M13 10V3L4 14h7v7l9-11h-7z"
-                />
-              </svg>
-              <span class="text-sm font-medium">Tramo de Escala</span>
-              <span class="text-xs text-gray-500">Parte de un vuelo</span>
-            </div>
-          </button>
-        </div>
-        <div
-          v-if="formData.esTramoEscala"
-          class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg"
-        >
-          <div class="flex items-start gap-2">
-            <svg
-              class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path
-                fill-rule="evenodd"
-                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                clip-rule="evenodd"
-              />
-            </svg>
-            <div class="text-xs text-blue-800">
-              <p class="font-medium">Tramo de escala seleccionado</p>
-              <p class="mt-1">
-                El tiempo de escala se calculará automáticamente si el destino de un segmento
-                coincide con el origen del siguiente.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- Origen (solo visible después de seleccionar tipo) -->
       <div v-if="formData.tipo" class="space-y-4">
         <!-- Origen -->
@@ -493,7 +415,7 @@
           <!-- Fecha de Salida -->
           <div class="relative" data-field="fechaInicial">
             <label class="block text-sm font-medium text-gray-700 mb-2">
-              Fecha de Salida/Vuelo *
+              Fecha de Salida *
             </label>
             <input
               id="fechaInicial"
@@ -716,17 +638,12 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <!-- Fecha de Llegada -->
           <div class="relative" data-field="fechaFinal">
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              <span v-if="formData.tipo === 'aereo' && formData.tieneRetorno">
-                Fecha de Regreso *
-              </span>
-              <span v-else>Fecha de Llegada *</span>
-            </label>
+            <label class="block text-sm font-medium text-gray-700 mb-2"> Fecha de Llegada * </label>
             <input
               id="fechaFinal"
               v-model="formData.fechaFinal"
               type="date"
-              :required="formData.tipo === 'aereo' && !formData.esTramoEscala"
+              :required="formData.tipo === 'aereo'"
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
               :class="{ 'border-red-500': errores.fechaFinal }"
             />
@@ -749,7 +666,7 @@
               id="horaEntrada"
               v-model="formData.horaEntrada"
               type="time"
-              :required="formData.tipo === 'aereo' && !formData.esTramoEscala"
+              :required="formData.tipo === 'aereo'"
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
               :class="{ 'border-red-500': errores.horaEntrada }"
             />
@@ -779,51 +696,6 @@
           name="codigo-reserva"
         />
         <p class="text-xs text-gray-500 mt-1">Código de confirmación de la aerolínea (opcional)</p>
-      </div>
-
-      <!-- Checkbox de Retorno (solo para transportes no aéreos) -->
-      <div
-        v-if="formData.tipo !== 'aereo'"
-        class="flex items-center gap-2 p-3 bg-orange-50 rounded-lg border border-orange-200"
-      >
-        <input
-          v-model="formData.tieneRetorno"
-          type="checkbox"
-          id="tieneRetorno"
-          class="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
-        />
-        <label for="tieneRetorno" class="text-sm font-medium text-gray-900 cursor-pointer">
-          ¿Tiene retorno? (Viaje de ida y vuelta)
-        </label>
-      </div>
-
-      <!-- Checkbox de Retorno para vuelos aéreos (solo para vuelos directos) -->
-      <div
-        v-if="formData.tipo === 'aereo' && !formData.esTramoEscala"
-        class="flex items-center gap-2 p-3 bg-orange-50 rounded-lg border border-orange-200"
-      >
-        <input
-          v-model="formData.tieneRetorno"
-          type="checkbox"
-          id="tieneRetornoAereo"
-          class="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
-        />
-        <label for="tieneRetornoAereo" class="text-sm font-medium text-gray-900 cursor-pointer">
-          ¿Es vuelo de ida y vuelta?
-        </label>
-      </div>
-
-      <!-- Duración del Segmento -->
-      <div v-if="formData.tieneRetorno">
-        <label class="block text-sm font-medium text-gray-700 mb-2">
-          Duración del Viaje (Ida y Vuelta)
-        </label>
-        <input
-          v-model="duracionCalculada"
-          type="text"
-          readonly
-          class="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-600"
-        />
       </div>
 
       <!-- Adiciones/Observaciones -->
@@ -868,8 +740,6 @@ import { AEROPUERTOS } from '@/data/aeropuertos'
 interface TransporteFormData extends Record<string, unknown> {
   tipo: string
   proveedor: string
-  tieneRetorno: boolean
-  esTramoEscala: boolean
   origen: string
   destino: string
   fechaSalida: string
@@ -904,12 +774,6 @@ const formData = ref({
     ((props.initialData?.segmento_transporte as Record<string, unknown>)?.origen as string) || '',
   destino:
     ((props.initialData?.segmento_transporte as Record<string, unknown>)?.destino as string) || '',
-  tieneRetorno:
-    ((props.initialData?.segmento_transporte as Record<string, unknown>)
-      ?.tiene_retorno as boolean) !== false,
-  esTramoEscala:
-    ((props.initialData?.segmento_transporte as Record<string, unknown>)
-      ?.es_tramo_escala as boolean) || false,
   fechaInicial: (props.initialData?.fecha_inicio as string) || '',
   fechaFinal: (props.initialData?.fecha_fin as string) || '',
   horaSalida: (props.initialData?.hora_inicio as string) || '',
@@ -976,17 +840,14 @@ watch(
       const tipo = (segmentoTransporte?.tipo_transporte as string) || ''
       const origen = (segmentoTransporte?.origen as string) || ''
       const destino = (segmentoTransporte?.destino as string) || ''
-      const tieneRetorno = (segmentoTransporte?.tiene_retorno as boolean) !== false
 
-      // console.log('📦 Datos extraídos:', { tipo, proveedor, origen, destino, tieneRetorno })
+      // console.log('📦 Datos extraídos:', { tipo, proveedor, origen, destino })
 
       formData.value = {
         tipo,
         proveedor,
         origen,
         destino,
-        tieneRetorno,
-        esTramoEscala: (segmentoTransporte?.es_tramo_escala as boolean) || false,
         fechaInicial: (newData.fecha_inicio as string) || '',
         fechaFinal: (newData.fecha_fin as string) || '',
         horaSalida: (newData.hora_inicio as string) || '',
@@ -1197,18 +1058,6 @@ const filtrarAeropuertosDestino = () => {
   // La lógica de filtrado está en el computed aeropuertosDestinoFiltrados
 }
 
-// Funciones para manejar tipo de vuelo
-const seleccionarVueloDirecto = () => {
-  formData.value.esTramoEscala = false
-  // Para vuelos directos, resetear el retorno por defecto
-  formData.value.tieneRetorno = false
-}
-
-const seleccionarTramoEscala = () => {
-  formData.value.esTramoEscala = true
-  formData.value.tieneRetorno = false
-}
-
 // Funciones de validación
 const validarFormulario = (): boolean => {
   errores.value = {}
@@ -1260,18 +1109,10 @@ const validarFormulario = (): boolean => {
     errores.value.fechaInicial = 'Debe seleccionar la fecha de salida'
   }
 
-  // Solo validar fecha de retorno si NO es tramo de escala y tiene retorno marcado
-  if (formData.value.tieneRetorno && !formData.value.esTramoEscala && !formData.value.fechaFinal) {
-    errores.value.fechaFinal = 'Debe seleccionar la fecha de regreso'
-  }
-
-  // Para tramos de escala SOLAMENTE, validar fecha de llegada (es obligatoria)
-  if (formData.value.esTramoEscala && !formData.value.fechaFinal) {
+  // Para vuelos aéreos, la fecha final es obligatoria
+  if (formData.value.tipo === 'aereo' && !formData.value.fechaFinal) {
     errores.value.fechaFinal = 'Debe seleccionar la fecha de llegada'
   }
-
-  // Para vuelos aéreos directos (sin escalas), la fecha final NO es obligatoria
-  // Solo es obligatoria si es tramo de escala o si tiene retorno marcado
 
   // Validar que la fecha de regreso sea posterior a la de salida
   if (formData.value.fechaInicial && formData.value.fechaFinal) {
@@ -1297,11 +1138,8 @@ const validarFormulario = (): boolean => {
     errores.value.horaSalida = 'Debe especificar la hora de salida'
   }
 
-  // Hora de llegada es requerida para vuelos aéreos o cuando hay retorno
-  if (
-    (formData.value.tipo === 'aereo' || formData.value.tieneRetorno) &&
-    !formData.value.horaEntrada
-  ) {
+  // Hora de llegada es requerida para vuelos aéreos
+  if (formData.value.tipo === 'aereo' && !formData.value.horaEntrada) {
     errores.value.horaEntrada = 'Debe especificar la hora de llegada'
   }
 
@@ -1337,11 +1175,6 @@ onUnmounted(() => {
 })
 
 const duracionCalculada = computed(() => {
-  // Solo calcular duración si tiene retorno
-  if (!formData.value.tieneRetorno) {
-    return 'Solo ida'
-  }
-
   if (formData.value.fechaInicial && formData.value.fechaFinal) {
     const inicio = new Date(formData.value.fechaInicial)
     const fin = new Date(formData.value.fechaFinal)

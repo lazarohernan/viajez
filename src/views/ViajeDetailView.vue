@@ -269,11 +269,26 @@
                           <span
                             v-if="
                               segmento.tipo === 'transporte' &&
-                              segmento.segmento_transporte?.tiene_retorno === false
+                              segmento.segmento_transporte?.tipo_transporte === 'aereo'
                             "
-                            class="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800"
+                            class="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800"
                           >
-                            Solo ida
+                            Vuelo
+                          </span>
+                          <span
+                            v-if="
+                              segmento.tipo === 'transporte' &&
+                              segmento.segmento_transporte &&
+                              segmento.segmento_transporte.es_parte_escala &&
+                              segmento.segmento_transporte.tiempo_escala_minutos
+                            "
+                            class="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800"
+                          >
+                            Escala ({{
+                              formatearTiempoEscala(
+                                segmento.segmento_transporte.tiempo_escala_minutos,
+                              )
+                            }})
                           </span>
                         </div>
 
@@ -831,7 +846,6 @@ const handleSegmentSubmit = async (data: Record<string, unknown>) => {
             | 'carro_privado'
             | 'uber'
             | 'otro',
-          tiene_retorno: data.tieneRetorno !== false,
           origen: (data.origen as string) || '',
           destino: (data.destino as string) || '',
         }
@@ -881,8 +895,6 @@ const handleSegmentSubmit = async (data: Record<string, unknown>) => {
             | 'carro_privado'
             | 'uber'
             | 'otro',
-          tiene_retorno: data.tieneRetorno !== false,
-          es_tramo_escala: (data.esTramoEscala as boolean) || false,
           origen: (data.origen as string) || '',
           destino: (data.destino as string) || '',
           codigo_reserva: (data.codigoReserva as string) || undefined,
@@ -1121,5 +1133,20 @@ const calcularDuracion = () => {
   } catch (error) {
     return 'N/A'
   }
+}
+
+const formatearTiempoEscala = (minutos: number): string => {
+  if (minutos < 60) {
+    return `${minutos} min`
+  }
+
+  const horas = Math.floor(minutos / 60)
+  const minsRestantes = minutos % 60
+
+  if (minsRestantes === 0) {
+    return `${horas}h`
+  }
+
+  return `${horas}h ${minsRestantes}min`
 }
 </script>

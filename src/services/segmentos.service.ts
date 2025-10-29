@@ -34,11 +34,11 @@ export interface CreateSegmentoData {
   // Datos específicos por tipo
   transporte?: {
     tipo_transporte: 'aereo' | 'tren' | 'bus' | 'carro_privado' | 'auto_rentado' | 'uber' | 'otro'
-    tiene_retorno?: boolean
-    es_tramo_escala?: boolean
     origen?: string
     destino?: string
     codigo_reserva?: string
+    tiempo_escala_minutos?: number
+    es_parte_escala?: boolean
   }
 
   hospedaje?: {
@@ -59,6 +59,29 @@ export class SegmentosService extends BaseService {
    */
   async create(data: CreateSegmentoData): Promise<ServiceResponse<SegmentoWithDetails>> {
     try {
+      // Obtener segmentos existentes para detectar escalas
+      const segmentosExistentes = await this.getSegmentosExistentes(
+        data.cotizacion_id,
+        data.viaje_id,
+      )
+
+      // Detectar si es parte de una escala
+      const { tiempoEscala, esParteEscala } = await this.detectarYCalcularEscala(
+        data,
+        segmentosExistentes,
+      )
+
+      // Si es parte de escala, actualizar los datos
+      if (esParteEscala && data.transporte) {
+        data.transporte.tiempo_escala_minutos = tiempoEscala
+        data.transporte.es_parte_escala = true
+
+        // Actualizar el segmento anterior para marcar que tiene escala
+        await this.marcarSegmentoAnteriorConEscala(segmentosExistentes, tiempoEscala || 0)
+
+        console.log(`🛫 Escala detectada: ${tiempoEscala} minutos`)
+      }
+
       // Si se marca como último, validar que todos los segmentos estén en orden
       if (data.es_ultimo) {
         await this.validarOrdenSegmentos(data.cotizacion_id, data.viaje_id, data.orden)
@@ -199,11 +222,11 @@ export class SegmentosService extends BaseService {
             id,
             segmento_id,
             tipo_transporte,
-            tiene_retorno,
-            es_tramo_escala,
             origen,
             destino,
             codigo_reserva,
+            tiempo_escala_minutos,
+            es_parte_escala,
             created_at,
             updated_at
           ),
@@ -295,11 +318,11 @@ export class SegmentosService extends BaseService {
             id,
             segmento_id,
             tipo_transporte,
-            tiene_retorno,
-            es_tramo_escala,
             origen,
             destino,
             codigo_reserva,
+            tiempo_escala_minutos,
+            es_parte_escala,
             created_at,
             updated_at
           ),
@@ -398,11 +421,11 @@ export class SegmentosService extends BaseService {
             id,
             segmento_id,
             tipo_transporte,
-            tiene_retorno,
-            es_tramo_escala,
             origen,
             destino,
             codigo_reserva,
+            tiempo_escala_minutos,
+            es_parte_escala,
             created_at,
             updated_at
           ),
@@ -775,7 +798,6 @@ export class SegmentosService extends BaseService {
       if (originalSegmento.tipo === 'transporte' && originalSegmento.segmento_transporte) {
         newSegmentoData.transporte = {
           tipo_transporte: originalSegmento.segmento_transporte.tipo_transporte,
-          tiene_retorno: originalSegmento.segmento_transporte.tiene_retorno,
           origen: originalSegmento.segmento_transporte.origen,
           destino: originalSegmento.segmento_transporte.destino,
         }
@@ -873,6 +895,160 @@ export class SegmentosService extends BaseService {
     } catch (error) {
       console.error('Error validando orden de segmentos:', error)
     }
+  }
+
+  /**
+   * Detectar si un nuevo segmento forma parte de una escala y calcular el tiempo
+   */
+  async detectarYCalcularEscala(
+    nuevoSegmento: CreateSegmentoData,
+    segmentosExistentes: Segmento[],
+  ): Promise<{ tiempoEscala?: number; esParteEscala: boolean }> {
+    try {
+      // Solo aplicar para vuelos aéreos
+      if (
+        nuevoSegmento.tipo !== 'transporte' ||
+        nuevoSegmento.transporte?.tipo_transporte !== 'aereo'
+      ) {
+        return { esParteEscala: false }
+      }
+
+      // Buscar el último segmento de transporte aéreo
+      const ultimoSegmentoAereo = segmentosExistentes
+        .filter(
+          (s) => s.tipo === 'transporte' && s.segmento_transporte?.tipo_transporte === 'aereo',
+        )
+        .sort((a, b) => b.orden - a.orden)[0]
+
+      if (!ultimoSegmentoAereo?.segmento_transporte) {
+        return { esParteEscala: false }
+      }
+
+      // Verificar si el origen del nuevo segmento coincide con el destino del anterior
+      const origenNuevo = nuevoSegmento.transporte?.origen?.toLowerCase().trim()
+      const destinoAnterior = ultimoSegmentoAereo.segmento_transporte.destino?.toLowerCase().trim()
+
+      if (origenNuevo && destinoAnterior && origenNuevo === destinoAnterior) {
+        // Calcular tiempo de escala
+        const tiempoEscala = this.calcularTiempoEscala(ultimoSegmentoAereo, nuevoSegmento)
+
+        return {
+          tiempoEscala,
+          esParteEscala: true,
+        }
+      }
+
+      return { esParteEscala: false }
+    } catch (error) {
+      console.error('Error detectando escala:', error)
+      return { esParteEscala: false }
+    }
+  }
+
+  /**
+   * Calcular el tiempo de escala entre dos segmentos
+   */
+  private calcularTiempoEscala(
+    segmentoAnterior: Segmento,
+    segmentoNuevo: CreateSegmentoData,
+  ): number {
+    try {
+      const fechaHoraLlegadaAnterior = new Date(
+        `${segmentoAnterior.fecha_fin}T${segmentoAnterior.hora_fin}`,
+      )
+
+      const fechaHoraSalidaNuevo = new Date(
+        `${segmentoNuevo.fecha_inicio}T${segmentoNuevo.hora_inicio}`,
+      )
+
+      const diffMs = fechaHoraSalidaNuevo.getTime() - fechaHoraLlegadaAnterior.getTime()
+      return Math.round(diffMs / (1000 * 60)) // Convertir a minutos
+    } catch (error) {
+      console.error('Error calculando tiempo de escala:', error)
+      return 0
+    }
+  }
+
+  /**
+   * Obtener segmentos existentes para detectar escalas
+   */
+  private async getSegmentosExistentes(
+    cotizacionId?: string,
+    viajeId?: string,
+  ): Promise<Segmento[]> {
+    try {
+      const { data, error } = await supabase
+        .from('segmentos')
+        .select(
+          `
+          *,
+          segmento_transporte (*),
+          segmento_hospedaje (*),
+          segmento_actividad (*)
+        `,
+        )
+        .eq(cotizacionId ? 'cotizacion_id' : 'viaje_id', cotizacionId || viajeId!)
+        .order('orden', { ascending: true })
+
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      console.error('Error obteniendo segmentos existentes:', error)
+      return []
+    }
+  }
+
+  /**
+   * Marcar el segmento anterior como que tiene escala
+   */
+  private async marcarSegmentoAnteriorConEscala(
+    segmentosExistentes: Segmento[],
+    tiempoEscala: number,
+  ): Promise<void> {
+    try {
+      const ultimoSegmentoAereo = segmentosExistentes
+        .filter(
+          (s) => s.tipo === 'transporte' && s.segmento_transporte?.tipo_transporte === 'aereo',
+        )
+        .sort((a, b) => b.orden - a.orden)[0]
+
+      if (ultimoSegmentoAereo?.segmento_transporte?.id) {
+        await supabase
+          .from('segmento_transporte')
+          .update({
+            tiempo_escala_minutos: tiempoEscala,
+            es_parte_escala: true,
+          })
+          .eq('id', ultimoSegmentoAereo.segmento_transporte.id)
+      }
+    } catch (error) {
+      console.error('Error marcando segmento anterior con escala:', error)
+    }
+  }
+
+  /**
+   * Formatear tiempo de escala para mostrar en la UI
+   */
+  formatearTiempoEscala(minutos: number): string {
+    if (minutos < 60) {
+      return `${minutos} min`
+    }
+
+    const horas = Math.floor(minutos / 60)
+    const minsRestantes = minutos % 60
+
+    if (minsRestantes === 0) {
+      return `${horas}h`
+    }
+
+    return `${horas}h ${minsRestantes}min`
+  }
+
+  /**
+   * Validar tiempo de escala mínimo
+   */
+  validarTiempoEscala(minutos: number): boolean {
+    return minutos >= 30 // Mínimo 30 minutos entre vuelos
   }
 }
 
