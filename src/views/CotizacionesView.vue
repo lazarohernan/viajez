@@ -564,8 +564,18 @@ const handleFormSubmit = async (data: Record<string, unknown>) => {
     // - Si no hay segmentos, el nuevo es el primero Y el último
     // - Si ya hay segmentos, el nuevo es solo el último (no el primero)
     // - Al editar, mantener los valores actuales
-    const esPrimerSegmento = !editandoSegmento.value && totalSegmentos === 0
-    const esUltimoSegmento = !editandoSegmento.value // Siempre el nuevo segmento es el último
+    let esPrimerSegmento: boolean
+    let esUltimoSegmento: boolean
+
+    if (editandoSegmento.value) {
+      // Al editar, mantener los valores actuales
+      esPrimerSegmento = editandoSegmento.value.es_primero || false
+      esUltimoSegmento = editandoSegmento.value.es_ultimo || false
+    } else {
+      // Al crear nuevo segmento
+      esPrimerSegmento = totalSegmentos === 0
+      esUltimoSegmento = true // El nuevo segmento siempre es el último
+    }
 
     // Preparar datos del segmento
     const segmentoData = {
