@@ -414,9 +414,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <!-- Fecha de Salida -->
           <div class="relative" data-field="fechaInicial">
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              Fecha de Salida *
-            </label>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Fecha de Salida *</label>
             <input
               id="fechaInicial"
               v-model="formData.fechaInicial"
@@ -638,7 +636,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <!-- Fecha de Llegada -->
           <div class="relative" data-field="fechaFinal">
-            <label class="block text-sm font-medium text-gray-700 mb-2"> Fecha de Llegada * </label>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Fecha de Llegada *</label>
             <input
               id="fechaFinal"
               v-model="formData.fechaFinal"
@@ -1114,16 +1112,16 @@ const validarFormulario = (): boolean => {
     errores.value.fechaFinal = 'Debe seleccionar la fecha de llegada'
   }
 
-  // Validar que la fecha de regreso sea posterior a la de salida
+  // Validar que la fecha de llegada sea posterior a la de salida
   if (formData.value.fechaInicial && formData.value.fechaFinal) {
     const fechaSalida = new Date(formData.value.fechaInicial)
-    const fechaRegreso = new Date(formData.value.fechaFinal)
-    if (fechaRegreso <= fechaSalida) {
-      errores.value.fechaFinal = 'La fecha de regreso debe ser posterior a la fecha de salida'
+    const fechaLlegada = new Date(formData.value.fechaFinal)
+    if (fechaLlegada < fechaSalida) {
+      errores.value.fechaFinal = 'La fecha de llegada debe ser posterior a la fecha de salida'
     }
   }
 
-  // Validar que la fecha de llegada no sea anterior a la de salida (vuelos sin retorno)
+  // Validar que la fecha de llegada no sea anterior a la de salida
   // COMENTADO: Se removió esta validación para permitir fechas de mismo día
   // if (formData.value.fechaInicial && !formData.value.tieneRetorno && formData.value.fechaFinal) {
   //   const fechaSalida = new Date(formData.value.fechaInicial)

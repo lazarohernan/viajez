@@ -833,26 +833,36 @@ export class SegmentosService extends BaseService {
     try {
       // Desmarcar otros segmentos primeros
       if (esPrimero) {
-        const query = supabase
+        let query = supabase
           .from('segmentos')
           .update({ es_primero: false })
           .eq('es_primero', true)
 
         if (cotizacionId) {
-          await query.eq('cotizacion_id', cotizacionId)
+          query = query.eq('cotizacion_id', cotizacionId)
         } else {
-          await query.eq('viaje_id', viajeId!)
+          query = query.eq('viaje_id', viajeId!)
+        }
+
+        const { error } = await query
+        if (error) {
+          console.error('Error desmarcando segmentos primeros:', error)
         }
       }
 
       // Desmarcar otros segmentos últimos
       if (esUltimo) {
-        const query = supabase.from('segmentos').update({ es_ultimo: false }).eq('es_ultimo', true)
+        let query = supabase.from('segmentos').update({ es_ultimo: false }).eq('es_ultimo', true)
 
         if (cotizacionId) {
-          await query.eq('cotizacion_id', cotizacionId)
+          query = query.eq('cotizacion_id', cotizacionId)
         } else {
-          await query.eq('viaje_id', viajeId!)
+          query = query.eq('viaje_id', viajeId!)
+        }
+
+        const { error } = await query
+        if (error) {
+          console.error('Error desmarcando segmentos últimos:', error)
         }
       }
     } catch (error) {

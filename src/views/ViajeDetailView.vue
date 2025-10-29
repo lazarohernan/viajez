@@ -789,15 +789,19 @@ const handleSegmentSubmit = async (data: Record<string, unknown>) => {
     // console.log('💾 Guardando segmento:', { tipo: selectedSegmentType.value, editando: !!editingSegment.value, data })
 
     // Calcular si es primer o último segmento
-    const esPrimerSegmento = !editingSegment.value && segmentos.value.length === 0
-    const esUltimoSegmento = !editingSegment.value && segmentos.value.length > 0
-    const nuevoOrden = editingSegment.value
-      ? editingSegment.value.orden
-      : segmentos.value.length + 1
+    const totalSegmentos = segmentos.value.length
+    const nuevoOrden = editingSegment.value ? editingSegment.value.orden : totalSegmentos + 1
+
+    // Lógica corregida:
+    // - Si no hay segmentos, el nuevo es el primero Y el último
+    // - Si ya hay segmentos, el nuevo es solo el último (no el primero)
+    // - Al editar, mantener los valores actuales
+    const esPrimerSegmento = !editingSegment.value && totalSegmentos === 0
+    const esUltimoSegmento = !editingSegment.value // Siempre el nuevo segmento es el último
 
     console.log('🔍 Debug segmento:', {
       editingSegment: !!editingSegment.value,
-      segmentosLength: segmentos.value.length,
+      totalSegmentos,
       esPrimerSegmento,
       esUltimoSegmento,
       nuevoOrden,
@@ -824,7 +828,7 @@ const handleSegmentSubmit = async (data: Record<string, unknown>) => {
       observaciones: (data.observaciones as string) || '',
       orden: nuevoOrden,
       es_primero: esPrimerSegmento,
-      es_ultimo: esPrimerSegmento || esUltimoSegmento,
+      es_ultimo: esUltimoSegmento,
       viaje_id: viajeId.value,
     }
 
@@ -930,16 +934,7 @@ const handleSegmentSubmit = async (data: Record<string, unknown>) => {
         throw new Error(result.error)
       }
 
-      // Si es un nuevo segmento que se convierte en último, actualizar el anterior
-      if (esUltimoSegmento && segmentos.value.length > 0) {
-        const segmentoAnterior = segmentos.value.find((s) => s.es_ultimo)
-        if (segmentoAnterior) {
-          await segmentosService.update(segmentoAnterior.id, {
-            es_ultimo: false,
-          })
-        }
-      }
-
+      // El servicio ya actualiza automáticamente los marcadores de otros segmentos
       // console.log('✅ Segmento creado:', result.data)
       alert('Segmento agregado al viaje correctamente')
     }

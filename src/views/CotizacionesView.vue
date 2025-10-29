@@ -335,15 +335,19 @@ const handleFormSubmit = async (data: Record<string, unknown>) => {
     }
 
     // Calcular si es primer o último segmento
-    const esPrimerSegmento = !editandoSegmento.value && segmentosAgregados.value.length === 0
-    const esUltimoSegmento = !editandoSegmento.value && segmentosAgregados.value.length > 0
-    const nuevoOrden = editandoSegmento.value
-      ? editandoSegmento.value.orden
-      : segmentosAgregados.value.length + 1
+    const totalSegmentos = segmentosAgregados.value.length
+    const nuevoOrden = editandoSegmento.value ? editandoSegmento.value.orden : totalSegmentos + 1
+
+    // Lógica corregida:
+    // - Si no hay segmentos, el nuevo es el primero Y el último
+    // - Si ya hay segmentos, el nuevo es solo el último (no el primero)
+    // - Al editar, mantener los valores actuales
+    const esPrimerSegmento = !editandoSegmento.value && totalSegmentos === 0
+    const esUltimoSegmento = !editandoSegmento.value // Siempre el nuevo segmento es el último
 
     console.log('🔍 Debug segmento cotización:', {
       editandoSegmento: !!editandoSegmento.value,
-      segmentosLength: segmentosAgregados.value.length,
+      totalSegmentos,
       esPrimerSegmento,
       esUltimoSegmento,
       nuevoOrden,
@@ -370,7 +374,7 @@ const handleFormSubmit = async (data: Record<string, unknown>) => {
       observaciones: (data.observaciones as string) || '',
       orden: nuevoOrden,
       es_primero: esPrimerSegmento,
-      es_ultimo: esPrimerSegmento || esUltimoSegmento,
+      es_ultimo: esUltimoSegmento,
       cotizacion_id: cotizacionActual.value.id,
     }
 
@@ -443,16 +447,7 @@ const handleFormSubmit = async (data: Record<string, unknown>) => {
         throw new Error(result.error || 'Error al crear segmento')
       }
 
-      // Si es un nuevo segmento que se convierte en último, actualizar el anterior
-      if (esUltimoSegmento && segmentosAgregados.value.length > 0) {
-        const segmentoAnterior = segmentosAgregados.value.find((s) => s.es_ultimo)
-        if (segmentoAnterior) {
-          await segmentosService.update(segmentoAnterior.id, {
-            es_ultimo: false,
-          })
-        }
-      }
-
+      // El servicio ya actualiza automáticamente los marcadores de otros segmentos
       segmentosAgregados.value.push(result.data as Segmento)
       // console.log('✅ Segmento creado:', result.data)
       alert('Segmento agregado. Puedes agregar más o guardar la cotización completa.')
