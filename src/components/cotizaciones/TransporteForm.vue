@@ -1112,14 +1112,9 @@ const validarFormulario = (): boolean => {
     errores.value.fechaFinal = 'Debe seleccionar la fecha de llegada'
   }
 
-  // Validar que la fecha de llegada sea posterior a la de salida
-  if (formData.value.fechaInicial && formData.value.fechaFinal) {
-    const fechaSalida = new Date(formData.value.fechaInicial)
-    const fechaLlegada = new Date(formData.value.fechaFinal)
-    if (fechaLlegada < fechaSalida) {
-      errores.value.fechaFinal = 'La fecha de llegada debe ser posterior a la fecha de salida'
-    }
-  }
+  // VALIDACIÓN REMOVIDA: Permitir que la fecha de llegada sea el mismo día o incluso anterior
+  // Esto es útil para vuelos que salen de noche y llegan temprano al día siguiente
+  // o vuelos que salen y llegan el mismo día
 
   // Validar que la fecha de llegada no sea anterior a la de salida
   // COMENTADO: Se removió esta validación para permitir fechas de mismo día
