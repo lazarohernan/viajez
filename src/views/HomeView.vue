@@ -42,6 +42,54 @@ const closeLoginModal = () => {
   loginError.value = ''
 }
 
+// Formatear identidad hondureña (DNI: XXXX-XXXX-XXXXX o RTN: XXXX-XXXX-XXXXXX)
+const formatIdentidad = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  let value = target.value
+
+  // Remover todos los caracteres que no sean números
+  value = value.replace(/\D/g, '')
+
+  // Limitar a 14 dígitos máximo (RTN)
+  if (value.length > 14) {
+    value = value.substring(0, 14)
+  }
+
+  // Aplicar formato según la cantidad de dígitos
+  if (value.length > 0) {
+    if (value.length <= 13) {
+      // Formato DNI: XXXX-XXXX-XXXXX
+      if (value.length <= 4) {
+        // Primer grupo: XXXX
+        value = value
+      } else if (value.length <= 8) {
+        // Segundo grupo: XXXX-XXXX
+        value = value.substring(0, 4) + '-' + value.substring(4)
+      } else {
+        // Tercer grupo: XXXX-XXXX-XXXXX
+        value = value.substring(0, 4) + '-' + value.substring(4, 8) + '-' + value.substring(8)
+      }
+    } else {
+      // Formato RTN: XXXX-XXXX-XXXXXX (14 dígitos con dos guiones)
+      if (value.length <= 4) {
+        // Primer grupo: XXXX
+        value = value
+      } else if (value.length <= 8) {
+        // Segundo grupo: XXXX-XXXX
+        value = value.substring(0, 4) + '-' + value.substring(4)
+      } else {
+        // Tercer grupo: XXXX-XXXX-XXXXXX
+        value = value.substring(0, 4) + '-' + value.substring(4, 8) + '-' + value.substring(8)
+      }
+    }
+  }
+
+  // Actualizar el valor del formulario
+  loginForm.identidad = value
+
+  // Ajustar la posición del cursor si es necesario
+}
+
 // Login del viajero
 const loginViajero = async () => {
   // Reset errors
@@ -50,6 +98,13 @@ const loginViajero = async () => {
   // Validate DNI
   if (!loginForm.identidad.trim()) {
     loginError.value = 'El DNI es obligatorio'
+    return
+  }
+
+  // Validar formato de identidad hondureña
+  const identidadRegex = /^(\d{4}-\d{4}-\d{5}|\d{4}-\d{4}-\d{6})$/
+  if (!identidadRegex.test(loginForm.identidad)) {
+    loginError.value = 'El DNI debe tener el formato XXXX-XXXX-XXXXX o RTN XXXX-XXXX-XXXXXX'
     return
   }
 
@@ -268,10 +323,11 @@ const goToAdmin = () => {
               v-model="loginForm.identidad"
               type="text"
               required
-              maxlength="13"
+              maxlength="17"
               class="w-full px-4 py-3 text-lg border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
-              placeholder="Número de identidad"
+              placeholder="Ej: 0615-1963-00365"
               :disabled="isLoading"
+              @input="formatIdentidad"
             />
           </div>
 

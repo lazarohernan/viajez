@@ -135,7 +135,7 @@ export class ViajerosService extends BaseService {
       // Si se deben crear credenciales, crear usuario en Supabase Auth
       if (data.crear_credenciales && viajero && data.email && data.password) {
         try {
-          // Intentar usar función RPC para crear usuario
+          // Intentar usar función RPC para crear usuario (sistema simplificado)
           const { data: rpcResult, error: rpcError } = await supabase.rpc('create_viajero_user', {
             user_email: data.email,
             user_password: data.password,
@@ -308,14 +308,31 @@ export class ViajerosService extends BaseService {
   }
 
   /**
-   * Eliminar viajero
+   * Eliminar viajero con eliminación en cascada usando función RPC (sistema simplificado)
    */
   async delete(id: string): Promise<ServiceResponse<boolean>> {
     try {
-      const { error } = await supabase.from('viajeroz').delete().eq('id', id)
+      // Usar función RPC para eliminación en cascada (sistema simplificado)
+      const { data: rpcResult, error: rpcError } = await supabase.rpc('delete_viajero_cascade', {
+        viajero_id_param: id,
+      })
 
-      if (error) this.handleError(error)
+      if (rpcError) {
+        console.error('Error en RPC delete_viajero_cascade:', rpcError)
+        this.handleError(rpcError)
+        return { data: false, error: 'Error eliminando viajero' }
+      }
 
+      // Verificar resultado de la función
+      if (!rpcResult || !rpcResult.success) {
+        console.error('Error en función RPC:', rpcResult?.error)
+        return {
+          data: false,
+          error: rpcResult?.error || 'Error eliminando viajero',
+        }
+      }
+
+      console.log('✅ Viajero eliminado exitosamente:', rpcResult.message)
       return { data: true, error: null }
     } catch (error) {
       return {
@@ -448,7 +465,7 @@ export class ViajerosService extends BaseService {
         }
       }
 
-      // Usar función RPC para resetear contraseña
+      // Usar función RPC para resetear contraseña (sistema simplificado)
       const { data: rpcResult, error: rpcError } = await supabase.rpc('reset_viajero_password', {
         viajero_id_param: viajeroId,
         new_password: newPassword,

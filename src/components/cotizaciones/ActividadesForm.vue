@@ -159,9 +159,11 @@ interface ActividadFormData extends Record<string, unknown> {
   observaciones: string
 }
 
-// Props para recibir datos iniciales al editar
+// Props para recibir datos iniciales al editar y fechas del viaje/cotización
 const props = defineProps<{
   initialData?: Record<string, unknown> | null
+  fechaInicioViaje?: string | null // Fecha de inicio del viaje/cotización para validación
+  fechaFinViaje?: string | null // Fecha de fin del viaje/cotización para validación
 }>()
 
 const emit = defineEmits<{
@@ -240,6 +242,81 @@ const duracionHorasCalculada = computed(() => {
 })
 
 const handleSubmit = () => {
+  // Validar fechas del segmento contra fechas del viaje/cotización
+  const erroresFecha: Record<string, string> = {}
+
+  // Validar si tenemos ambas fechas del viaje/cotización
+  if (props.fechaInicioViaje && props.fechaFinViaje) {
+    const fechaInicioViaje = new Date(props.fechaInicioViaje + 'T00:00:00')
+    const fechaFinViaje = new Date(props.fechaFinViaje + 'T23:59:59')
+
+    // Validar fecha inicial
+    if (formData.value.fechaInicial) {
+      const fechaInicialSegmento = new Date(formData.value.fechaInicial + 'T00:00:00')
+
+      if (fechaInicialSegmento < fechaInicioViaje) {
+        erroresFecha.fechaInicial = `La fecha inicial no puede ser anterior al inicio del viaje (${props.fechaInicioViaje})`
+      } else if (fechaInicialSegmento > fechaFinViaje) {
+        erroresFecha.fechaInicial = `La fecha inicial no puede ser posterior al fin del viaje (${props.fechaFinViaje})`
+      }
+    }
+
+    // Validar fecha final
+    if (formData.value.fechaFinal) {
+      const fechaFinalSegmento = new Date(formData.value.fechaFinal + 'T23:59:59')
+
+      if (fechaFinalSegmento < fechaInicioViaje) {
+        erroresFecha.fechaFinal = `La fecha final no puede ser anterior al inicio del viaje (${props.fechaInicioViaje})`
+      } else if (fechaFinalSegmento > fechaFinViaje) {
+        erroresFecha.fechaFinal = `La fecha final no puede ser posterior al fin del viaje (${props.fechaFinViaje})`
+      }
+    }
+  } else {
+    // Si solo tenemos una fecha límite, validar individualmente
+    if (props.fechaInicioViaje && formData.value.fechaInicial) {
+      const fechaInicioViaje = new Date(props.fechaInicioViaje + 'T00:00:00')
+      const fechaInicialSegmento = new Date(formData.value.fechaInicial + 'T00:00:00')
+
+      if (fechaInicialSegmento < fechaInicioViaje) {
+        erroresFecha.fechaInicial = `La fecha inicial no puede ser anterior al inicio del viaje (${props.fechaInicioViaje})`
+      }
+    }
+
+    if (props.fechaFinViaje && formData.value.fechaInicial) {
+      const fechaFinViaje = new Date(props.fechaFinViaje + 'T23:59:59')
+      const fechaInicialSegmento = new Date(formData.value.fechaInicial + 'T00:00:00')
+
+      if (fechaInicialSegmento > fechaFinViaje) {
+        erroresFecha.fechaInicial = `La fecha inicial no puede ser posterior al fin del viaje (${props.fechaFinViaje})`
+      }
+    }
+
+    if (props.fechaInicioViaje && formData.value.fechaFinal) {
+      const fechaInicioViaje = new Date(props.fechaInicioViaje + 'T00:00:00')
+      const fechaFinalSegmento = new Date(formData.value.fechaFinal + 'T23:59:59')
+
+      if (fechaFinalSegmento < fechaInicioViaje) {
+        erroresFecha.fechaFinal = `La fecha final no puede ser anterior al inicio del viaje (${props.fechaInicioViaje})`
+      }
+    }
+
+    if (props.fechaFinViaje && formData.value.fechaFinal) {
+      const fechaFinViaje = new Date(props.fechaFinViaje + 'T23:59:59')
+      const fechaFinalSegmento = new Date(formData.value.fechaFinal + 'T23:59:59')
+
+      if (fechaFinalSegmento > fechaFinViaje) {
+        erroresFecha.fechaFinal = `La fecha final no puede ser posterior al fin del viaje (${props.fechaFinViaje})`
+      }
+    }
+  }
+
+  // Si hay errores de fecha, mostrar alerta y no enviar
+  if (Object.keys(erroresFecha).length > 0) {
+    const mensajes = Object.values(erroresFecha).join('\n')
+    alert(`Error de validación:\n\n${mensajes}`)
+    return
+  }
+
   emit('submit', {
     ...formData.value,
     fechaEntrada: formData.value.fechaInicial,

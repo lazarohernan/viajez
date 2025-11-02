@@ -33,6 +33,7 @@
           <option value="">Seleccione un tipo</option>
           <option value="hotel">Hotel</option>
           <option value="renta_privada">Renta Privada</option>
+          <option value="airbnb">Airbnb</option>
           <option value="otro">Otro</option>
         </select>
       </div>
@@ -275,9 +276,11 @@ interface HospedajeFormData extends Record<string, unknown> {
   observaciones: string
 }
 
-// Props para recibir datos iniciales al editar
+// Props para recibir datos iniciales al editar y fechas del viaje/cotización
 const props = defineProps<{
   initialData?: Record<string, unknown> | null
+  fechaInicioViaje?: string | null // Fecha de inicio del viaje/cotización para validación
+  fechaFinViaje?: string | null // Fecha de fin del viaje/cotización para validación
 }>()
 
 const emit = defineEmits<{
@@ -402,7 +405,9 @@ const seleccionarHotelPersonalizado = () => {
 const getPlaceholderForProvider = (): string => {
   switch (formData.value.tipo) {
     case 'renta_privada':
-      return 'Ej: Airbnb, Booking.com, HomeAway...'
+      return 'Ej: Booking.com, HomeAway, VRBO...'
+    case 'airbnb':
+      return 'Ej: Airbnb - Nombre del alojamiento...'
     case 'otro':
       return 'Ej: Hostal, Posada, Camping...'
     default:
@@ -488,6 +493,81 @@ const duracionCalculada = computed(() => {
 })
 
 const handleSubmit = async () => {
+  // Validar fechas del segmento contra fechas del viaje/cotización
+  const erroresFecha: Record<string, string> = {}
+
+  // Validar si tenemos ambas fechas del viaje/cotización
+  if (props.fechaInicioViaje && props.fechaFinViaje) {
+    const fechaInicioViaje = new Date(props.fechaInicioViaje + 'T00:00:00')
+    const fechaFinViaje = new Date(props.fechaFinViaje + 'T23:59:59')
+
+    // Validar fecha de entrada
+    if (formData.value.fechaEntrada) {
+      const fechaEntradaSegmento = new Date(formData.value.fechaEntrada + 'T00:00:00')
+
+      if (fechaEntradaSegmento < fechaInicioViaje) {
+        erroresFecha.fechaEntrada = `La fecha de entrada no puede ser anterior al inicio del viaje (${props.fechaInicioViaje})`
+      } else if (fechaEntradaSegmento > fechaFinViaje) {
+        erroresFecha.fechaEntrada = `La fecha de entrada no puede ser posterior al fin del viaje (${props.fechaFinViaje})`
+      }
+    }
+
+    // Validar fecha de salida
+    if (formData.value.fechaSalida) {
+      const fechaSalidaSegmento = new Date(formData.value.fechaSalida + 'T23:59:59')
+
+      if (fechaSalidaSegmento < fechaInicioViaje) {
+        erroresFecha.fechaSalida = `La fecha de salida no puede ser anterior al inicio del viaje (${props.fechaInicioViaje})`
+      } else if (fechaSalidaSegmento > fechaFinViaje) {
+        erroresFecha.fechaSalida = `La fecha de salida no puede ser posterior al fin del viaje (${props.fechaFinViaje})`
+      }
+    }
+  } else {
+    // Si solo tenemos una fecha límite, validar individualmente
+    if (props.fechaInicioViaje && formData.value.fechaEntrada) {
+      const fechaInicioViaje = new Date(props.fechaInicioViaje + 'T00:00:00')
+      const fechaEntradaSegmento = new Date(formData.value.fechaEntrada + 'T00:00:00')
+
+      if (fechaEntradaSegmento < fechaInicioViaje) {
+        erroresFecha.fechaEntrada = `La fecha de entrada no puede ser anterior al inicio del viaje (${props.fechaInicioViaje})`
+      }
+    }
+
+    if (props.fechaFinViaje && formData.value.fechaEntrada) {
+      const fechaFinViaje = new Date(props.fechaFinViaje + 'T23:59:59')
+      const fechaEntradaSegmento = new Date(formData.value.fechaEntrada + 'T00:00:00')
+
+      if (fechaEntradaSegmento > fechaFinViaje) {
+        erroresFecha.fechaEntrada = `La fecha de entrada no puede ser posterior al fin del viaje (${props.fechaFinViaje})`
+      }
+    }
+
+    if (props.fechaInicioViaje && formData.value.fechaSalida) {
+      const fechaInicioViaje = new Date(props.fechaInicioViaje + 'T00:00:00')
+      const fechaSalidaSegmento = new Date(formData.value.fechaSalida + 'T23:59:59')
+
+      if (fechaSalidaSegmento < fechaInicioViaje) {
+        erroresFecha.fechaSalida = `La fecha de salida no puede ser anterior al inicio del viaje (${props.fechaInicioViaje})`
+      }
+    }
+
+    if (props.fechaFinViaje && formData.value.fechaSalida) {
+      const fechaFinViaje = new Date(props.fechaFinViaje + 'T23:59:59')
+      const fechaSalidaSegmento = new Date(formData.value.fechaSalida + 'T23:59:59')
+
+      if (fechaSalidaSegmento > fechaFinViaje) {
+        erroresFecha.fechaSalida = `La fecha de salida no puede ser posterior al fin del viaje (${props.fechaFinViaje})`
+      }
+    }
+  }
+
+  // Si hay errores de fecha, mostrar alerta y no enviar
+  if (Object.keys(erroresFecha).length > 0) {
+    const mensajes = Object.values(erroresFecha).join('\n')
+    alert(`Error de validación:\n\n${mensajes}`)
+    return
+  }
+
   // Determinar el proveedor final
   let proveedorFinal = formData.value.proveedor
 

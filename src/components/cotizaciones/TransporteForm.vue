@@ -35,8 +35,8 @@
         </svg>
         <span class="font-medium">Por favor, corrige los siguientes errores:</span>
       </div>
-      <ul class="mt-2 text-sm text-red-700 list-disc list-inside">
-        <li v-for="(error, campo) in errores" :key="campo">{{ error }}</li>
+      <ul class="mt-2 text-sm text-red-700 list-disc list-inside space-y-1">
+        <li v-for="(error, campo) in erroresFiltrados" :key="campo">{{ error }}</li>
       </ul>
     </div>
 
@@ -291,7 +291,9 @@
                     spellcheck="false"
                     data-lpignore="true"
                     data-form-type="other"
-                    name="search-origen"
+                    data-1p-ignore="true"
+                    data-bwignore="true"
+                    :name="`search-origen-${Math.random()}`"
                     readonly
                     onfocus="this.removeAttribute('readonly');"
                   />
@@ -358,24 +360,82 @@
               </div>
             </div>
 
-            <!-- Campo adicional para ubicación personalizada -->
-            <div v-if="origenSeleccionado === 'personalizado'" class="mt-2">
-              <input
-                v-model="origenPersonalizado"
-                type="text"
-                placeholder=""
-                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                :class="errores.origen ? 'border-red-500' : 'border-gray-300'"
-                required
-                @input="limpiarErrores"
-                autocomplete="off"
-                autocapitalize="off"
-                autocorrect="off"
-                spellcheck="false"
-                data-lpignore="true"
-                data-form-type="other"
-                name="origen-personalizado"
-              />
+            <!-- Formulario para agregar nuevo aeropuerto -->
+            <div
+              v-if="origenSeleccionado === 'personalizado'"
+              class="mt-2 space-y-3 p-4 bg-orange-50 border border-orange-200 rounded-lg"
+            >
+              <p class="text-sm font-medium text-orange-900 mb-2">Agregar nuevo aeropuerto</p>
+
+              <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Ciudad *</label>
+                <input
+                  v-model="nuevoAeropuertoOrigen.ciudad"
+                  type="text"
+                  placeholder="Ej: San Pedro Sula"
+                  class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                  :class="errores.origenCiudad ? 'border-red-500' : 'border-gray-300'"
+                  @input="limpiarErrores"
+                  autocomplete="off"
+                />
+                <div v-if="errores.origenCiudad" class="mt-1 text-xs text-red-600">
+                  {{ errores.origenCiudad }}
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">
+                  Nombre del Aeropuerto *
+                </label>
+                <input
+                  v-model="nuevoAeropuertoOrigen.nombre"
+                  type="text"
+                  placeholder="Ej: Aeropuerto Internacional Ramón Villeda Morales"
+                  class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                  :class="errores.origenNombre ? 'border-red-500' : 'border-gray-300'"
+                  @input="limpiarErrores"
+                  autocomplete="off"
+                />
+                <div v-if="errores.origenNombre" class="mt-1 text-xs text-red-600">
+                  {{ errores.origenNombre }}
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">
+                  Siglas (Código IATA) *
+                </label>
+                <input
+                  v-model="nuevoAeropuertoOrigen.codigo"
+                  type="text"
+                  placeholder="Ej: SAP"
+                  maxlength="3"
+                  class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm uppercase"
+                  :class="errores.origenCodigo ? 'border-red-500' : 'border-gray-300'"
+                  @input="handleOrigenCodigoInput"
+                  autocomplete="off"
+                />
+                <div v-if="errores.origenCodigo" class="mt-1 text-xs text-red-600">
+                  {{ errores.origenCodigo }}
+                </div>
+              </div>
+
+              <div class="flex gap-2">
+                <button
+                  type="button"
+                  @click="agregarAeropuertoOrigen"
+                  class="flex-1 px-3 py-2 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700 transition-colors font-medium"
+                >
+                  Agregar y Seleccionar
+                </button>
+                <button
+                  type="button"
+                  @click="cancelarAeropuertoOrigen"
+                  class="px-3 py-2 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
             </div>
           </div>
 
@@ -512,8 +572,9 @@
                     autocorrect="off"
                     spellcheck="false"
                     data-lpignore="true"
-                    data-form-type="other"
-                    name="search-destino"
+                    data-1p-ignore="true"
+                    data-bwignore="true"
+                    :name="`search-destino-${Math.random()}`"
                     readonly
                     onfocus="this.removeAttribute('readonly');"
                   />
@@ -580,24 +641,82 @@
               </div>
             </div>
 
-            <!-- Campo adicional para ubicación personalizada -->
-            <div v-if="destinoSeleccionado === 'personalizado'" class="mt-2">
-              <input
-                v-model="destinoPersonalizado"
-                type="text"
-                placeholder=""
-                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                :class="errores.destino ? 'border-red-500' : 'border-gray-300'"
-                required
-                @input="limpiarErrores"
-                autocomplete="off"
-                autocapitalize="off"
-                autocorrect="off"
-                spellcheck="false"
-                data-lpignore="true"
-                data-form-type="other"
-                name="destino-personalizado"
-              />
+            <!-- Formulario para agregar nuevo aeropuerto -->
+            <div
+              v-if="destinoSeleccionado === 'personalizado'"
+              class="mt-2 space-y-3 p-4 bg-orange-50 border border-orange-200 rounded-lg"
+            >
+              <p class="text-sm font-medium text-orange-900 mb-2">Agregar nuevo aeropuerto</p>
+
+              <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Ciudad *</label>
+                <input
+                  v-model="nuevoAeropuertoDestino.ciudad"
+                  type="text"
+                  placeholder="Ej: San Pedro Sula"
+                  class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                  :class="errores.destinoCiudad ? 'border-red-500' : 'border-gray-300'"
+                  @input="limpiarErrores"
+                  autocomplete="off"
+                />
+                <div v-if="errores.destinoCiudad" class="mt-1 text-xs text-red-600">
+                  {{ errores.destinoCiudad }}
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">
+                  Nombre del Aeropuerto *
+                </label>
+                <input
+                  v-model="nuevoAeropuertoDestino.nombre"
+                  type="text"
+                  placeholder="Ej: Aeropuerto Internacional Ramón Villeda Morales"
+                  class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                  :class="errores.destinoNombre ? 'border-red-500' : 'border-gray-300'"
+                  @input="limpiarErrores"
+                  autocomplete="off"
+                />
+                <div v-if="errores.destinoNombre" class="mt-1 text-xs text-red-600">
+                  {{ errores.destinoNombre }}
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">
+                  Siglas (Código IATA) *
+                </label>
+                <input
+                  v-model="nuevoAeropuertoDestino.codigo"
+                  type="text"
+                  placeholder="Ej: SAP"
+                  maxlength="3"
+                  class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm uppercase"
+                  :class="errores.destinoCodigo ? 'border-red-500' : 'border-gray-300'"
+                  @input="handleDestinoCodigoInput"
+                  autocomplete="off"
+                />
+                <div v-if="errores.destinoCodigo" class="mt-1 text-xs text-red-600">
+                  {{ errores.destinoCodigo }}
+                </div>
+              </div>
+
+              <div class="flex gap-2">
+                <button
+                  type="button"
+                  @click="agregarAeropuertoDestino"
+                  class="flex-1 px-3 py-2 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700 transition-colors font-medium"
+                >
+                  Agregar y Seleccionar
+                </button>
+                <button
+                  type="button"
+                  @click="cancelarAeropuertoDestino"
+                  class="px-3 py-2 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
             </div>
           </div>
 
@@ -734,6 +853,7 @@ import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { ETIQUETAS_TRANSPORTE } from '@/utils/constants'
 import { AEROLINEAS } from '@/data/aerolineas'
 import { AEROPUERTOS } from '@/data/aeropuertos'
+import { AeropuertosService, type Aeropuerto } from '@/services/aeropuertos.service'
 
 interface TransporteFormData extends Record<string, unknown> {
   tipo: string
@@ -752,9 +872,11 @@ interface TransporteFormData extends Record<string, unknown> {
   observaciones: string
 }
 
-// Props para recibir datos iniciales al editar
+// Props para recibir datos iniciales al editar y fechas del viaje/cotización
 const props = defineProps<{
   initialData?: Record<string, unknown> | null
+  fechaInicioViaje?: string | null // Fecha de inicio del viaje/cotización para validación
+  fechaFinViaje?: string | null // Fecha de fin del viaje/cotización para validación
 }>()
 
 const emit = defineEmits<{
@@ -789,15 +911,27 @@ const proveedorSeleccionado = ref('')
 const dropdownOpen = ref(false)
 const busquedaAerolinea = ref('')
 
-const origenPersonalizado = ref('')
 const origenSeleccionado = ref('')
 const dropdownOrigenOpen = ref(false)
 const busquedaOrigen = ref('')
+const nuevoAeropuertoOrigen = ref({
+  ciudad: '',
+  nombre: '',
+  codigo: '',
+})
+const aeropuertosOrigen = ref<Aeropuerto[]>([])
+const cargandoAeropuertosOrigen = ref(false)
 
-const destinoPersonalizado = ref('')
 const destinoSeleccionado = ref('')
 const dropdownDestinoOpen = ref(false)
 const busquedaDestino = ref('')
+const nuevoAeropuertoDestino = ref({
+  ciudad: '',
+  nombre: '',
+  codigo: '',
+})
+const aeropuertosDestino = ref<Aeropuerto[]>([])
+const cargandoAeropuertosDestino = ref(false)
 
 // Variables para manejo de errores
 const errores = ref<Record<string, string>>({})
@@ -807,6 +941,17 @@ const mostrarErrores = ref(false)
 const limpiarErrores = () => {
   errores.value = {}
   mostrarErrores.value = false
+}
+
+// Funciones para manejar inputs de códigos de aeropuerto
+const handleOrigenCodigoInput = () => {
+  nuevoAeropuertoOrigen.value.codigo = nuevoAeropuertoOrigen.value.codigo.toUpperCase()
+  limpiarErrores()
+}
+
+const handleDestinoCodigoInput = () => {
+  nuevoAeropuertoDestino.value.codigo = nuevoAeropuertoDestino.value.codigo.toUpperCase()
+  limpiarErrores()
 }
 
 // Watch para actualizar formData cuando cambien los initialData (al editar)
@@ -889,6 +1034,34 @@ watch(
   { immediate: true },
 )
 
+// Filtrar errores para mostrar solo los principales en la alerta general
+// Ocultar errores específicos de campos que ya tienen error general
+const erroresFiltrados = computed(() => {
+  const erroresMostrar: Record<string, string> = {}
+
+  // Campos específicos que no deben mostrarse en la alerta general (solo en campos individuales)
+  const camposEspecificos = [
+    'origenCiudad',
+    'origenNombre',
+    'origenCodigo',
+    'destinoCiudad',
+    'destinoNombre',
+    'destinoCodigo',
+  ]
+
+  Object.keys(errores.value).forEach((campo) => {
+    // Excluir campos específicos de la alerta general (se muestran debajo de cada campo)
+    if (camposEspecificos.includes(campo)) {
+      return
+    }
+
+    // Agregar el error a la alerta general
+    erroresMostrar[campo] = errores.value[campo]
+  })
+
+  return erroresMostrar
+})
+
 const aerolineasFiltradas = computed(() => {
   if (!busquedaAerolinea.value.trim()) {
     return AEROLINEAS // Mostrar todas las aerolíneas si no hay búsqueda
@@ -902,33 +1075,76 @@ const aerolineasFiltradas = computed(() => {
   )
 })
 
+// Combinar aeropuertos estáticos con los de BD
+const aeropuertosCombinadosOrigen = computed(() => {
+  // Convertir AEROPUERTOS estáticos al formato de Aeropuerto de BD
+  const aeropuertosEstaticos = AEROPUERTOS.map((ap) => ({
+    id: `static-${ap.codigo}`,
+    ciudad: ap.ciudad || '',
+    nombre: ap.nombre || '',
+    codigo: ap.codigo || '',
+    pais: ap.pais || '',
+  }))
+
+  // Combinar con aeropuertos de BD (evitar duplicados por código)
+  const codigosExistentes = new Set(aeropuertosEstaticos.map((ap) => ap.codigo))
+  const aeropuertosBD = (aeropuertosOrigen.value || []).filter(
+    (ap) => !codigosExistentes.has(ap.codigo),
+  )
+
+  return [...aeropuertosEstaticos, ...aeropuertosBD]
+})
+
+const aeropuertosCombinadosDestino = computed(() => {
+  // Convertir AEROPUERTOS estáticos al formato de Aeropuerto de BD
+  const aeropuertosEstaticos = AEROPUERTOS.map((ap) => ({
+    id: `static-${ap.codigo}`,
+    ciudad: ap.ciudad || '',
+    nombre: ap.nombre || '',
+    codigo: ap.codigo || '',
+    pais: ap.pais || '',
+  }))
+
+  // Combinar con aeropuertos de BD (evitar duplicados por código)
+  const codigosExistentes = new Set(aeropuertosEstaticos.map((ap) => ap.codigo))
+  const aeropuertosBD = (aeropuertosDestino.value || []).filter(
+    (ap) => !codigosExistentes.has(ap.codigo),
+  )
+
+  return [...aeropuertosEstaticos, ...aeropuertosBD]
+})
+
 const aeropuertosOrigenFiltrados = computed(() => {
+  const aeropuertos = aeropuertosCombinadosOrigen.value
+
   if (!busquedaOrigen.value.trim()) {
-    return AEROPUERTOS // Mostrar todos los aeropuertos si no hay búsqueda
+    return aeropuertos // Mostrar todos los aeropuertos si no hay búsqueda
   }
 
   const busqueda = busquedaOrigen.value.toLowerCase()
-  return AEROPUERTOS.filter(
+  return aeropuertos.filter(
     (aeropuerto) =>
       aeropuerto?.nombre?.toLowerCase().includes(busqueda) ||
       aeropuerto?.ciudad?.toLowerCase().includes(busqueda) ||
       aeropuerto?.codigo?.toLowerCase().includes(busqueda) ||
-      aeropuerto?.pais?.toLowerCase().includes(busqueda),
+      (aeropuerto as { pais?: string })?.pais?.toLowerCase().includes(busqueda),
   )
 })
 
 const aeropuertosDestinoFiltrados = computed(() => {
+  const aeropuertos = aeropuertosCombinadosDestino.value
+
   if (!busquedaDestino.value.trim()) {
-    return AEROPUERTOS // Mostrar todos los aeropuertos si no hay búsqueda
+    return aeropuertos // Mostrar todos los aeropuertos si no hay búsqueda
   }
 
   const busqueda = busquedaDestino.value.toLowerCase()
-  return AEROPUERTOS.filter(
+  return aeropuertos.filter(
     (aeropuerto) =>
       aeropuerto?.nombre?.toLowerCase().includes(busqueda) ||
       aeropuerto?.ciudad?.toLowerCase().includes(busqueda) ||
       aeropuerto?.codigo?.toLowerCase().includes(busqueda) ||
-      aeropuerto?.pais?.toLowerCase().includes(busqueda),
+      (aeropuerto as { pais?: string })?.pais?.toLowerCase().includes(busqueda),
   )
 })
 
@@ -986,12 +1202,9 @@ const toggleDropdownDestino = () => {
   }
 }
 
-const seleccionarAeropuertoOrigen = (aeropuerto: {
-  codigo: string
-  nombre: string
-  ciudad: string
-  pais: string
-}) => {
+const seleccionarAeropuertoOrigen = (
+  aeropuerto: Aeropuerto | { codigo: string; nombre: string; ciudad: string; pais?: string },
+) => {
   // Solo resumir texto para transporte aéreo, otros transportes muestran texto completo
   const textoResumido =
     formData.value.tipo === 'aereo'
@@ -1010,12 +1223,9 @@ const seleccionarAeropuertoOrigen = (aeropuerto: {
   busquedaOrigen.value = ''
 }
 
-const seleccionarAeropuertoDestino = (aeropuerto: {
-  codigo: string
-  nombre: string
-  ciudad: string
-  pais: string
-}) => {
+const seleccionarAeropuertoDestino = (
+  aeropuerto: Aeropuerto | { codigo: string; nombre: string; ciudad: string; pais?: string },
+) => {
   // Solo resumir texto para transporte aéreo, otros transportes muestran texto completo
   const textoResumido =
     formData.value.tipo === 'aereo'
@@ -1081,25 +1291,65 @@ const validarFormulario = (): boolean => {
   }
 
   // Validar origen
-  if (!formData.value.origen) {
+  if (origenSeleccionado.value === 'personalizado') {
+    // Si está en modo personalizado, validar que se complete el formulario
+    const tieneErroresAeropuerto =
+      !nuevoAeropuertoOrigen.value.ciudad.trim() ||
+      !nuevoAeropuertoOrigen.value.nombre.trim() ||
+      !nuevoAeropuertoOrigen.value.codigo.trim() ||
+      nuevoAeropuertoOrigen.value.codigo.trim().length !== 3
+
+    // Solo mostrar errores específicos en los campos, NO en la alerta general
+    if (!nuevoAeropuertoOrigen.value.ciudad.trim()) {
+      errores.value.origenCiudad = 'La ciudad es requerida'
+    }
+    if (!nuevoAeropuertoOrigen.value.nombre.trim()) {
+      errores.value.origenNombre = 'El nombre del aeropuerto es requerido'
+    }
+    if (!nuevoAeropuertoOrigen.value.codigo.trim()) {
+      errores.value.origenCodigo = 'El código IATA es requerido'
+    } else if (nuevoAeropuertoOrigen.value.codigo.trim().length !== 3) {
+      errores.value.origenCodigo = 'El código IATA debe tener 3 letras'
+    }
+
+    // Solo agregar error general si hay errores (se filtra en erroresFiltrados)
+    if (tieneErroresAeropuerto) {
+      errores.value.origen = 'Complete todos los campos del formulario de nuevo aeropuerto'
+    }
+  } else if (!formData.value.origen) {
+    // Si no está en modo personalizado pero no hay origen seleccionado
     errores.value.origen = 'Debe especificar el origen'
-  }
-  if (origenSeleccionado.value === 'personalizado' && !origenPersonalizado.value.trim()) {
-    errores.value.origen =
-      formData.value.tipo === 'aereo'
-        ? 'Debe especificar el aeropuerto de origen'
-        : 'Debe especificar el lugar de origen'
   }
 
   // Validar destino
-  if (!formData.value.destino) {
+  if (destinoSeleccionado.value === 'personalizado') {
+    // Si está en modo personalizado, validar que se complete el formulario
+    const tieneErroresAeropuerto =
+      !nuevoAeropuertoDestino.value.ciudad.trim() ||
+      !nuevoAeropuertoDestino.value.nombre.trim() ||
+      !nuevoAeropuertoDestino.value.codigo.trim() ||
+      nuevoAeropuertoDestino.value.codigo.trim().length !== 3
+
+    // Solo mostrar errores específicos en los campos, NO en la alerta general
+    if (!nuevoAeropuertoDestino.value.ciudad.trim()) {
+      errores.value.destinoCiudad = 'La ciudad es requerida'
+    }
+    if (!nuevoAeropuertoDestino.value.nombre.trim()) {
+      errores.value.destinoNombre = 'El nombre del aeropuerto es requerido'
+    }
+    if (!nuevoAeropuertoDestino.value.codigo.trim()) {
+      errores.value.destinoCodigo = 'El código IATA es requerido'
+    } else if (nuevoAeropuertoDestino.value.codigo.trim().length !== 3) {
+      errores.value.destinoCodigo = 'El código IATA debe tener 3 letras'
+    }
+
+    // Solo agregar error general si hay errores (se filtra en erroresFiltrados)
+    if (tieneErroresAeropuerto) {
+      errores.value.destino = 'Complete todos los campos del formulario de nuevo aeropuerto'
+    }
+  } else if (!formData.value.destino) {
+    // Si no está en modo personalizado pero no hay destino seleccionado
     errores.value.destino = 'Debe especificar el destino'
-  }
-  if (destinoSeleccionado.value === 'personalizado' && !destinoPersonalizado.value.trim()) {
-    errores.value.destino =
-      formData.value.tipo === 'aereo'
-        ? 'Debe especificar el aeropuerto de destino'
-        : 'Debe especificar el lugar de destino'
   }
 
   // Validar fechas
@@ -1110,6 +1360,71 @@ const validarFormulario = (): boolean => {
   // Para vuelos aéreos, la fecha final es obligatoria
   if (formData.value.tipo === 'aereo' && !formData.value.fechaFinal) {
     errores.value.fechaFinal = 'Debe seleccionar la fecha de llegada'
+  }
+
+  // Validar que las fechas estén dentro del rango del viaje/cotización
+  if (props.fechaInicioViaje && props.fechaFinViaje) {
+    const fechaInicioViaje = new Date(props.fechaInicioViaje + 'T00:00:00')
+    const fechaFinViaje = new Date(props.fechaFinViaje + 'T23:59:59')
+
+    // Validar fecha de salida
+    if (formData.value.fechaInicial) {
+      const fechaInicioSegmento = new Date(formData.value.fechaInicial + 'T00:00:00')
+
+      if (fechaInicioSegmento < fechaInicioViaje) {
+        errores.value.fechaInicial = `La fecha de salida no puede ser anterior al inicio del viaje (${props.fechaInicioViaje})`
+      } else if (fechaInicioSegmento > fechaFinViaje) {
+        errores.value.fechaInicial = `La fecha de salida no puede ser posterior al fin del viaje (${props.fechaFinViaje})`
+      }
+    }
+
+    // Validar fecha de llegada
+    if (formData.value.fechaFinal) {
+      const fechaFinSegmento = new Date(formData.value.fechaFinal + 'T23:59:59')
+
+      if (fechaFinSegmento < fechaInicioViaje) {
+        errores.value.fechaFinal = `La fecha de llegada no puede ser anterior al inicio del viaje (${props.fechaInicioViaje})`
+      } else if (fechaFinSegmento > fechaFinViaje) {
+        errores.value.fechaFinal = `La fecha de llegada no puede ser posterior al fin del viaje (${props.fechaFinViaje})`
+      }
+    }
+  } else {
+    // Si solo tenemos una fecha límite, validar individualmente
+    if (props.fechaInicioViaje && formData.value.fechaInicial) {
+      const fechaInicioViaje = new Date(props.fechaInicioViaje + 'T00:00:00')
+      const fechaInicioSegmento = new Date(formData.value.fechaInicial + 'T00:00:00')
+
+      if (fechaInicioSegmento < fechaInicioViaje) {
+        errores.value.fechaInicial = `La fecha de salida no puede ser anterior al inicio del viaje (${props.fechaInicioViaje})`
+      }
+    }
+
+    if (props.fechaFinViaje && formData.value.fechaInicial) {
+      const fechaFinViaje = new Date(props.fechaFinViaje + 'T23:59:59')
+      const fechaInicioSegmento = new Date(formData.value.fechaInicial + 'T00:00:00')
+
+      if (fechaInicioSegmento > fechaFinViaje) {
+        errores.value.fechaInicial = `La fecha de salida no puede ser posterior al fin del viaje (${props.fechaFinViaje})`
+      }
+    }
+
+    if (props.fechaInicioViaje && formData.value.fechaFinal) {
+      const fechaInicioViaje = new Date(props.fechaInicioViaje + 'T00:00:00')
+      const fechaFinSegmento = new Date(formData.value.fechaFinal + 'T23:59:59')
+
+      if (fechaFinSegmento < fechaInicioViaje) {
+        errores.value.fechaFinal = `La fecha de llegada no puede ser anterior al inicio del viaje (${props.fechaInicioViaje})`
+      }
+    }
+
+    if (props.fechaFinViaje && formData.value.fechaFinal) {
+      const fechaFinViaje = new Date(props.fechaFinViaje + 'T23:59:59')
+      const fechaFinSegmento = new Date(formData.value.fechaFinal + 'T23:59:59')
+
+      if (fechaFinSegmento > fechaFinViaje) {
+        errores.value.fechaFinal = `La fecha de llegada no puede ser posterior al fin del viaje (${props.fechaFinViaje})`
+      }
+    }
   }
 
   // VALIDACIÓN REMOVIDA: Permitir que la fecha de llegada sea el mismo día o incluso anterior
@@ -1158,9 +1473,215 @@ const handleClickOutside = (event: Event) => {
   }
 }
 
-// Agregar listener para cerrar dropdown
-onMounted(() => {
+// Cargar aeropuertos desde datos estáticos y base de datos
+const cargarAeropuertos = async () => {
+  try {
+    cargandoAeropuertosOrigen.value = true
+    cargandoAeropuertosDestino.value = true
+
+    const { data, error } = await AeropuertosService.getAll()
+
+    if (error) {
+      // Si hay error, mostrar mensaje pero continuar con aeropuertos estáticos
+      console.warn('⚠️ Error al cargar aeropuertos:', error)
+      return
+    }
+
+    if (data) {
+      aeropuertosOrigen.value = data
+      aeropuertosDestino.value = data
+    }
+  } catch (error) {
+    // Capturar cualquier error y continuar con aeropuertos estáticos
+    console.warn('⚠️ Error al cargar aeropuertos:', error)
+  } finally {
+    cargandoAeropuertosOrigen.value = false
+    cargandoAeropuertosDestino.value = false
+  }
+}
+
+// Función para agregar nuevo aeropuerto desde origen
+const agregarAeropuertoOrigen = async () => {
+  // Limpiar errores previos
+  delete errores.value.origenCiudad
+  delete errores.value.origenNombre
+  delete errores.value.origenCodigo
+  delete errores.value.origen
+  mostrarErrores.value = false
+
+  // Validar campos
+  if (!nuevoAeropuertoOrigen.value.ciudad.trim()) {
+    errores.value.origenCiudad = 'La ciudad es requerida'
+    mostrarErrores.value = true
+    return
+  }
+  if (!nuevoAeropuertoOrigen.value.nombre.trim()) {
+    errores.value.origenNombre = 'El nombre del aeropuerto es requerido'
+    mostrarErrores.value = true
+    return
+  }
+  if (!nuevoAeropuertoOrigen.value.codigo.trim()) {
+    errores.value.origenCodigo = 'El código IATA es requerido'
+    mostrarErrores.value = true
+    return
+  }
+  if (nuevoAeropuertoOrigen.value.codigo.trim().length !== 3) {
+    errores.value.origenCodigo = 'El código IATA debe tener exactamente 3 letras'
+    mostrarErrores.value = true
+    return
+  }
+
+  try {
+    const { data, error } = await AeropuertosService.create(
+      nuevoAeropuertoOrigen.value.ciudad.trim(),
+      nuevoAeropuertoOrigen.value.nombre.trim(),
+      nuevoAeropuertoOrigen.value.codigo.trim().toUpperCase(),
+    )
+
+    if (error) {
+      errores.value.origenCodigo = error
+      errores.value.origen = error
+      mostrarErrores.value = true
+      return
+    }
+
+    if (data) {
+      // Limpiar errores al tener éxito
+      delete errores.value.origenCiudad
+      delete errores.value.origenNombre
+      delete errores.value.origenCodigo
+      delete errores.value.origen
+
+      // Agregar a la lista local
+      aeropuertosOrigen.value.push(data)
+
+      // Seleccionar el aeropuerto recién creado
+      seleccionarAeropuertoOrigen(data)
+
+      // Limpiar formulario
+      nuevoAeropuertoOrigen.value = {
+        ciudad: '',
+        nombre: '',
+        codigo: '',
+      }
+    }
+  } catch (error) {
+    console.error('Error agregando aeropuerto:', error)
+    errores.value.origenCodigo =
+      'Error inesperado al agregar el aeropuerto. Por favor, intenta nuevamente.'
+    errores.value.origen =
+      'Error inesperado al agregar el aeropuerto. Por favor, intenta nuevamente.'
+    mostrarErrores.value = true
+  }
+}
+
+// Función para cancelar agregar aeropuerto desde origen
+const cancelarAeropuertoOrigen = () => {
+  nuevoAeropuertoOrigen.value = {
+    ciudad: '',
+    nombre: '',
+    codigo: '',
+  }
+  origenSeleccionado.value = ''
+  formData.value.origen = ''
+  delete errores.value.origenCiudad
+  delete errores.value.origenNombre
+  delete errores.value.origenCodigo
+}
+
+// Función para agregar nuevo aeropuerto desde destino
+const agregarAeropuertoDestino = async () => {
+  // Limpiar errores previos
+  delete errores.value.destinoCiudad
+  delete errores.value.destinoNombre
+  delete errores.value.destinoCodigo
+  delete errores.value.destino
+  mostrarErrores.value = false
+
+  // Validar campos
+  if (!nuevoAeropuertoDestino.value.ciudad.trim()) {
+    errores.value.destinoCiudad = 'La ciudad es requerida'
+    mostrarErrores.value = true
+    return
+  }
+  if (!nuevoAeropuertoDestino.value.nombre.trim()) {
+    errores.value.destinoNombre = 'El nombre del aeropuerto es requerido'
+    mostrarErrores.value = true
+    return
+  }
+  if (!nuevoAeropuertoDestino.value.codigo.trim()) {
+    errores.value.destinoCodigo = 'El código IATA es requerido'
+    mostrarErrores.value = true
+    return
+  }
+  if (nuevoAeropuertoDestino.value.codigo.trim().length !== 3) {
+    errores.value.destinoCodigo = 'El código IATA debe tener exactamente 3 letras'
+    mostrarErrores.value = true
+    return
+  }
+
+  try {
+    const { data, error } = await AeropuertosService.create(
+      nuevoAeropuertoDestino.value.ciudad.trim(),
+      nuevoAeropuertoDestino.value.nombre.trim(),
+      nuevoAeropuertoDestino.value.codigo.trim().toUpperCase(),
+    )
+
+    if (error) {
+      errores.value.destinoCodigo = error
+      errores.value.destino = error
+      mostrarErrores.value = true
+      return
+    }
+
+    if (data) {
+      // Limpiar errores al tener éxito
+      delete errores.value.destinoCiudad
+      delete errores.value.destinoNombre
+      delete errores.value.destinoCodigo
+      delete errores.value.destino
+
+      // Agregar a la lista local
+      aeropuertosDestino.value.push(data)
+
+      // Seleccionar el aeropuerto recién creado
+      seleccionarAeropuertoDestino(data)
+
+      // Limpiar formulario
+      nuevoAeropuertoDestino.value = {
+        ciudad: '',
+        nombre: '',
+        codigo: '',
+      }
+    }
+  } catch (error) {
+    console.error('Error agregando aeropuerto:', error)
+    errores.value.destinoCodigo =
+      'Error inesperado al agregar el aeropuerto. Por favor, intenta nuevamente.'
+    errores.value.destino =
+      'Error inesperado al agregar el aeropuerto. Por favor, intenta nuevamente.'
+    mostrarErrores.value = true
+  }
+}
+
+// Función para cancelar agregar aeropuerto desde destino
+const cancelarAeropuertoDestino = () => {
+  nuevoAeropuertoDestino.value = {
+    ciudad: '',
+    nombre: '',
+    codigo: '',
+  }
+  destinoSeleccionado.value = ''
+  formData.value.destino = ''
+  delete errores.value.destinoCiudad
+  delete errores.value.destinoNombre
+  delete errores.value.destinoCodigo
+}
+
+// Agregar listener para cerrar dropdown y cargar aeropuertos
+onMounted(async () => {
   document.addEventListener('click', handleClickOutside)
+  await cargarAeropuertos()
 })
 
 onUnmounted(() => {
@@ -1198,11 +1719,19 @@ watch(
       dropdownOpen.value = false
       formData.value.proveedor = ''
       origenSeleccionado.value = ''
-      origenPersonalizado.value = ''
+      nuevoAeropuertoOrigen.value = {
+        ciudad: '',
+        nombre: '',
+        codigo: '',
+      }
       busquedaOrigen.value = ''
       dropdownOrigenOpen.value = false
       destinoSeleccionado.value = ''
-      destinoPersonalizado.value = ''
+      nuevoAeropuertoDestino.value = {
+        ciudad: '',
+        nombre: '',
+        codigo: '',
+      }
       busquedaDestino.value = ''
       dropdownDestinoOpen.value = false
       formData.value.origen = ''
@@ -1235,15 +1764,29 @@ const handleSubmit = () => {
   }
 
   // Determinar el origen final
-  let origenFinal = formData.value.origen
+  const origenFinal = formData.value.origen
+  // Si el origen es "personalizado", significa que el usuario no completó el formulario de nuevo aeropuerto
+  // En ese caso, ya debería haberse validado antes de llegar aquí, pero verificamos nuevamente por seguridad
   if (origenSeleccionado.value === 'personalizado') {
-    origenFinal = origenPersonalizado.value
+    // Verificar que el origen no sea 'personalizado' (debe ser un valor real del aeropuerto agregado)
+    if (origenFinal === 'personalizado' || !origenFinal) {
+      errores.value.origen =
+        'Debe completar el formulario de nuevo aeropuerto y hacer clic en "Agregar y Seleccionar" o seleccionar un aeropuerto existente'
+      return
+    }
   }
 
   // Determinar el destino final
-  let destinoFinal = formData.value.destino
+  const destinoFinal = formData.value.destino
+  // Si el destino es "personalizado", significa que el usuario no completó el formulario de nuevo aeropuerto
+  // En ese caso, ya debería haberse validado antes de llegar aquí, pero verificamos nuevamente por seguridad
   if (destinoSeleccionado.value === 'personalizado') {
-    destinoFinal = destinoPersonalizado.value
+    // Verificar que el destino no sea 'personalizado' (debe ser un valor real del aeropuerto agregado)
+    if (destinoFinal === 'personalizado' || !destinoFinal) {
+      errores.value.destino =
+        'Debe completar el formulario de nuevo aeropuerto y hacer clic en "Agregar y Seleccionar" o seleccionar un aeropuerto existente'
+      return
+    }
   }
 
   // Limpiar errores antes de enviar

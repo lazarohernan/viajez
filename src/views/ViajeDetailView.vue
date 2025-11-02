@@ -466,6 +466,8 @@
           v-if="selectedSegmentType === 'transporte'"
           ref="transporteFormRef"
           :initial-data="editingSegment"
+          :fecha-inicio-viaje="viaje?.fecha_inicio || null"
+          :fecha-fin-viaje="viaje?.fecha_fin || null"
           @submit="handleSegmentSubmit"
           @cancel="closeSegmentModal"
         />
@@ -473,6 +475,8 @@
           v-else-if="selectedSegmentType === 'hospedaje'"
           ref="hospedajeFormRef"
           :initial-data="editingSegment"
+          :fecha-inicio-viaje="viaje?.fecha_inicio || null"
+          :fecha-fin-viaje="viaje?.fecha_fin || null"
           @submit="handleSegmentSubmit"
           @cancel="closeSegmentModal"
         />
@@ -480,6 +484,8 @@
           v-else-if="selectedSegmentType === 'actividad'"
           ref="actividadesFormRef"
           :initial-data="editingSegment"
+          :fecha-inicio-viaje="viaje?.fecha_inicio || null"
+          :fecha-fin-viaje="viaje?.fecha_fin || null"
           @submit="handleSegmentSubmit"
           @cancel="closeSegmentModal"
         />
@@ -726,14 +732,37 @@ const editarSegmento = (segmento: Segmento) => {
 // Función para manejar el reordenamiento de segmentos en viajes
 const onDragEndViaje = async () => {
   try {
-    // Usar la función de recalcular marcadores que garantiza consistencia
-    const result = await segmentosService.recalcularMarcadoresViaje(viajeId.value)
+    const totalSegmentos = segmentos.value.length
+
+    if (totalSegmentos === 0 || !viajeId.value) return
+
+    // Actualizar orden de todos los segmentos según su nueva posición
+    for (let index = 0; index < totalSegmentos; index++) {
+      const segmento = segmentos.value[index]
+      const nuevoOrden = index + 1
+
+      // Actualizar el orden si cambió
+      if (segmento.orden !== nuevoOrden) {
+        await segmentosService.update(segmento.id, {
+          orden: nuevoOrden,
+        })
+
+        // Actualizar localmente
+        segmento.orden = nuevoOrden
+      }
+    }
+
+    // Actualizar banderas de primero/último usando el método del servicio
+    const result = await segmentosService.actualizarBanderasDespuesReordenar(
+      undefined,
+      viajeId.value,
+    )
 
     if (result.error) {
       throw new Error(result.error)
     }
 
-    // Recargar los datos para reflejar los cambios
+    // Recargar viaje para obtener las banderas actualizadas
     await loadViaje()
   } catch (error) {
     console.error('Error en drag & drop:', error)
@@ -751,10 +780,6 @@ const eliminarSegmento = async (segmentoId: string) => {
 
   try {
     await segmentosService.delete(segmentoId)
-
-    // Recalcular marcadores después de eliminar
-    await segmentosService.recalcularMarcadoresViaje(viajeId.value)
-
     await loadViaje()
     alert('Segmento eliminado del viaje correctamente')
   } catch (error) {
@@ -780,18 +805,8 @@ const handleSegmentSubmit = async (data: Record<string, unknown>) => {
     // - Si no hay segmentos, el nuevo es el primero Y el último
     // - Si ya hay segmentos, el nuevo es solo el último (no el primero)
     // - Al editar, mantener los valores actuales
-    let esPrimerSegmento: boolean
-    let esUltimoSegmento: boolean
-
-    if (editingSegment.value) {
-      // Al editar, mantener los valores actuales
-      esPrimerSegmento = editingSegment.value.es_primero || false
-      esUltimoSegmento = editingSegment.value.es_ultimo || false
-    } else {
-      // Al crear nuevo segmento
-      esPrimerSegmento = totalSegmentos === 0
-      esUltimoSegmento = true // El nuevo segmento siempre es el último
-    }
+    const esPrimerSegmento = !editingSegment.value && totalSegmentos === 0
+    const esUltimoSegmento = !editingSegment.value // Siempre el nuevo segmento es el último
 
     // Preparar datos del segmento base
     const segmentoData = {
@@ -824,7 +839,6 @@ const handleSegmentSubmit = async (data: Record<string, unknown>) => {
 
       const updateData: Partial<CreateSegmentoData> = {
         ...segmentoData,
-        tipo: selectedSegmentType.value, // Asegurar que se incluya el tipo
       }
 
       // Agregar datos específicos según el tipo
@@ -990,9 +1004,6 @@ const importarCotizacion = async () => {
     }
 
     // console.log('✅ Segmentos copiados:', segmentosCopiados)
-
-    // Recalcular marcadores de primero/último para todos los segmentos del viaje
-    await segmentosService.recalcularMarcadoresViaje(viajeId.value)
 
     // Recargar viaje
     await loadViaje()

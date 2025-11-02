@@ -220,10 +220,11 @@ export class CotizacionesService extends BaseService {
         // Transformar segmentos para que las relaciones sean objetos en lugar de arrays
         const segmentosTransformados = (cot.segmentos || []).map((seg: Record<string, unknown>) => {
           const segmentoCopia = JSON.parse(JSON.stringify(seg))
-          const segmentoTransporte = Array.isArray(segmentoCopia.segmento_transporte) &&
+          const segmentoTransporte =
+            Array.isArray(segmentoCopia.segmento_transporte) &&
             segmentoCopia.segmento_transporte.length > 0
-            ? segmentoCopia.segmento_transporte[0]
-            : segmentoCopia.segmento_transporte || null
+              ? segmentoCopia.segmento_transporte[0]
+              : segmentoCopia.segmento_transporte || null
 
           return {
             ...segmentoCopia,

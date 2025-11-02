@@ -135,13 +135,7 @@
         />
       </Modal>
 
-      <!-- Modal de confirmación de eliminación -->
-      <Modal
-        v-model="showDeleteConfirm"
-        :max-width="'md'"
-        title="Confirmar Eliminación"
-        @close="cancelDelete"
-      >
+      <Modal v-model="showDeleteConfirm" :max-width="'md'" title="Confirmar Eliminación">
         <div class="space-y-4">
           <!-- Icono de advertencia -->
           <div class="flex items-center justify-center">
@@ -163,10 +157,21 @@
           </div>
 
           <div class="text-center">
-            <h3 class="text-lg font-semibold text-gray-900 mb-2">¿Eliminar viajero?</h3>
-            <p class="text-gray-600">
-              Esta acción no se puede deshacer. Se eliminará permanentemente al viajero y toda su
-              información.
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">
+              ¿Eliminar viajero permanentemente?
+            </h3>
+            <p class="text-gray-600 text-sm">
+              Esta acción <strong>NO SE PUEDE DESHACER</strong>. Se eliminará completamente:
+            </p>
+            <ul class="text-gray-600 text-sm mt-2 text-left list-disc list-inside space-y-1">
+              <li>Información personal del viajero</li>
+              <li>Todas las cotizaciones asociadas</li>
+              <li>Todos los viajes y segmentos relacionados</li>
+              <li>Credenciales de acceso (si existen)</li>
+              <li>Toda la información histórica del cliente</li>
+            </ul>
+            <p class="text-red-600 font-medium mt-3 text-sm">
+              ⚠️ Esta eliminación es irreversible y afectará todos los registros del sistema.
             </p>
           </div>
 

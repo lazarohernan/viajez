@@ -52,12 +52,9 @@ interface ViajeWithRelations {
   fecha_fin?: string
   estado: 'por_iniciar' | 'en_curso' | 'finalizado'
   progreso_porcentaje: number
+  cotizacion_id?: string
   created_at: string
   updated_at: string
-  cotizacion?: {
-    id: string
-    nombre: string
-  }
   segmentos?: Segmento[]
   viaje_viajeroz?: Array<{
     viajero: Viajeroz
@@ -66,7 +63,7 @@ interface ViajeWithRelations {
 
 interface ViajeroViajeResult {
   viaje_id: string
-  viajes: ViajeWithRelations[]
+  viajes: ViajeWithRelations | ViajeWithRelations[]
 }
 
 export interface ViajeWithDetails extends Viaje {
@@ -270,9 +267,44 @@ export class ViajesService extends BaseService {
 
       // console.log('📦 Consulta ejecutada exitosamente, procesando resultados...')
 
+      // Transformar la estructura de segmentos para que las relaciones sean objetos en lugar de arrays
+      // Usar JSON.parse/stringify para romper completamente la reactividad de Vue
+      const segmentosTransformados = (viaje.segmentos || []).map(
+        (segmento: Record<string, unknown>) => {
+          // Crear copia profunda para evitar problemas con Proxies de Vue
+          const segmentoCopia = JSON.parse(JSON.stringify(segmento))
+
+          // Extraer el primer elemento si es array
+          const segmentoTransporte =
+            Array.isArray(segmentoCopia.segmento_transporte) &&
+            segmentoCopia.segmento_transporte.length > 0
+              ? segmentoCopia.segmento_transporte[0]
+              : segmentoCopia.segmento_transporte || null
+
+          const segmentoHospedaje =
+            Array.isArray(segmentoCopia.segmento_hospedaje) &&
+            segmentoCopia.segmento_hospedaje.length > 0
+              ? segmentoCopia.segmento_hospedaje[0]
+              : segmentoCopia.segmento_hospedaje || null
+
+          const segmentoActividad =
+            Array.isArray(segmentoCopia.segmento_actividad) &&
+            segmentoCopia.segmento_actividad.length > 0
+              ? segmentoCopia.segmento_actividad[0]
+              : segmentoCopia.segmento_actividad || null
+
+          return {
+            ...segmentoCopia,
+            segmento_transporte: segmentoTransporte,
+            segmento_hospedaje: segmentoHospedaje,
+            segmento_actividad: segmentoActividad,
+          }
+        },
+      )
+
       const viajeWithDetails: ViajeWithDetails = {
         ...viaje,
-        segmentos: viaje.segmentos || [],
+        segmentos: segmentosTransformados,
         viajeros:
           viaje.viaje_viajeroz?.map((vv: { viajero: Viajeroz }) => vv.viajero).filter(Boolean) ||
           [],
@@ -570,13 +602,50 @@ export class ViajesService extends BaseService {
 
       // Transformar los datos para el formato esperado
       const viajesWithDetails: ViajeWithDetails[] = (data || []).map(
-        (viaje: ViajeWithRelations) => ({
-          ...viaje,
-          segmentos: viaje.segmentos || [],
-          viajeros:
-            viaje.viaje_viajeroz?.map((vv: { viajero: Viajeroz }) => vv.viajero).filter(Boolean) ||
-            [],
-        }),
+        (viaje: ViajeWithRelations) => {
+          // Transformar la estructura de segmentos para que las relaciones sean objetos en lugar de arrays
+          // Usar JSON.parse/stringify para romper completamente la reactividad de Vue
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const segmentosTransformados = (viaje.segmentos || []).map((segmento: any) => {
+            // Crear copia profunda para evitar problemas con Proxies de Vue
+            const segmentoCopia = JSON.parse(JSON.stringify(segmento))
+
+            // Extraer el primer elemento si es array
+            const segmentoTransporte =
+              Array.isArray(segmentoCopia.segmento_transporte) &&
+              segmentoCopia.segmento_transporte.length > 0
+                ? segmentoCopia.segmento_transporte[0]
+                : segmentoCopia.segmento_transporte || null
+
+            const segmentoHospedaje =
+              Array.isArray(segmentoCopia.segmento_hospedaje) &&
+              segmentoCopia.segmento_hospedaje.length > 0
+                ? segmentoCopia.segmento_hospedaje[0]
+                : segmentoCopia.segmento_hospedaje || null
+
+            const segmentoActividad =
+              Array.isArray(segmentoCopia.segmento_actividad) &&
+              segmentoCopia.segmento_actividad.length > 0
+                ? segmentoCopia.segmento_actividad[0]
+                : segmentoCopia.segmento_actividad || null
+
+            return {
+              ...segmentoCopia,
+              segmento_transporte: segmentoTransporte,
+              segmento_hospedaje: segmentoHospedaje,
+              segmento_actividad: segmentoActividad,
+            }
+          })
+
+          return {
+            ...viaje,
+            segmentos: segmentosTransformados,
+            viajeros:
+              viaje.viaje_viajeroz
+                ?.map((vv: { viajero: Viajeroz }) => vv.viajero)
+                .filter(Boolean) || [],
+          }
+        },
       )
 
       // Guardar en caché por 2 minutos
@@ -634,8 +703,6 @@ export class ViajesService extends BaseService {
    */
   async getViajesByViajero(viajeroId: string): Promise<ServiceResponse<ViajeWithDetails[]>> {
     try {
-      // console.log('🔍 Obteniendo viajes para viajero (optimizado):', viajeroId)
-
       // Consulta optimizada que obtiene todos los viajes del viajero en una sola operación
       const { data, error } = await supabase
         .from('viaje_viajeroz')
@@ -643,8 +710,16 @@ export class ViajesService extends BaseService {
           `
           viaje_id,
           viajes!inner(
-            *,
-            cotizacion:cotizaciones(id, nombre),
+            id,
+            nombre,
+            descripcion,
+            fecha_inicio,
+            fecha_fin,
+            estado,
+            progreso_porcentaje,
+            cotizacion_id,
+            created_at,
+            updated_at,
             segmentos(
               *,
               segmento_transporte(*),
@@ -655,22 +730,75 @@ export class ViajesService extends BaseService {
         `,
         )
         .eq('viajero_id', viajeroId)
-        .order('viajes.fecha_inicio', { ascending: false })
+        .order('created_at', { ascending: false })
 
       if (error) this.handleError(error)
 
-      // console.log('📦 Consulta ejecutada exitosamente, procesando resultados...')
+      // Debug: mostrar estructura de la respuesta
+      console.log('🔍 Respuesta cruda de Supabase:', data)
+      if (data && data.length > 0) {
+        console.log('🔍 Primer elemento de data:', data[0])
+        console.log('🔍 Propiedades del primer elemento:', Object.keys(data[0]))
+        if (data[0].viajes) {
+          console.log('🔍 data[0].viajes:', data[0].viajes)
+          console.log('🔍 Tipo de data[0].viajes:', typeof data[0].viajes)
+        }
+      }
 
       // Transformar los datos para el formato esperado
-      const viajesWithDetails: ViajeWithDetails[] = (data || []).map(
-        (item: ViajeroViajeResult) => ({
-          ...(item.viajes[0] as ViajeWithRelations),
-          segmentos: item.viajes[0]?.segmentos || [],
-          viajeros: [], // Se puede agregar si es necesario
-        }),
+      const viajesWithDetails: ViajeWithDetails[] = ((data as ViajeroViajeResult[]) || []).map(
+        (item: ViajeroViajeResult) => {
+          const viajeData = Array.isArray(item.viajes) ? item.viajes[0] : item.viajes
+
+          // Transformar segmentos para convertir arrays en objetos
+          // Usar JSON.parse/stringify para romper completamente la reactividad de Vue
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const segmentosTransformados = (viajeData?.segmentos || []).map((segmento: any) => {
+            // Crear copia profunda para evitar problemas con Proxies de Vue
+            const segmentoCopia = JSON.parse(JSON.stringify(segmento))
+
+            // Extraer el primer elemento si es array
+            const segmentoTransporte =
+              Array.isArray(segmentoCopia.segmento_transporte) &&
+              segmentoCopia.segmento_transporte.length > 0
+                ? segmentoCopia.segmento_transporte[0]
+                : segmentoCopia.segmento_transporte || null
+
+            const segmentoHospedaje =
+              Array.isArray(segmentoCopia.segmento_hospedaje) &&
+              segmentoCopia.segmento_hospedaje.length > 0
+                ? segmentoCopia.segmento_hospedaje[0]
+                : segmentoCopia.segmento_hospedaje || null
+
+            const segmentoActividad =
+              Array.isArray(segmentoCopia.segmento_actividad) &&
+              segmentoCopia.segmento_actividad.length > 0
+                ? segmentoCopia.segmento_actividad[0]
+                : segmentoCopia.segmento_actividad || null
+
+            return {
+              ...segmentoCopia,
+              segmento_transporte: segmentoTransporte,
+              segmento_hospedaje: segmentoHospedaje,
+              segmento_actividad: segmentoActividad,
+            }
+          })
+
+          return {
+            ...(viajeData as ViajeWithRelations),
+            segmentos: segmentosTransformados,
+            viajeros: [], // Se puede agregar si es necesario
+          }
+        },
       )
 
-      // console.log('✅ Viajes obtenidos:', viajesWithDetails.length)
+      // Ordenar manualmente por fecha_inicio descendente ya que la foreignTable order no funciona
+      viajesWithDetails.sort((a, b) => {
+        const dateA = new Date(a.fecha_inicio || 0).getTime()
+        const dateB = new Date(b.fecha_inicio || 0).getTime()
+        return dateB - dateA // Descendente (más reciente primero)
+      })
+
       return { data: viajesWithDetails, error: null }
     } catch (error) {
       console.error('❌ Error obteniendo viajes del viajero:', error)

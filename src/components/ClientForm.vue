@@ -310,28 +310,11 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
-
-interface ClientForm {
-  nombre: string
-  apellido: string
-  email?: string
-  telefono: string
-  identidad?: string
-  fecha_nacimiento?: string
-  numero_pasaporte?: string
-  fecha_vencimiento_pasaporte?: string
-  numero_visa?: string
-  pais_visa?: string
-  tipo_visa?: string
-  fecha_vencimiento_visa?: string
-  pais_residencia?: string
-  password?: string
-  crear_credenciales?: boolean
-}
+import type { CreateViajeroData } from '@/services/viajeros.service'
 
 const props = defineProps<{
   isEditing?: boolean
-  initialData?: Partial<ClientForm>
+  initialData?: Partial<CreateViajeroData>
   hideHeader?: boolean
   unstyled?: boolean
 }>()
@@ -339,18 +322,18 @@ const props = defineProps<{
 const wrapperClass = computed(() => (props.unstyled ? '' : 'bg-white rounded-lg shadow-md p-6'))
 
 const emit = defineEmits<{
-  submit: [data: ClientForm]
+  submit: [data: CreateViajeroData]
   cancel: []
 }>()
 
 const isLoading = ref(false)
 const passwordError = ref('')
 
-const form = reactive<ClientForm>({
+const form = reactive<CreateViajeroData>({
   nombre: props.initialData?.nombre || '',
   apellido: props.initialData?.apellido || '',
-  email: props.initialData?.email || '',
   telefono: props.initialData?.telefono || '',
+  email: props.initialData?.email || '',
   identidad: props.initialData?.identidad || '',
   fecha_nacimiento: props.initialData?.fecha_nacimiento || '',
   numero_pasaporte: props.initialData?.numero_pasaporte || '',
@@ -360,7 +343,7 @@ const form = reactive<ClientForm>({
   tipo_visa: props.initialData?.tipo_visa || '',
   fecha_vencimiento_visa: props.initialData?.fecha_vencimiento_visa || '',
   pais_residencia: props.initialData?.pais_residencia || '',
-  password: '',
+  password: props.initialData?.password || '',
 })
 
 // Generar contraseña aleatoria
@@ -565,16 +548,24 @@ const handleSubmit = async () => {
       }
     }
 
-    // Preparar datos para enviar
-    const dataToSubmit: ClientForm = {
+    // Preparar datos para enviar - usar el form directamente ya que está tipado correctamente
+    const dataToSubmit: CreateViajeroData = {
       ...form,
+      nombre: form.nombre.trim(),
+      apellido: form.apellido.trim(),
+      telefono: form.telefono,
+      email: form.email.trim(),
+      identidad: form.identidad.trim(),
+      fecha_nacimiento: form.fecha_nacimiento,
+      numero_pasaporte: form.numero_pasaporte || undefined,
+      fecha_vencimiento_pasaporte: form.fecha_vencimiento_pasaporte || undefined,
+      numero_visa: form.numero_visa || undefined,
+      pais_visa: form.pais_visa || undefined,
+      tipo_visa: form.tipo_visa || undefined,
+      fecha_vencimiento_visa: form.fecha_vencimiento_visa || undefined,
+      pais_residencia: form.pais_residencia || undefined,
+      password: form.password || undefined,
       crear_credenciales: !!form.password,
-    }
-
-    // Si no hay contraseña, eliminar campos relacionados
-    if (!form.password) {
-      delete dataToSubmit.password
-      delete dataToSubmit.crear_credenciales
     }
 
     // console.log('📤 Enviando datos del formulario:', dataToSubmit)

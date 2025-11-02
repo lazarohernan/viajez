@@ -4,7 +4,7 @@ import { authService, type AuthUser } from '@/services/auth.service'
 import type { Session } from '@supabase/supabase-js'
 
 export const useAuthStore = defineStore('auth', () => {
-  // Estado
+  // Estado simplificado
   const user = ref<AuthUser | null>(null)
   const session = ref<Session | null>(null)
   const loading = ref(false)
@@ -12,12 +12,11 @@ export const useAuthStore = defineStore('auth', () => {
 
   // Getters computados
   const isAuthenticated = computed(() => !!user.value && !!session.value)
-  const isAdmin = computed(() => !!user.value?.isAdmin || !!user.value?.adminProfile)
-  const isClient = computed(() => !!user.value?.profile)
+  const isClient = computed(() => !!user.value?.profile) // Si tiene perfil de viajero, es cliente
+  const isAdmin = computed(() => !!user.value && !user.value?.profile) // Si no tiene perfil, es admin
   const userProfile = computed(() => user.value?.profile || null)
-  const adminProfile = computed(() => user.value?.adminProfile || null)
 
-  // Acciones
+  // Acciones simplificadas
   const login = async (credentials: { email?: string; password?: string; identidad?: string }) => {
     try {
       loading.value = true
@@ -183,7 +182,6 @@ export const useAuthStore = defineStore('auth', () => {
     isAdmin,
     isClient,
     userProfile,
-    adminProfile,
 
     // Acciones
     login,

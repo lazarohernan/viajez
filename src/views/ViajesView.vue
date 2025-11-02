@@ -699,7 +699,8 @@ const syncSelectedClients = async (viajeId: string) => {
     return
   }
 
-  // console.log(`🔗 Sincronizando ${selectedClients.value.length} cliente(s) con viaje ${viajeId}`)
+  console.log(`🔗 Sincronizando ${selectedClients.value.length} cliente(s) con viaje ${viajeId}`)
+  console.log('👥 Clientes seleccionados:', selectedClients.value.map(c => ({ id: c.id, nombre: c.nombre, email: c.email })))
 
   // Eliminar relaciones existentes
   const { error: deleteError } = await supabase
@@ -718,7 +719,7 @@ const syncSelectedClients = async (viajeId: string) => {
     viajero_id: viajero.id,
   }))
 
-  // console.log('📝 Insertando relaciones:', inserts)
+  console.log('📝 Insertando relaciones:', inserts)
 
   const { data, error: insertError } = await supabase
     .from('viaje_viajeroz')
@@ -730,6 +731,6 @@ const syncSelectedClients = async (viajeId: string) => {
     throw insertError
   }
 
-  // console.log('✅ Relaciones sincronizadas correctamente:', data)
+  console.log('✅ Relaciones sincronizadas correctamente:', data)
 }
 </script>

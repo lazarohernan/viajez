@@ -365,8 +365,8 @@
                         <span>
                           {{ formatDate(segmento.fecha_inicio) }}
                           <span v-if="segmento.fecha_fin">
-                            - {{ formatDate(segmento.fecha_fin) }}</span
-                          >
+                            - {{ formatDate(segmento.fecha_fin) }}
+                          </span>
                         </span>
                       </div>
                       <div
@@ -400,6 +400,8 @@
         <TransporteForm
           v-if="selectedSegment === 'transporte'"
           :initial-data="editandoSegmento"
+          :fecha-inicio-viaje="fechaInicioCotizacion"
+          :fecha-fin-viaje="fechaFinCotizacion"
           @submit="handleFormSubmit"
           @cancel="closeForm"
         />
@@ -408,6 +410,8 @@
         <HospedajeForm
           v-else-if="selectedSegment === 'hospedaje'"
           :initial-data="editandoSegmento"
+          :fecha-inicio-viaje="fechaInicioCotizacion"
+          :fecha-fin-viaje="fechaFinCotizacion"
           @submit="handleFormSubmit"
           @cancel="closeForm"
         />
@@ -416,6 +420,8 @@
         <ActividadesForm
           v-else-if="selectedSegment === 'actividades'"
           :initial-data="editandoSegmento"
+          :fecha-inicio-viaje="fechaInicioCotizacion"
+          :fecha-fin-viaje="fechaFinCotizacion"
           @submit="handleFormSubmit"
           @cancel="closeForm"
         />
@@ -456,6 +462,13 @@ import {
 } from '@/services/segmentos.service'
 import type { ServiceResponse } from '@/services/base.service'
 
+// Interface para el viajero en cotizaciones
+interface ViajeroCotizacion {
+  nombre?: string
+  apellido?: string
+  email?: string
+}
+
 // Tipos para formularios
 // Interfaces de formularios definidas en componentes individuales
 
@@ -468,6 +481,56 @@ const tableLoading = ref(false)
 const cotizacionActual = ref<Cotizacion | null>(null)
 const segmentosAgregados = ref<Segmento[]>([])
 const editandoSegmento = ref<Segmento | null>(null)
+
+// Calcular rango de fechas desde los segmentos existentes (excluyendo el que se está editando)
+const fechaInicioCotizacion = computed(() => {
+  // Filtrar segmentos (excluir el que se está editando)
+  const segmentosParaValidar = editandoSegmento.value
+    ? segmentosAgregados.value.filter((s) => s.id !== editandoSegmento.value?.id)
+    : segmentosAgregados.value
+
+  if (segmentosParaValidar.length === 0) {
+    return null // Si no hay segmentos (o solo el que se está editando), no hay restricción
+  }
+
+  // Obtener todas las fechas de inicio de los segmentos
+  const fechasInicio = segmentosParaValidar
+    .map((s) => s.fecha_inicio)
+    .filter((f) => f)
+    .sort()
+
+  return fechasInicio.length > 0 ? fechasInicio[0] : null
+})
+
+const fechaFinCotizacion = computed(() => {
+  // Filtrar segmentos (excluir el que se está editando)
+  const segmentosParaValidar = editandoSegmento.value
+    ? segmentosAgregados.value.filter((s) => s.id !== editandoSegmento.value?.id)
+    : segmentosAgregados.value
+
+  if (segmentosParaValidar.length === 0) {
+    return null // Si no hay segmentos (o solo el que se está editando), no hay restricción
+  }
+
+  // Obtener todas las fechas de fin de los segmentos
+  const fechasFin = segmentosParaValidar
+    .map((s) => s.fecha_fin)
+    .filter((f) => f)
+    .sort()
+
+  // Si hay fechas de fin, tomar la más tardía
+  if (fechasFin.length > 0) {
+    return fechasFin[fechasFin.length - 1]
+  }
+
+  // Si no hay fechas de fin, usar la fecha de inicio más tardía
+  const fechasInicio = segmentosParaValidar
+    .map((s) => s.fecha_inicio)
+    .filter((f) => f)
+    .sort()
+
+  return fechasInicio.length > 0 ? fechasInicio[fechasInicio.length - 1] : null
+})
 
 // Columnas de la tabla de cotizaciones
 const tableColumns: DataTableColumn[] = [
@@ -564,18 +627,8 @@ const handleFormSubmit = async (data: Record<string, unknown>) => {
     // - Si no hay segmentos, el nuevo es el primero Y el último
     // - Si ya hay segmentos, el nuevo es solo el último (no el primero)
     // - Al editar, mantener los valores actuales
-    let esPrimerSegmento: boolean
-    let esUltimoSegmento: boolean
-
-    if (editandoSegmento.value) {
-      // Al editar, mantener los valores actuales
-      esPrimerSegmento = editandoSegmento.value.es_primero || false
-      esUltimoSegmento = editandoSegmento.value.es_ultimo || false
-    } else {
-      // Al crear nuevo segmento
-      esPrimerSegmento = totalSegmentos === 0
-      esUltimoSegmento = true // El nuevo segmento siempre es el último
-    }
+    const esPrimerSegmento = !editandoSegmento.value && totalSegmentos === 0
+    const esUltimoSegmento = !editandoSegmento.value // Siempre el nuevo segmento es el último
 
     // Preparar datos del segmento
     const segmentoData = {
@@ -708,15 +761,7 @@ const eliminarSegmento = async (id: string) => {
   if (confirm('¿Estás seguro de eliminar este segmento?')) {
     try {
       await segmentosService.delete(id)
-
-      // Recalcular marcadores después de eliminar
-      if (cotizacionActual.value) {
-        await segmentosService.recalcularMarcadoresCotizacion(cotizacionActual.value.id)
-      }
-
-      // Recargar segmentos para reflejar los cambios
-      await loadSegmentos()
-
+      segmentosAgregados.value = segmentosAgregados.value.filter((s) => s.id !== id)
       alert('Segmento eliminado correctamente')
     } catch (error) {
       console.error('Error al eliminar segmento:', error)
@@ -728,17 +773,40 @@ const eliminarSegmento = async (id: string) => {
 // Función para manejar el reordenamiento de segmentos
 const onDragEnd = async () => {
   try {
-    if (!cotizacionActual.value) return
+    const totalSegmentos = segmentosAgregados.value.length
 
-    // Usar la función de recalcular marcadores que garantiza consistencia
-    const result = await segmentosService.recalcularMarcadoresCotizacion(cotizacionActual.value.id)
+    if (totalSegmentos === 0) return
 
-    if (result.error) {
-      throw new Error(result.error)
+    // Actualizar orden de todos los segmentos según su nueva posición
+    for (let index = 0; index < totalSegmentos; index++) {
+      const segmento = segmentosAgregados.value[index]
+      const nuevoOrden = index + 1
+
+      // Actualizar el orden si cambió
+      if (segmento.orden !== nuevoOrden) {
+        await segmentosService.update(segmento.id, {
+          orden: nuevoOrden,
+        })
+
+        // Actualizar localmente
+        segmento.orden = nuevoOrden
+      }
     }
 
-    // Recargar los datos para reflejar los cambios
-    await loadSegmentos()
+    // Actualizar banderas de primero/último usando el método del servicio
+    if (cotizacionActual.value) {
+      const result = await segmentosService.actualizarBanderasDespuesReordenar(
+        cotizacionActual.value.id,
+        undefined,
+      )
+
+      if (result.error) {
+        throw new Error(result.error)
+      }
+
+      // Recargar segmentos para obtener las banderas actualizadas
+      await loadSegmentos()
+    }
   } catch (error) {
     console.error('Error en drag & drop:', error)
     alert('Error al reordenar los segmentos')
@@ -915,20 +983,20 @@ const calcularDuracionViaje = (segmentos: Segmento[]): string => {
   // Obtener todas las fechas de inicio y fin
   const fechasInicio = segmentos
     .map((s) => s.fecha_inicio)
-    .filter((f) => f)
+    .filter((f): f is string => f !== undefined && f !== null)
     .sort()
 
   const fechasFin = segmentos
     .map((s) => s.fecha_fin)
-    .filter((f) => f)
+    .filter((f): f is string => f !== undefined && f !== null)
     .sort()
 
   if (fechasInicio.length === 0) {
     return 'Sin fecha'
   }
 
-  const fechaInicio = new Date(fechasInicio[0]!)
-  const fechaFin = fechasFin.length > 0 ? new Date(fechasFin[fechasFin.length - 1]!) : fechaInicio
+  const fechaInicio = new Date(fechasInicio[0])
+  const fechaFin = fechasFin.length > 0 ? new Date(fechasFin[fechasFin.length - 1]) : fechaInicio
 
   // Calcular diferencia en días
   const diffTime = Math.abs(fechaFin.getTime() - fechaInicio.getTime())
@@ -953,11 +1021,12 @@ const obtenerDestinoDesdeSegmentos = (segmentos: Segmento[]): string => {
     .sort((a, b) => (b.orden || 0) - (a.orden || 0))
 
   if (segmentosTransporte.length > 0) {
-    const destino = segmentosTransporte[0].segmento_transporte?.destino
-    if (destino) {
+    const segmentoTransporte = segmentosTransporte[0].segmento_transporte
+    if (segmentoTransporte?.destino) {
+      const destino = segmentoTransporte.destino
       // Extraer solo el nombre de la ciudad si tiene formato "Ciudad (COD)"
       const match = destino.match(/^(.+?)\s*\(/)
-      return match ? match[1].trim() : destino
+      return match ? match[1] : destino
     }
   }
 
@@ -979,7 +1048,7 @@ const recargarCotizaciones = async () => {
     // Transformar cotizaciones a formato de tabla
     allTableRows.value = (result.data || []).map((cot) => {
       // Obtener información del cliente/viajero
-      const viajero = cot.viajero as { nombre?: string; apellido?: string; email?: string } | null
+      const viajero = cot.viajero as ViajeroCotizacion | null
       const nombreCliente = viajero
         ? `${viajero.nombre || ''} ${viajero.apellido || ''}`.trim() || 'Sin nombre'
         : 'Sin cliente asignado'
