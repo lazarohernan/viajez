@@ -151,14 +151,63 @@
         />
 
         <!-- Campo para hotel personalizado -->
-        <div v-if="proveedorSeleccionado === 'personalizado'" class="mt-2">
-          <input
-            v-model="proveedorPersonalizado"
-            type="text"
-            placeholder="Escriba el nombre del hotel..."
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-            required
-          />
+        <div
+          v-if="proveedorSeleccionado === 'personalizado'"
+          class="mt-2 space-y-3 p-4 bg-orange-50 border border-orange-200 rounded-lg"
+        >
+          <p class="text-sm font-medium text-orange-900 mb-2">Agregar nuevo hotel</p>
+
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Nombre del Hotel *</label>
+            <input
+              v-model="nuevoHotel.nombre"
+              type="text"
+              placeholder="Nombre del hotel"
+              class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+              :class="errores.hotelNombre ? 'border-red-500' : 'border-gray-300'"
+              @input="limpiarErrores"
+              autocomplete="off"
+            />
+            <div v-if="errores.hotelNombre" class="mt-1 text-xs text-red-600">
+              {{ errores.hotelNombre }}
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">
+              Siglas (Código Identificador) *
+            </label>
+            <input
+              v-model="nuevoHotel.codigo"
+              type="text"
+              placeholder="Código identificador"
+              maxlength="5"
+              class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm uppercase"
+              :class="errores.hotelCodigo ? 'border-red-500' : 'border-gray-300'"
+              @input="handleHotelCodigoInput"
+              autocomplete="off"
+            />
+            <div v-if="errores.hotelCodigo" class="mt-1 text-xs text-red-600">
+              {{ errores.hotelCodigo }}
+            </div>
+          </div>
+
+          <div class="flex gap-2">
+            <button
+              type="button"
+              @click="agregarHotel"
+              class="flex-1 px-3 py-2 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700 transition-colors font-medium"
+            >
+              Agregar y Seleccionar
+            </button>
+            <button
+              type="button"
+              @click="cancelarHotel"
+              class="px-3 py-2 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
         </div>
 
         <p class="mt-1 text-xs text-gray-500">
@@ -309,6 +358,16 @@ const busquedaHotel = ref('')
 const proveedorPersonalizado = ref('')
 const hoteles = ref<Hotel[]>([])
 const cargandoHoteles = ref(false)
+
+// Variables para hotel personalizado
+const nuevoHotel = ref({
+  nombre: '',
+  codigo: '',
+})
+
+// Variables para manejo de errores
+const errores = ref<Record<string, string>>({})
+const mostrarErrores = ref(false)
 
 // Watch para actualizar formData cuando cambien los initialData (al editar)
 watch(
@@ -491,6 +550,96 @@ const duracionCalculada = computed(() => {
   }
   return ''
 })
+
+// Función para limpiar errores
+const limpiarErrores = () => {
+  errores.value = {}
+  mostrarErrores.value = false
+}
+
+// Función para manejar input de código de hotel
+const handleHotelCodigoInput = () => {
+  nuevoHotel.value.codigo = nuevoHotel.value.codigo.toUpperCase()
+  limpiarErrores()
+}
+
+// Función para agregar nuevo hotel
+const agregarHotel = async () => {
+  // Limpiar errores previos
+  delete errores.value.hotelNombre
+  delete errores.value.hotelCodigo
+  delete errores.value.proveedor
+  mostrarErrores.value = false
+
+  // Validar campos
+  if (!nuevoHotel.value.nombre.trim()) {
+    errores.value.hotelNombre = 'El nombre del hotel es requerido'
+    mostrarErrores.value = true
+    return
+  }
+  if (!nuevoHotel.value.codigo.trim()) {
+    errores.value.hotelCodigo = 'El código identificador es requerido'
+    mostrarErrores.value = true
+    return
+  }
+  if (nuevoHotel.value.codigo.trim().length < 2) {
+    errores.value.hotelCodigo = 'El código debe tener al menos 2 caracteres'
+    mostrarErrores.value = true
+    return
+  }
+
+  try {
+    // Crear el formato completo para el hotel
+    const hotelCompleto = `${nuevoHotel.value.nombre.trim()} (${nuevoHotel.value.codigo.trim().toUpperCase()})`
+
+    // Seleccionar el hotel recién agregado
+    proveedorSeleccionado.value = hotelCompleto
+    formData.value.proveedor = hotelCompleto
+    dropdownOpen.value = false
+    busquedaHotel.value = ''
+
+    // Guardar el nuevo hotel en Supabase
+    const { error } = await HotelesService.create(nuevoHotel.value.nombre.trim())
+    if (!error) {
+      // Recargar la lista de hoteles
+      await cargarHoteles()
+    } else {
+      console.warn('⚠️ Hotel ya existe o error al guardar:', error)
+    }
+
+    // Limpiar el formulario de nuevo hotel
+    nuevoHotel.value = {
+      nombre: '',
+      codigo: '',
+    }
+
+    // Limpiar errores
+    delete errores.value.hotelNombre
+    delete errores.value.hotelCodigo
+    delete errores.value.proveedor
+
+    // Mostrar éxito (opcional)
+    console.log('✅ Hotel agregado:', hotelCompleto)
+  } catch (error) {
+    console.error('❌ Error al agregar hotel:', error)
+    errores.value.proveedor = 'Error al agregar el hotel'
+    mostrarErrores.value = true
+  }
+}
+
+// Función para cancelar agregar hotel
+const cancelarHotel = () => {
+  nuevoHotel.value = {
+    nombre: '',
+    codigo: '',
+  }
+  proveedorSeleccionado.value = ''
+  formData.value.proveedor = ''
+  delete errores.value.hotelNombre
+  delete errores.value.hotelCodigo
+  delete errores.value.proveedor
+  mostrarErrores.value = false
+}
 
 const handleSubmit = async () => {
   // Validar fechas del segmento contra fechas del viaje/cotización

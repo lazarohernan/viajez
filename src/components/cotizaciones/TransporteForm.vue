@@ -176,16 +176,65 @@
           </div>
 
           <!-- Campo adicional para aerolínea personalizada -->
-          <div v-if="proveedorSeleccionado === 'personalizado'" class="mt-2">
-            <input
-              v-model="proveedorPersonalizado"
-              type="text"
-              placeholder="Ej: Aerolínea XYZ, LATAM, etc."
-              class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-              :class="errores.proveedor ? 'border-red-500' : 'border-gray-300'"
-              required
-              @input="limpiarErrores"
-            />
+          <div
+            v-if="proveedorSeleccionado === 'personalizado'"
+            class="mt-2 space-y-3 p-4 bg-orange-50 border border-orange-200 rounded-lg"
+          >
+            <p class="text-sm font-medium text-orange-900 mb-2">Agregar nueva aerolínea</p>
+
+            <div>
+              <label class="block text-xs font-medium text-gray-700 mb-1">
+                Nombre de la Aerolínea *
+              </label>
+              <input
+                v-model="nuevaAerolinea.nombre"
+                type="text"
+                placeholder="Ej: CM AIRLINES"
+                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                :class="errores.aerolineaNombre ? 'border-red-500' : 'border-gray-300'"
+                @input="limpiarErrores"
+                autocomplete="off"
+              />
+              <div v-if="errores.aerolineaNombre" class="mt-1 text-xs text-red-600">
+                {{ errores.aerolineaNombre }}
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-gray-700 mb-1">
+                Siglas (Código IATA) *
+              </label>
+              <input
+                v-model="nuevaAerolinea.codigo"
+                type="text"
+                placeholder="Ej: CMA"
+                maxlength="3"
+                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm uppercase"
+                :class="errores.aerolineaCodigo ? 'border-red-500' : 'border-gray-300'"
+                @input="handleAerolineaCodigoInput"
+                autocomplete="off"
+              />
+              <div v-if="errores.aerolineaCodigo" class="mt-1 text-xs text-red-600">
+                {{ errores.aerolineaCodigo }}
+              </div>
+            </div>
+
+            <div class="flex gap-2">
+              <button
+                type="button"
+                @click="agregarAerolinea"
+                class="flex-1 px-3 py-2 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700 transition-colors font-medium"
+              >
+                Agregar y Seleccionar
+              </button>
+              <button
+                type="button"
+                @click="cancelarAerolinea"
+                class="px-3 py-2 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
           </div>
 
           <!-- Mensaje de error -->
@@ -911,6 +960,12 @@ const proveedorSeleccionado = ref('')
 const dropdownOpen = ref(false)
 const busquedaAerolinea = ref('')
 
+// Variables para aerolínea personalizada
+const nuevaAerolinea = ref({
+  nombre: '',
+  codigo: '',
+})
+
 const origenSeleccionado = ref('')
 const dropdownOrigenOpen = ref(false)
 const busquedaOrigen = ref('')
@@ -943,7 +998,7 @@ const limpiarErrores = () => {
   mostrarErrores.value = false
 }
 
-// Funciones para manejar inputs de códigos de aeropuerto
+// Funciones para manejar inputs de códigos
 const handleOrigenCodigoInput = () => {
   nuevoAeropuertoOrigen.value.codigo = nuevoAeropuertoOrigen.value.codigo.toUpperCase()
   limpiarErrores()
@@ -951,6 +1006,11 @@ const handleOrigenCodigoInput = () => {
 
 const handleDestinoCodigoInput = () => {
   nuevoAeropuertoDestino.value.codigo = nuevoAeropuertoDestino.value.codigo.toUpperCase()
+  limpiarErrores()
+}
+
+const handleAerolineaCodigoInput = () => {
+  nuevaAerolinea.value.codigo = nuevaAerolinea.value.codigo.toUpperCase()
   limpiarErrores()
 }
 
@@ -1498,6 +1558,75 @@ const cargarAeropuertos = async () => {
     cargandoAeropuertosOrigen.value = false
     cargandoAeropuertosDestino.value = false
   }
+}
+
+// Función para agregar nueva aerolínea
+const agregarAerolinea = async () => {
+  // Limpiar errores previos
+  delete errores.value.aerolineaNombre
+  delete errores.value.aerolineaCodigo
+  delete errores.value.proveedor
+  mostrarErrores.value = false
+
+  // Validar campos
+  if (!nuevaAerolinea.value.nombre.trim()) {
+    errores.value.aerolineaNombre = 'El nombre de la aerolínea es requerido'
+    mostrarErrores.value = true
+    return
+  }
+  if (!nuevaAerolinea.value.codigo.trim()) {
+    errores.value.aerolineaCodigo = 'El código IATA es requerido'
+    mostrarErrores.value = true
+    return
+  }
+  if (nuevaAerolinea.value.codigo.trim().length !== 3) {
+    errores.value.aerolineaCodigo = 'El código IATA debe tener exactamente 3 letras'
+    mostrarErrores.value = true
+    return
+  }
+
+  try {
+    // Crear el formato completo para la aerolínea
+    const aerolineaCompleta = `${nuevaAerolinea.value.nombre.trim()} (${nuevaAerolinea.value.codigo.trim().toUpperCase()})`
+
+    // Seleccionar la aerolínea recién agregada
+    proveedorSeleccionado.value = aerolineaCompleta
+    formData.value.proveedor = aerolineaCompleta
+    dropdownOpen.value = false
+    busquedaAerolinea.value = ''
+
+    // Limpiar el formulario de nueva aerolínea
+    nuevaAerolinea.value = {
+      nombre: '',
+      codigo: '',
+    }
+
+    // Limpiar errores
+    delete errores.value.aerolineaNombre
+    delete errores.value.aerolineaCodigo
+    delete errores.value.proveedor
+
+    // Mostrar éxito (opcional)
+    console.log('✅ Aerolínea agregada:', aerolineaCompleta)
+  } catch (error) {
+    console.error('❌ Error al agregar aerolínea:', error)
+    errores.value.proveedor = 'Error al agregar la aerolínea'
+    mostrarErrores.value = true
+  }
+}
+
+// Función para cancelar agregar aerolínea
+const cancelarAerolinea = () => {
+  nuevaAerolinea.value = {
+    nombre: '',
+    codigo: '',
+  }
+  proveedorSeleccionado.value = ''
+  formData.value.proveedor = ''
+  delete errores.value.aerolineaNombre
+  delete errores.value.aerolineaCodigo
+  delete errores.value.proveedor
+  mostrarErrores.value = false
 }
 
 // Función para agregar nuevo aeropuerto desde origen

@@ -40,7 +40,7 @@
 
       <div v-else class="space-y-4">
         <div
-          v-for="viaje in viajes"
+          v-for="viaje in viajesPaginados"
           :key="viaje.id"
           class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
           @click="abrirModal(viaje)"
@@ -79,24 +79,70 @@
             </div>
 
             <!-- Segmentos del viaje -->
-            <div v-if="viaje.total_segmentos > 0" class="mt-3 space-y-2">
+            <div v-if="viaje.total_segmentos > 0" class="mt-3 space-y-3">
               <div class="flex items-center gap-2">
                 <span class="text-xs font-medium text-gray-700">
-                  Segmentos ({{ viaje.total_segmentos }})
+                  Segmentos del viaje ({{ viaje.total_segmentos }})
                 </span>
               </div>
-              <div class="flex flex-wrap gap-1.5">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div
-                  v-for="(segmento, index) in viaje.segmentos"
+                  v-for="(segmento, index) in viaje.segmentos.slice(0, 6)"
                   :key="index"
-                  class="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs transition-all"
-                  :class="getSegmentoClasses(segmento)"
-                  :title="`${segmento.nombre} - ${segmento.porcentaje}%`"
+                  class="flex items-center gap-2 p-2 rounded-lg border cursor-pointer hover:shadow-sm transition-shadow"
+                  :class="getSegmentoClass(segmento.estado, segmento.es_actual)"
+                  @click.stop="verDetalleSegmento(segmento)"
                 >
-                  <span>{{ getSegmentoIcon(segmento.tipo, segmento.subtipo) }}</span>
-                  <span class="max-w-[100px] truncate">{{ segmento.nombre }}</span>
-                  <span class="font-semibold ml-0.5">{{ segmento.porcentaje }}%</span>
+                  <!-- Icono del tipo -->
+                  <div
+                    class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                    :class="getSegmentoIconBg(segmento.tipo)"
+                  >
+                    <component
+                      :is="getSegmentoIcon(segmento.tipo)"
+                      class="w-4 h-4"
+                      :class="getSegmentoIconColor(segmento.tipo)"
+                    />
+                  </div>
+                  <!-- Información principal -->
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between mb-1">
+                      <div class="text-sm font-medium text-gray-900 truncate">
+                        {{ segmento.nombre }}
+                      </div>
+                      <span
+                        class="text-xs font-medium px-1.5 py-0.5 rounded-full"
+                        :class="getEstadoBadgeClass(segmento.estado, segmento.es_actual)"
+                      >
+                        {{ segmento.porcentaje }}%
+                      </span>
+                    </div>
+                    <!-- Información específica por tipo -->
+                    <div class="text-xs text-gray-600">
+                      <div class="capitalize">
+                        {{ segmento.tipo }}
+                        <span v-if="segmento.es_actual" class="text-blue-600 font-medium ml-1">
+                          • Actual
+                        </span>
+                      </div>
+                    </div>
+                    <!-- Fecha -->
+                    <div class="mt-1">
+                      <span class="text-xs text-gray-500">
+                        {{ formatDate(segmento.fecha_inicio) }}
+                      </span>
+                    </div>
+                  </div>
                 </div>
+              </div>
+              <!-- Mostrar "Ver más" si hay más de 6 segmentos -->
+              <div v-if="viaje.total_segmentos > 6" class="text-center mt-2">
+                <button
+                  @click.stop="abrirModal(viaje)"
+                  class="text-xs text-orange-600 hover:text-orange-700 font-medium"
+                >
+                  Ver todos los {{ viaje.total_segmentos }} segmentos →
+                </button>
               </div>
             </div>
 
@@ -123,6 +169,52 @@
               {{ formatEstado(viaje.estado) }}
             </span>
           </div>
+        </div>
+      </div>
+
+      <!-- Paginación -->
+      <div
+        v-if="totalPages > 1"
+        class="flex items-center justify-between pt-4 border-t border-gray-200"
+      >
+        <div class="text-sm text-gray-600">
+          Mostrando {{ startIndex + 1 }}-{{ endIndex }} de {{ viajes.length }} viajes
+        </div>
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            @click="paginaActual--"
+            :disabled="paginaActual === 1"
+            class="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            Anterior
+          </button>
+
+          <div class="flex items-center gap-1">
+            <button
+              v-for="page in totalPages"
+              :key="page"
+              type="button"
+              @click="paginaActual = page"
+              :class="[
+                'px-3 py-1 text-sm rounded-md transition-colors',
+                paginaActual === page
+                  ? 'bg-orange-600 text-white'
+                  : 'border border-gray-300 hover:bg-gray-50',
+              ]"
+            >
+              {{ page }}
+            </button>
+          </div>
+
+          <button
+            type="button"
+            @click="paginaActual++"
+            :disabled="paginaActual === totalPages"
+            class="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            Siguiente
+          </button>
         </div>
       </div>
     </div>
@@ -207,8 +299,15 @@
               "
             >
               <div class="flex items-center gap-3 flex-1">
-                <div class="text-2xl">
-                  {{ getSegmentoIcon(segmento.tipo, segmento.subtipo) }}
+                <div
+                  class="w-10 h-10 rounded-full flex items-center justify-center"
+                  :class="getSegmentoIconBg(segmento.tipo)"
+                >
+                  <component
+                    :is="getSegmentoIcon(segmento.tipo)"
+                    class="w-5 h-5"
+                    :class="getSegmentoIconColor(segmento.tipo)"
+                  />
                 </div>
                 <div class="flex-1 min-w-0">
                   <p class="text-sm font-medium text-gray-900 truncate">{{ segmento.nombre }}</p>
@@ -264,8 +363,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { Calendar, Clock, MapPin } from 'lucide-vue-next'
+import { ref, onMounted, computed, watch } from 'vue'
+import { Calendar, Clock, MapPin, Plane, Hotel, Activity } from 'lucide-vue-next'
 import Modal from '@/components/ui/Modal.vue'
 import { viajesService } from '@/services/viajes.service'
 
@@ -322,6 +421,7 @@ const props = defineProps<Props>()
 const emit = defineEmits<{
   verTodos: []
   verDetalle: [viaje: ViajeCard]
+  verDetalleSegmento: [segmento: SegmentoInfo]
 }>()
 
 const viajes = ref<ViajeCard[]>([])
@@ -329,6 +429,10 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 const showModal = ref(false)
 const viajeSeleccionado = ref<ViajeCard | null>(null)
+
+// Estado para paginación
+const paginaActual = ref(1)
+const ITEMS_POR_PAGINA = 5
 
 // Conectado a Supabase
 const fetchViajesEnCurso = async () => {
@@ -378,6 +482,8 @@ const fetchViajesEnCurso = async () => {
       })
 
     viajes.value = props.maxItems ? ordered.slice(0, props.maxItems) : ordered
+    // Resetear paginación cuando se cargan nuevos datos
+    paginaActual.value = 1
     // console.log('✅ Viajes cargados:', viajes.value.length)
   } catch (err) {
     error.value = 'Error al cargar los viajes en curso'
@@ -591,66 +697,84 @@ const calcularPorcentajeSegmento = (segmento: SegmentoData, hoy: Date) => {
   return { porcentaje, estado: 'en_curso' as const }
 }
 
-const getSegmentoClasses = (segmento: SegmentoInfo) => {
-  const baseClasses = 'flex items-center gap-1.5 px-2 py-1 rounded-md text-xs transition-all'
-
-  if (segmento.estado === 'completado') {
-    return `${baseClasses} bg-green-100 text-green-800`
+const getSegmentoClass = (estado: string, esActual: boolean) => {
+  if (esActual) {
+    return 'bg-blue-50 border-blue-200'
   }
-
-  if (segmento.es_actual) {
-    return `${baseClasses} bg-blue-100 text-blue-800 font-medium ring-2 ring-blue-300`
+  switch (estado) {
+    case 'completado':
+      return 'bg-green-50 border-green-200'
+    case 'en_curso':
+      return 'bg-orange-50 border-orange-200'
+    case 'pendiente':
+      return 'bg-gray-50 border-gray-200'
+    default:
+      return 'bg-gray-50 border-gray-200'
   }
-
-  return `${baseClasses} bg-gray-100 text-gray-600`
 }
 
-const getSegmentoIcon = (tipo: string, subtipo?: string) => {
-  // Emojis específicos para transporte
-  if (tipo === 'transporte') {
-    switch (subtipo) {
-      case 'aereo':
-        return '✈️' // Avión
-      case 'tren':
-        return '🚆' // Tren
-      case 'bus':
-        return '🚌' // Bus
-      case 'carro_privado':
-        return '🚗' // Carro
-      case 'auto_rentado':
-        return '🚙' // Auto rentado
-      case 'uber':
-        return '🚕' // Taxi/Uber
-      default:
-        return '🚎' // Transporte genérico
-    }
+const getEstadoBadgeClass = (estado: string, esActual: boolean) => {
+  if (esActual) {
+    return 'bg-blue-100 text-blue-800'
   }
-
-  // Emojis específicos para hospedaje
-  if (tipo === 'hospedaje') {
-    switch (subtipo) {
-      case 'hotel':
-        return '🏨' // Hotel
-      case 'renta_privada':
-        return '🏡' // Casa
-      case 'airbnb':
-        return '🏚️' // Casa de campo
-      default:
-        return '🏘️' // Edificio
-    }
+  switch (estado) {
+    case 'completado':
+      return 'bg-green-100 text-green-800'
+    case 'en_curso':
+      return 'bg-orange-100 text-orange-800'
+    case 'pendiente':
+      return 'bg-gray-100 text-gray-800'
+    default:
+      return 'bg-gray-100 text-gray-800'
   }
+}
 
-  // Emoji para actividades
-  if (tipo === 'actividad') {
-    return '🎯' // Actividad/Diana
+const getSegmentoIconBg = (tipo: string) => {
+  switch (tipo) {
+    case 'transporte':
+      return 'bg-orange-100'
+    case 'hospedaje':
+      return 'bg-blue-100'
+    case 'actividad':
+      return 'bg-green-100'
+    default:
+      return 'bg-gray-100'
   }
+}
 
-  return '📍' // Pin de ubicación por defecto
+const getSegmentoIcon = (tipo: string) => {
+  switch (tipo) {
+    case 'transporte':
+      return Plane
+    case 'hospedaje':
+      return Hotel
+    case 'actividad':
+      return Activity
+    default:
+      return MapPin
+  }
+}
+
+const getSegmentoIconColor = (tipo: string) => {
+  switch (tipo) {
+    case 'transporte':
+      return 'text-orange-600'
+    case 'hospedaje':
+      return 'text-blue-600'
+    case 'actividad':
+      return 'text-green-600'
+    default:
+      return 'text-gray-600'
+  }
 }
 
 const abrirModal = (viaje: ViajeCard) => {
   viajeSeleccionado.value = viaje
   showModal.value = true
+}
+
+const verDetalleSegmento = (segmento: SegmentoInfo) => {
+  emit('verDetalleSegmento', segmento)
 }
 
 const irADetalle = () => {
@@ -671,6 +795,27 @@ const formatDateFull = (dateString: string | null | undefined) => {
     year: 'numeric',
   })
 }
+
+// Propiedades computadas para paginación
+const totalPages = computed(() => Math.ceil(viajes.value.length / ITEMS_POR_PAGINA))
+
+const startIndex = computed(() => (paginaActual.value - 1) * ITEMS_POR_PAGINA)
+
+const endIndex = computed(() => {
+  const end = startIndex.value + ITEMS_POR_PAGINA
+  return end > viajes.value.length ? viajes.value.length : end
+})
+
+const viajesPaginados = computed(() => {
+  return viajes.value.slice(startIndex.value, endIndex.value)
+})
+
+// Watch para resetear página actual si cambia el total de viajes
+watch(totalPages, (newTotalPages) => {
+  if (paginaActual.value > newTotalPages && newTotalPages > 0) {
+    paginaActual.value = newTotalPages
+  }
+})
 
 // Inicializar
 onMounted(() => {

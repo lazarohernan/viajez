@@ -18,7 +18,11 @@
 
         <!-- Viajes en Curso con Componente (ocupa 2 columnas - 67%) -->
         <div class="bg-white rounded-xl border border-gray-200 lg:col-span-2">
-          <ViajesEnCurso @ver-todos="navigateToViajes" @ver-detalle="handleViajeDetalle" />
+          <ViajesEnCurso
+            @ver-todos="navigateToViajes"
+            @ver-detalle="handleViajeDetalle"
+            @ver-detalle-segmento="handleSegmentoDetalle"
+          />
         </div>
       </div>
 
@@ -46,10 +50,19 @@
         </div>
       </div>
     </main>
+
+    <!-- Modal de Detalle de Segmento -->
+    <SegmentoDetailModal
+      v-if="segmentoSeleccionado"
+      v-model="showSegmentoModal"
+      :segmento="segmentoSeleccionado"
+      @close="closeSegmentoModal"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   EstadisticasGenerales,
@@ -58,6 +71,18 @@ import {
   CumpleanosHoy as Cumpleanos,
   PasaportesPorVencer,
 } from '@/components/dashboard'
+import SegmentoDetailModal from '@/components/SegmentoDetailModal.vue'
+import type { Segmento } from '@/services/supabase'
+
+interface SegmentoInfo {
+  nombre: string
+  tipo: string
+  fecha_inicio: string
+  es_actual: boolean
+  porcentaje: number
+  estado: 'completado' | 'en_curso' | 'pendiente'
+  subtipo?: string
+}
 
 interface ViajeWithId {
   id: string | number
@@ -115,6 +140,10 @@ interface PasaportePorVencer {
 
 const router = useRouter()
 
+// Estado para el modal de segmentos
+const showSegmentoModal = ref(false)
+const segmentoSeleccionado = ref<Segmento | null>(null)
+
 // Funciones de navegación básicas
 const navigateToViajes = () => {
   router.push('/viajes')
@@ -130,6 +159,73 @@ const handleViajeDetalle = (viaje: ViajeWithId) => {
   router.push(`/viajes/${viaje.id}`)
 }
 
+const handleSegmentoDetalle = (segmento: SegmentoInfo) => {
+  // Convertir SegmentoInfo a un formato compatible con Segmento
+  const segmentoData: Segmento = {
+    id: 'temp-' + Date.now(), // ID temporal ya que solo es para visualización
+    nombre: segmento.nombre,
+    tipo: segmento.tipo as 'transporte' | 'hospedaje' | 'actividad',
+    fecha_inicio: segmento.fecha_inicio,
+    fecha_fin: segmento.fecha_inicio, // Usamos la misma fecha ya que no tenemos fecha_fin
+    proveedor: segmento.subtipo || segmento.tipo,
+    observaciones: `Estado: ${segmento.estado}\nProgreso: ${segmento.porcentaje}%${segmento.es_actual ? '\nSegmento actual' : ''}`,
+    orden: 1,
+    es_primero: false,
+    es_ultimo: false,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    // Campos opcionales para el modal
+    segmento_transporte:
+      segmento.tipo === 'transporte'
+        ? {
+            id: 'temp',
+            segmento_id: 'temp',
+            tipo_transporte:
+              (segmento.subtipo as
+                | 'aereo'
+                | 'tren'
+                | 'bus'
+                | 'carro_privado'
+                | 'auto_rentado'
+                | 'uber'
+                | 'otro') || 'aereo',
+            origen: 'N/A',
+            destino: 'N/A',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }
+        : undefined,
+    segmento_hospedaje:
+      segmento.tipo === 'hospedaje'
+        ? {
+            id: 'temp',
+            segmento_id: 'temp',
+            tipo_hospedaje:
+              (segmento.subtipo as
+                | 'hotel'
+                | 'renta_privada'
+                | 'airbnb'
+                | 'otro') || 'hotel',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }
+        : undefined,
+    segmento_actividad:
+      segmento.tipo === 'actividad'
+        ? {
+            id: 'temp',
+            segmento_id: 'temp',
+            duracion_horas: 2, // Valor por defecto
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }
+        : undefined,
+  }
+
+  segmentoSeleccionado.value = segmentoData
+  showSegmentoModal.value = true
+}
+
 const handleVisaDetalle = (visa: VisaPorVencer) => {
   // console.log('Ver detalle de la visa:', visa)
   alert(`Ver detalle de visa de ${visa.cliente.nombre} ${visa.cliente.apellido}`)
@@ -143,5 +239,10 @@ const handleCumpleanosDetalle = (cumpleanos: Cumpleanos) => {
 const handlePasaporteDetalle = (pasaporte: PasaportePorVencer) => {
   // console.log('Ver detalle del pasaporte:', pasaporte)
   alert(`Ver detalle de pasaporte de ${pasaporte.cliente.nombre} ${pasaporte.cliente.apellido}`)
+}
+
+const closeSegmentoModal = () => {
+  showSegmentoModal.value = false
+  segmentoSeleccionado.value = null
 }
 </script>

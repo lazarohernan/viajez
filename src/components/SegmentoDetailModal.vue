@@ -13,8 +13,8 @@
           :class="getIconBgClass(segmento.tipo)"
         >
           <Plane v-if="segmento.tipo === 'transporte'" class="w-5 h-5 text-orange-600" />
-          <Home v-else-if="segmento.tipo === 'hospedaje'" class="w-5 h-5 text-orange-600" />
-          <Compass v-else class="w-5 h-5 text-orange-600" />
+          <Home v-else-if="segmento.tipo === 'hospedaje'" class="w-5 h-5 text-blue-600" />
+          <Compass v-else class="w-5 h-5 text-green-600" />
         </div>
         <div>
           <h3 class="text-lg font-semibold text-gray-900">
@@ -215,13 +215,13 @@ const emit = defineEmits<{
 const getIconBgClass = (tipo: string) => {
   switch (tipo) {
     case 'transporte':
-      return 'bg-orange-50'
+      return 'bg-orange-100'
     case 'hospedaje':
-      return 'bg-amber-50'
+      return 'bg-blue-100'
     case 'actividad':
-      return 'bg-yellow-50'
+      return 'bg-green-100'
     default:
-      return 'bg-gray-50'
+      return 'bg-gray-100'
   }
 }
 
